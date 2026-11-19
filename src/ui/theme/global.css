@@ -1,0 +1,57 @@
+/* 기본 토큰. 장 테마(chapter.theme.tokens)가 실행 중에 같은 변수를 덮어쓴다 (applyTheme). */
+:root {
+  --bg: #16130f;
+  --surface: #221d17;
+  --card: #2b241c;
+  --text: #ece2cf;
+  --text-muted: #bfaf94;
+  --text-faint: #9a8b74;
+  --accent: #f0a050;
+  --ochre: #c98a4b;
+  --danger: #e9785f;
+  --good: #9dc08b;
+
+  /* 글자 크기 3단계 설정은 이 값 하나로 바꾼다 (DESIGN.md §16) */
+  --font-scale: 1;
+  --fs-body: calc(1.0625rem * var(--font-scale)); /* 17px */
+  --fs-small: calc(0.9375rem * var(--font-scale)); /* 15px — 이보다 작게 쓰지 않는다 */
+  --fs-title: calc(1.375rem * var(--font-scale));
+  --lh-body: 1.65;
+  --measure: 34em;
+
+  --radius: 6px;
+  --gap: 12px;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
