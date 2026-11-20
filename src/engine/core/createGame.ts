@@ -1,6 +1,7 @@
 // 게임 생성: (장 정의, 시작 출처) → 1턴 시작 상태 (DESIGN.md §2.5)
 
 import type { ChapterDefinition, GameState, Id, Person } from '../types';
+import { buildStartingDeck } from '../actions/deck';
 import { seedToState } from '../rng/rng';
 import { SAVE_VERSION } from '../save/version';
 import { rolesTotal } from './population';
@@ -81,8 +82,10 @@ export function createGame(def: ChapterDefinition, source: StartSource): GameSta
     traditions: {},
     flags: {},
     counters: {},
-    actions: { playsLeft: 0 },
-    events: { scheduled: [], history: {} },
+    actions: { playsLeft: 0, busy: [] },
+    deck: { draw: [], hand: [], discard: [] },
+    events: { pending: [], scheduled: [], history: {}, recentTags: [] },
+    chronicle: [],
     delayed: [],
     modifiers: [],
     seq: 0,
@@ -91,6 +94,7 @@ export function createGame(def: ChapterDefinition, source: StartSource): GameSta
     ending: null,
   };
 
+  buildStartingDeck(def, state);
   beginTurn(def, state);
   return state;
 }

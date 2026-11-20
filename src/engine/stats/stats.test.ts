@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ch1, newGame, tweakDef } from '../../test/fixtures';
+import { ch1Numbers } from '../../data/chapters/ch1/balance';
 import { getStat, stat } from './stats';
 
 describe('stats', () => {
@@ -11,17 +12,17 @@ describe('stats', () => {
       );
     });
     const s = newGame('x', def);
-    // (0.5 + 0.5) × 2
-    expect(stat(def, s, 'yield.craft')).toBeCloseTo(2);
+    // (기본 + 0.5) × 2
+    expect(stat(def, s, 'yield.craft')).toBeCloseTo((ch1.balance.stats['yield.craft']! + 0.5) * 2);
   });
 
   it('계절 모디파이어는 그 계절에만 켜진다', () => {
     const s = newGame();
     expect(s.season).toBe('spring');
-    expect(stat(ch1, s, 'consume.food')).toBeCloseTo(1.0);
+    expect(stat(ch1, s, 'consume.food')).toBeCloseTo(ch1.balance.stats['consume.food']!);
     const winter = structuredClone(s);
     winter.season = 'winter';
-    expect(stat(ch1, winter, 'consume.food')).toBeCloseTo(1.3);
+    expect(stat(ch1, winter, 'consume.food')).toBeCloseTo(ch1.balance.stats['consume.food']! * ch1Numbers.season.winter.consume);
   });
 
   it('when 조건이 맞을 때만 적용한다 (결속에 따른 행동 수)', () => {

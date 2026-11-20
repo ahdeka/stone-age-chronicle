@@ -66,9 +66,9 @@ describe('effects', () => {
     expect(s.delayed).toHaveLength(0);
   });
 
-  it('schedule: 예약 목록에 들어간다 (소비는 M2 이벤트 엔진)', () => {
+  it('schedule: 예약 목록에 들어간다', () => {
     const s = apply([{ type: 'schedule', eventId: 'red_ford_repays', delay: 6, chance: 0.5 }]);
-    expect(s.events.scheduled).toEqual([{ eventId: 'red_ford_repays', dueTurn: 7, chance: 0.5, seq: 0 }]);
+    expect(s.events.scheduled).toEqual([{ eventId: 'red_ford_repays', dueTurn: 7, chance: 0.5, seq: expect.any(Number) }]);
   });
 
   it('random: 같은 시드면 같은 결과', () => {
@@ -115,8 +115,34 @@ describe('effects', () => {
     expect(Object.keys(s.flags)).toEqual(['notWinter']);
   });
 
-  it('chronicle: 연대기 후보 로그를 남긴다', () => {
+  it('chronicle: 연대기 후보 로그를 남기고, 족장 이름을 그 시점 값으로 굳힌다', () => {
     const s = apply([{ type: 'chronicle', key: 'chron.test', importance: 3 }]);
-    expect(s.turnLog).toContainEqual({ kind: 'chronicle', key: 'chron.test', importance: 3, source: 'test' });
+    expect(s.turnLog).toContainEqual({
+      kind: 'chronicle',
+      key: 'chron.test',
+      importance: 3,
+      source: 'test',
+      params: expect.objectContaining({ chief: { key: 'person.ch1.maru' }, reign: 1 }),
+    });
+  });
+
+  it('person: 바인딩된 인물의 관계와 특성을 바꾼다 (범위 −100..100)', () => {
+    const s = newGame();
+    applyEffects({ def: ch1, state: s, source: 'test', actors: { a: 'p_bawi' } }, [
+      { type: 'person', ref: { actor: 'a' }, change: { relation: -500, addTrait: 'restless' } },
+      { type: 'person', ref: { actor: 'missing' }, change: { relation: 10 } },
+    ]);
+    expect(s.people['p_bawi']!.relation).toBe(-100);
+    expect(s.people['p_bawi']!.traits).toContain('restless');
+  });
+
+  it('addCard / removeCard: 덱에 카드를 넣고 뺀다', () => {
+    const s = newGame();
+    const total = () => s.deck.draw.length + s.deck.hand.length + s.deck.discard.length;
+    const before = total();
+    apply([{ type: 'addCard', id: 'share_feast', count: 2 }], s);
+    expect(total()).toBe(before + 2);
+    apply([{ type: 'removeCard', id: 'share_feast' }], s);
+    expect(total()).toBe(before + 1);
   });
 });

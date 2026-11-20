@@ -24,7 +24,12 @@ export function findChief(def: ChapterDefinition, state: GameState): Person | un
   return Object.values(state.people).find((p) => p.alive && p.office === chiefOffice);
 }
 
-export function evaluate(def: ChapterDefinition, state: GameState, c: Condition): boolean {
+/** 이벤트/행동에 바인딩된 인물: 슬롯 → 인물 id */
+export type Actors = Readonly<Record<string, string>>;
+
+const NO_ACTORS: Actors = {};
+
+export function evaluate(def: ChapterDefinition, state: GameState, c: Condition, actors: Actors = NO_ACTORS): boolean {
   const t = state.tribe;
   switch (c.type) {
     case 'resource':
@@ -81,12 +86,17 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition)
       const chief = findChief(def, state);
       return chief !== undefined && matchPerson(chief, c.match);
     }
+    case 'actor': {
+      const id = actors[c.slot];
+      const p = id === undefined ? undefined : state.people[id];
+      return p !== undefined && (c.match === undefined || matchPerson(p, c.match));
+    }
     case 'all':
-      return c.of.every((x) => evaluate(def, state, x));
+      return c.of.every((x) => evaluate(def, state, x, actors));
     case 'any':
-      return c.of.some((x) => evaluate(def, state, x));
+      return c.of.some((x) => evaluate(def, state, x, actors));
     case 'not':
-      return !evaluate(def, state, c.of);
+      return !evaluate(def, state, c.of, actors);
     default: {
       const never: never = c;
       throw new Error(`unknown condition: ${JSON.stringify(never)}`);
@@ -101,12 +111,22 @@ export interface EvalResult {
 }
 
 /** 목록은 AND. 실패한 조건을 모두 모은다. */
-export function evaluateAll(def: ChapterDefinition, state: GameState, conds: readonly Condition[] | undefined): EvalResult {
+export function evaluateAll(
+  def: ChapterDefinition,
+  state: GameState,
+  conds: readonly Condition[] | undefined,
+  actors: Actors = NO_ACTORS,
+): EvalResult {
   const failed: Condition[] = [];
-  for (const c of conds ?? []) if (!evaluate(def, state, c)) failed.push(c);
+  for (const c of conds ?? []) if (!evaluate(def, state, c, actors)) failed.push(c);
   return { ok: failed.length === 0, failed };
 }
 
-export function allTrue(def: ChapterDefinition, state: GameState, conds: readonly Condition[] | undefined): boolean {
-  return (conds ?? []).every((c) => evaluate(def, state, c));
+export function allTrue(
+  def: ChapterDefinition,
+  state: GameState,
+  conds: readonly Condition[] | undefined,
+  actors: Actors = NO_ACTORS,
+): boolean {
+  return (conds ?? []).every((c) => evaluate(def, state, c, actors));
 }

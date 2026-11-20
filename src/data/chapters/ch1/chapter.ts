@@ -3,7 +3,9 @@
 import type { ChapterDefinition } from '../../../engine';
 import { offices } from '../../common/offices';
 import { personTraits } from '../../common/personTraits';
+import { ch1Actions, ch1StartingDeck } from './actions';
 import { ch1Balance, ch1Numbers } from './balance';
+import { ch1Events } from './events';
 import { ch1Endings } from './endings';
 import { ch1Presets } from './presets';
 import { ch1Regions } from './regions';
@@ -103,6 +105,14 @@ export const ch1: ChapterDefinition = {
     tribeTraits: [],
     regions: ch1Regions,
     endings: ch1Endings,
+    events: ch1Events,
+    actions: ch1Actions,
   },
+  startingDeck: ch1StartingDeck,
+  chronicleFallbacks: [
+    { when: [{ type: 'flag', id: 'hungry' }], keys: ['chron.quiet.hungry.1', 'chron.quiet.hungry.2'] },
+    { when: [{ type: 'season', in: ['winter'] }], keys: ['chron.quiet.winter.1', 'chron.quiet.winter.2'] },
+    { when: [], keys: ['chron.quiet.1', 'chron.quiet.2', 'chron.quiet.3', 'chron.quiet.4'] },
+  ],
   theme: ch1Theme,
 };

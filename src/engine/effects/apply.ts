@@ -1,8 +1,10 @@
 // 단일 효과 적용기 (DESIGN.md §4.2). 상태를 제자리에서 바꾼다 — reduce가 넘겨준 복제본에만 호출할 것.
 // 효과는 목록 순서대로 적용하고, 모든 변화는 turnLog에 남긴다.
 
-import type { ChapterDefinition, Effect, GameState, PowerTerm } from '../types';
-import { allTrue } from '../conditions/evaluate';
+import type { ChapterDefinition, Effect, GameState, Person, PersonRef, PowerTerm } from '../types';
+import { allTrue, findChief, type Actors } from '../conditions/evaluate';
+import { addCardToDeck, removeCardFromDeck } from '../actions/deck';
+import { chronicleParams } from '../chronicle/chronicle';
 import { axisRange, clamp, resourceRange, round4 } from '../core/lookup';
 import { changePopulation } from '../core/population';
 import { chance, weightedIndex } from '../rng/rng';
@@ -13,7 +15,11 @@ export interface EffectCtx {
   state: GameState;
   /** 로그 출처 (예: 'season.winter', 'event.hungry_neighbors.share') */
   source: string;
+  actors?: Actors;
 }
+
+const RELATION_MIN = -100;
+const RELATION_MAX = 100;
 
 export function addResource(ctx: EffectCtx, key: string, delta: number): number {
   const { def, state } = ctx;
@@ -23,6 +29,9 @@ export function addResource(ctx: EffectCtx, key: string, delta: number): number 
   state.tribe.resources[key] = after;
   const applied = round4(after - before);
   if (applied !== 0) state.turnLog.push({ kind: 'resource', key, delta: applied, source: ctx.source });
+  // 얻은 양을 누적 카운터에 더한다 (출처와 상관없이: 역할, 카드, 이벤트 모두)
+  const counter = def.balance.totalCounters[key];
+  if (counter !== undefined && applied > 0) state.counters[counter] = round4((state.counters[counter] ?? 0) + applied);
   return applied;
 }
 
@@ -45,6 +54,13 @@ export function setFlag(ctx: EffectCtx, id: string, set: boolean): void {
   if (had !== set) state.turnLog.push({ kind: 'flag', id, set, source: ctx.source });
 }
 
+export function resolvePerson(ctx: EffectCtx, ref: PersonRef): Person | undefined {
+  if (ref === 'chief') return findChief(ctx.def, ctx.state);
+  const id = ctx.actors?.[ref.actor];
+  const p = id === undefined ? undefined : ctx.state.people[id];
+  return p?.alive ? p : undefined;
+}
+
 /** check 효과의 힘 */
 export function computePower(ctx: EffectCtx, terms: readonly PowerTerm[]): number {
   const { def, state } = ctx;
@@ -63,6 +79,14 @@ export function computePower(ctx: EffectCtx, terms: readonly PowerTerm[]): numbe
       case 'stat':
         p += stat(def, state, t.id) * t.weight;
         break;
+      case 'actor': {
+        const person = resolvePerson(ctx, { actor: t.slot });
+        if (!person) break;
+        if (t.trait !== undefined && !person.traits.includes(t.trait)) break;
+        if (t.office !== undefined && person.office !== t.office) break;
+        p += t.weight;
+        break;
+      }
       case 'const':
         p += t.value;
         break;
@@ -103,6 +127,34 @@ export function applyEffect(ctx: EffectCtx, e: Effect): void {
       state.modifiers.push({ mod: e.mod, lastTurn: state.turn + e.duration - 1, sourceKey: ctx.source });
       state.turnLog.push({ kind: 'modifier', stat: e.mod.stat, turns: e.duration, source: ctx.source });
       return;
+    case 'person': {
+      const p = resolvePerson(ctx, e.ref);
+      if (!p) return;
+      const c = e.change;
+      if (c.relation !== undefined) {
+        const before = p.relation;
+        p.relation = clamp(p.relation + c.relation, RELATION_MIN, RELATION_MAX);
+        if (p.relation !== before) state.turnLog.push({ kind: 'person', personId: p.id, relation: p.relation - before, source: ctx.source });
+      }
+      if (c.addTrait !== undefined && !p.traits.includes(c.addTrait)) {
+        p.traits.push(c.addTrait);
+        state.turnLog.push({ kind: 'trait', personId: p.id, trait: c.addTrait, added: true, source: ctx.source });
+      }
+      if (c.removeTrait !== undefined && p.traits.includes(c.removeTrait)) {
+        p.traits = p.traits.filter((t) => t !== c.removeTrait);
+        state.turnLog.push({ kind: 'trait', personId: p.id, trait: c.removeTrait, added: false, source: ctx.source });
+      }
+      return;
+    }
+    case 'addCard': {
+      const n = e.count ?? 1;
+      for (let i = 0; i < n; i++) addCardToDeck(state, e.id);
+      state.turnLog.push({ kind: 'card', cardId: e.id, delta: n, source: ctx.source });
+      return;
+    }
+    case 'removeCard':
+      if (removeCardFromDeck(state, e.id)) state.turnLog.push({ kind: 'card', cardId: e.id, delta: -1, source: ctx.source });
+      return;
     case 'schedule':
       state.events.scheduled.push({
         eventId: e.eventId,
@@ -131,10 +183,16 @@ export function applyEffect(ctx: EffectCtx, e: Effect): void {
       return;
     }
     case 'if':
-      applyEffects(ctx, allTrue(ctx.def, state, e.when) ? e.then : (e.else ?? []));
+      applyEffects(ctx, allTrue(ctx.def, state, e.when, ctx.actors) ? e.then : (e.else ?? []));
       return;
     case 'chronicle':
-      state.turnLog.push({ kind: 'chronicle', key: e.key, importance: e.importance, source: ctx.source });
+      state.turnLog.push({
+        kind: 'chronicle',
+        key: e.key,
+        importance: e.importance,
+        source: ctx.source,
+        params: chronicleParams(ctx.def, state, ctx.actors),
+      });
       return;
     default: {
       const never: never = e;

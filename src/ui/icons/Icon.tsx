@@ -13,6 +13,7 @@ const PATHS: Record<string, string> = {
   craft: 'M5 19l6-6M11 13l3-6 5 3-6 4z', // 망치돌
   ritual: 'M12 4c3 4 4 7 0 11-4-4-3-7 0-11zM8 20h8', // 불꽃
   guard: 'M12 4l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V7z', // 방패 모양 바위
+  explore: 'M4 18c3-6 6-9 8-9s5 3 8 9M12 9V4M12 4l3 2-3 1', // 언덕과 깃대
 };
 
 export function Icon({ name, label, size = 20 }: { name: string; label?: string; size?: number }) {

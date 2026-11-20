@@ -42,10 +42,12 @@ export type Condition =
   // 인물
   | { type: 'person'; match: PersonQuery; count?: NumRange }
   | { type: 'chief'; match: PersonQuery }
+  /** 이벤트/행동에 바인딩된 인물. 슬롯이 비어 있으면 거짓. 행동 카드의 배정 인물은 슬롯 'assignee'. */
+  | { type: 'actor'; slot: string; match?: PersonQuery }
   // 논리
   | { type: 'all'; of: Condition[] }
   | { type: 'any'; of: Condition[] }
   | { type: 'not'; of: Condition };
-// 'actor'(이벤트 인물 바인딩)는 M2, 'neighbor'는 M5에서 추가한다.
+// 'neighbor'는 M5에서 추가한다.
 
 export type ConditionType = Condition['type'];

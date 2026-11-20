@@ -56,6 +56,32 @@ export interface ScheduledEffect {
   sourceKey: string;
 }
 
+export interface EventInstance {
+  uid: string;
+  eventId: Id;
+  /** 슬롯 → 인물 id */
+  actors: Record<string, Id>;
+  variant: string | null;
+}
+
+export interface CardInstance {
+  uid: string;
+  cardId: Id;
+}
+
+/** 연대기 문장 템플릿 변수. 인물 이름은 그 시점의 값으로 굳혀 둔다. */
+export type ChronicleParam = Label | number;
+
+export interface ChronicleEntry {
+  turn: number;
+  reign: number;
+  season: Id;
+  /** 이 족장 시절의 몇 번째 같은 계절인가 (1부터) */
+  seasonIndex: number;
+  key: string;
+  params: Record<string, ChronicleParam>;
+}
+
 export interface ActiveModifier {
   mod: ModifierDef;
   /** 이 턴이 끝날 때까지 유효 */
@@ -72,8 +98,13 @@ export type LogEntry =
   | { kind: 'flag'; id: Id; set: boolean; source: string }
   | { kind: 'modifier'; stat: string; turns: number; source: string }
   | { kind: 'roll'; p: number; success: boolean; source: string }
-  | { kind: 'chronicle'; key: string; importance: number; source: string }
+  | { kind: 'chronicle'; key: string; importance: number; source: string; params: Record<string, ChronicleParam> }
   | { kind: 'stage'; personId: Id; to: Id; source: string }
+  | { kind: 'person'; personId: Id; relation: number; source: string }
+  | { kind: 'trait'; personId: Id; trait: Id; added: boolean; source: string }
+  | { kind: 'card'; cardId: Id; delta: number; source: string }
+  | { kind: 'event'; eventId: Id; optionId: string; source: string }
+  | { kind: 'action'; cardId: Id; personId: Id | null; source: string }
   | { kind: 'note'; key: string; source: string };
 
 export interface TurnSummary {
@@ -111,11 +142,21 @@ export interface GameState {
   flags: Record<Id, number>;
   counters: Record<Id, number>;
 
-  actions: { playsLeft: number };
+  actions: {
+    playsLeft: number;
+    /** 이번 계절에 행동에 배정된 인물 (같은 인물을 두 번 쓰지 못한다) */
+    busy: Id[];
+  };
+  deck: { draw: CardInstance[]; hand: CardInstance[]; discard: CardInstance[] };
   events: {
+    /** 이번 턴에 해결해야 할 이벤트. 앞에서부터 하나씩 */
+    pending: EventInstance[];
     scheduled: ScheduledEvent[];
     history: Record<Id, { count: number; lastTurn: number }>;
+    /** 최근 턴들에 나온 이벤트 태그 (태그 피로 판정용, 최신이 끝) */
+    recentTags: string[][];
   };
+  chronicle: ChronicleEntry[];
   delayed: ScheduledEffect[];
   modifiers: ActiveModifier[];
   /** 예약 항목 등록 순서용 단조 증가 번호 */

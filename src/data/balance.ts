@@ -21,7 +21,9 @@ export const commonBalance = {
 
   events: {
     maxPerTurn: 2,
-    secondEventChance: 0.35,
+    secondEventChance: 0.5,
+    /** 같은 태그는 연속 2턴까지만 */
+    tagStreakMax: 2,
   },
 
   axis: {

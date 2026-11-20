@@ -16,7 +16,21 @@ export interface SaveFile {
 
 /** n → n+1 변환. 예: migrations[1] = v1 상태를 v2로 바꾸는 함수 */
 type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
-export const migrations: Record<number, Migration> = {};
+export const migrations: Record<number, Migration> = {
+  /** v1 → v2: 이벤트 대기열, 덱, 연대기 필드를 빈 값으로 추가한다.
+   *  장 정의를 모르는 곳이라 시작 덱은 채울 수 없다 — v1 세이브는 카드 없이 이어진다. */
+  1: (st) => {
+    const events = (st['events'] ?? {}) as Record<string, unknown>;
+    const actions = (st['actions'] ?? {}) as Record<string, unknown>;
+    return {
+      ...st,
+      events: { pending: [], recentTags: [], ...events },
+      actions: { busy: [], ...actions },
+      deck: { draw: [], hand: [], discard: [] },
+      chronicle: [],
+    };
+  },
+};
 
 export function serialize(state: GameState, savedAt: string | null = null): string {
   const file: SaveFile = { format: SAVE_FORMAT, saveVersion: state.saveVersion, chapterId: state.chapterId, savedAt, state };

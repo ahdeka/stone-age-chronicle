@@ -12,7 +12,7 @@ export const ch1Numbers = {
     spring: { gather: 1.2, hunt: 0.9 },
     summer: { gather: 1.4, hunt: 1.0 },
     autumn: { gather: 1.3, hunt: 1.2 },
-    winter: { gather: 0.3, hunt: 0.8, consume: 1.3 },
+    winter: { gather: 0.3, hunt: 0.6, consume: 1.4 },
   },
 
   /** 정착하면 저장 상한 배율 */
@@ -43,16 +43,37 @@ export const ch1Balance: ChapterBalance = {
     ...commonBalance.stats,
     'yield.gather': 1.6,
     'yield.hunt': 2.0,
-    'yield.craft': 0.5,
+    'yield.craft': 0.6,
     'yield.ritual.lore': 0.5,
     'yield.ritual.cohesion': 0.3,
     'consume.food': 1.0,
-    /** 인구 1명당 계절마다 닳는 도구 (10명당 1) */
-    'wear.tools': 0.1,
+    /** 인구 1명당 계절마다 닳는 도구 */
+    'wear.tools': 0.08,
+    /** 무리가 커질수록 하나로 묶어 두기 어렵다: 인구 1명당 계절마다 줄어드는 결속 */
+    'strain.cohesion': 0.08,
     'storage.food.perPop': 4,
-    'spoil.food': 0.1,
-    'growth.rate': 0.04,
+    'spoil.food': 0.12,
+    'growth.rate': 0.03,
     'actions.perTurn': 2,
+    'hand.size': 5,
+    /** 경계 태세. '경계 세우기' 카드가 올리고, 맹수·침입 판정의 힘에 더해진다 */
+    watch: 0,
+  },
+  statPolarity: {
+    'yield.gather': 1,
+    'yield.hunt': 1,
+    'yield.craft': 1,
+    'yield.ritual.lore': 1,
+    'yield.ritual.cohesion': 1,
+    'consume.food': -1,
+    'wear.tools': -1,
+    'strain.cohesion': -1,
+    'storage.food.perPop': 1,
+    'spoil.food': -1,
+    'growth.rate': 1,
+    'actions.perTurn': 1,
+    'hand.size': 1,
+    watch: 1,
   },
   globalModifiers: [
     {
@@ -73,11 +94,14 @@ export const ch1Balance: ChapterBalance = {
   upkeep: [
     { resource: 'food', perCapitaStat: 'consume.food' },
     { resource: 'tools', perCapitaStat: 'wear.tools' },
+    { resource: 'cohesion', perCapitaStat: 'strain.cohesion' },
   ],
   storage: [{ resource: 'food', capPerCapitaStat: 'storage.food.perPop', spoilStat: 'spoil.food' }],
   cohesionResource: 'cohesion',
   totalCounters: { lore: 'lore_total' },
-  starvation: { resource: 'food', cohesionPerDeficit: 1, popLossRate: 0.1, hungerTurnsForLoss: 2 },
+  starvation: { resource: 'food', cohesionPerDeficit: 1, popLossRate: 0.1, hungerTurnsForLoss: 2, flag: 'hungry' },
+  events: { ...commonBalance.events },
+  hand: { sizeStat: 'hand.size' },
   growth: { cohesionMin: 40, rateStat: 'growth.rate' },
   depletion: { perTurn: 0.03, max: 0.3, recoverPerTurn: 0.05 },
   roleLossOrder: ['ritual', 'craft', 'guard', 'hunt', 'gather'],

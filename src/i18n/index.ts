@@ -25,7 +25,7 @@ export function createTranslator(...tables: Strings[]): Translator {
       return `⟨${key}⟩`;
     }
     if (!params) return raw;
-    return raw.replace(/\{(\w+)\}/g, (m, name: string) => {
+    return raw.replace(/\{([\w:]+)\}/g, (m, name: string) => {
       const v = params[name];
       return v === undefined ? m : String(v);
     });

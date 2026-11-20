@@ -1,6 +1,11 @@
 // 1장 한국어 문자열. 키 규약은 DESIGN.md §5.2.
 
+import { ch1KoActions } from './koActions';
+import { ch1KoEvents } from './koEvents';
+
 export const ch1Ko: Record<string, string> = {
+  ...ch1KoEvents,
+  ...ch1KoActions,
   'chapter.ch1.title': '첫 장: 돌과 씨앗',
   'scale.band': '무리',
   'tribe.ch1.default': '솔바람 사람들',

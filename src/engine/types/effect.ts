@@ -1,5 +1,5 @@
 // 효과 언어 (DESIGN.md §4.2)
-// M1에서는 상태가 이미 존재하는 체계의 효과만 둔다. 인물/이웃/지식/지역 효과는 해당 마일스톤에서 추가한다.
+// 상태가 이미 존재하는 체계의 효과만 둔다. 이웃/지식/지역 효과는 해당 마일스톤에서 추가한다.
 
 import type { Id } from './common';
 import type { Condition } from './condition';
@@ -21,7 +21,18 @@ export type PowerTerm =
   | { source: 'resource'; id: Id; weight: number }
   | { source: 'population'; weight: number }
   | { source: 'stat'; id: StatKey; weight: number }
+  /** 바인딩된 인물이 조건을 만족하면 weight만큼 더한다 */
+  | { source: 'actor'; slot: string; trait?: Id; office?: Id; weight: number }
   | { source: 'const'; value: number };
+
+/** 효과가 가리키는 인물 */
+export type PersonRef = 'chief' | { actor: string };
+
+export interface PersonChange {
+  relation?: number;
+  addTrait?: Id;
+  removeTrait?: Id;
+}
 
 export type Effect =
   | { type: 'resource'; key: Id; delta: number }
@@ -30,6 +41,9 @@ export type Effect =
   | { type: 'counter'; id: Id; delta: number }
   | { type: 'flag'; id: Id; set: boolean }
   | { type: 'modifier'; mod: ModifierDef; duration: number }
+  | { type: 'person'; ref: PersonRef; change: PersonChange }
+  | { type: 'addCard'; id: Id; count?: number }
+  | { type: 'removeCard'; id: Id }
   | { type: 'schedule'; eventId: Id; delay: number; chance?: number }
   | { type: 'delayed'; delay: number; effects: Effect[] }
   | { type: 'random'; outcomes: { weight: number; effects: Effect[]; labelKey?: string }[] }

@@ -8,7 +8,7 @@ export default defineConfig({
     modules: { localsConvention: 'camelCaseOnly' },
   },
   test: {
-    include: ['src/**/*.test.ts', 'tools/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.ts'],
     environment: 'node',
   },
 });

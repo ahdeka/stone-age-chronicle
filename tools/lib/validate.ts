@@ -1,7 +1,8 @@
-// 콘텐츠 검증 (DESIGN.md §12). M1 범위: 중복 id, id 참조, 스탯 키, 문자열 키, 프리셋 정합성, 테마 토큰.
-// 이벤트·카드 관련 검사(도달 불가, 비용 없는 선택지, 라벨 길이 등)는 M2에서 추가한다.
+// 콘텐츠 검증 (DESIGN.md §12): 중복 id, id 참조, 스탯 키, 문자열 키, 프리셋 정합성, 테마 토큰.
+// 이벤트·카드 검사(도달 불가, 비용 없는 선택지, 가짜 선택지, 라벨 길이, 본문 문장 수)는 validateCards.ts.
 
 import type { ChapterDefinition, Condition, Label, ModifierDef } from '../../src/engine';
+import { validateCards } from './validateCards';
 
 export interface Issue {
   level: 'error' | 'warning';
@@ -224,6 +225,11 @@ export function validateChapter(def: ChapterDefinition, strings: Record<string, 
   // ── 8. 테마, 결말 ──
   for (const t of REQUIRED_THEME_TOKENS) if (!def.theme.tokens[t]) err('theme', `토큰 없음: ${t}`);
   if (!def.content.endings.some((e) => e.kind === 'survival')) err('endings', '생존(시간 종료) 결말이 하나 이상 필요하다');
+  Object.keys(b.statPolarity).forEach((k) => ref('balance.statPolarity', 'stat', k));
+  ref('balance.hand', 'stat', b.hand.sizeStat);
+
+  // ── 9. 이벤트와 행동 카드 ──
+  issues.push(...validateCards(def, strings));
 
   return issues;
 }

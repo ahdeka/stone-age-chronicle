@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ch1, endTurns, newGame, run, tweakDef } from '../../test/fixtures';
+import { ch1Numbers } from '../../data/chapters/ch1/balance';
 import type { GameState, LogEntry } from '../types';
+
+/** 수치는 balance에서 읽는다 — 밸런스를 조정해도 테스트가 의미를 잃지 않게 */
+const B = ch1.balance.stats;
 
 const lastLog = (s: GameState): LogEntry[] => s.history[s.history.length - 1]!.log;
 const sumBy = (log: LogEntry[], source: string, key: string) =>
@@ -33,7 +37,7 @@ describe('turn loop', () => {
     expect(s.season).toBe('winter');
     const after = endTurns(ch1, s, 1);
     const eaten = -sumBy(lastLog(after), 'upkeep.food', 'food');
-    expect(eaten).toBeCloseTo(s.tribe.population * 1.3, 4);
+    expect(eaten).toBeCloseTo(s.tribe.population * B['consume.food']! * ch1Numbers.season.winter.consume, 4);
   });
 
   it('생산은 역할 배분을 따른다: 채집만 하면 사냥 산출이 없다', () => {
@@ -42,7 +46,7 @@ describe('turn loop', () => {
     s = endTurns(ch1, s, 1);
     const log = lastLog(s);
     expect(sumBy(log, 'role.hunt', 'food')).toBe(0);
-    expect(sumBy(log, 'role.gather', 'food')).toBeCloseTo(12 * 1.6 * 1.2, 4);
+    expect(sumBy(log, 'role.gather', 'food')).toBeCloseTo(12 * B['yield.gather']! * ch1Numbers.season.spring.gather, 4);
   });
 
   it('의례는 전승과 결속을 만들고 누적 전승 카운터에 더한다', () => {
@@ -57,9 +61,9 @@ describe('turn loop', () => {
     let s = newGame();
     s = run(ch1, s, { type: 'debug', debug: { op: 'setResource', key: 'food', value: 500 } });
     s = endTurns(ch1, s, 1);
-    const cap = 12 * 4;
-    // 상한까지 잘린 뒤 10% 부패 (인구 증가는 결산 후반이라 상한 계산에 영향 없음)
-    expect(s.tribe.resources['food']).toBeCloseTo(cap * 0.9, 4);
+    const cap = 12 * B['storage.food.perPop']!;
+    // 상한까지 잘린 뒤 상함 (인구 증가는 결산 후반이라 상한 계산에 영향 없음)
+    expect(s.tribe.resources['food']).toBeCloseTo(cap * (1 - B['spoil.food']!), 4);
   });
 
   it('식량이 모자라면 결속이 줄고, 2턴 연속이면 인구가 준다', () => {
@@ -89,7 +93,7 @@ describe('turn loop', () => {
     let s = newGame();
     s = run(ch1, s, { type: 'setRoles', roles: { gather: 8, hunt: 4, craft: 0, ritual: 0, guard: 0 } });
     s = endTurns(ch1, s, 1);
-    expect(s.tribe.resources['tools']).toBeCloseTo(8 - 12 * 0.1, 4);
+    expect(s.tribe.resources['tools']).toBeCloseTo(8 - 12 * B['wear.tools']!, 4);
   });
 
   it('지역 고갈이 쌓여 채집 산출을 줄인다', () => {

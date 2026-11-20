@@ -3,6 +3,7 @@
 import type { Id, Label } from './common';
 import type { Condition } from './condition';
 import type { ModifierDef, StatKey } from './effect';
+import type { ActionCardDef, EventDef } from './cards';
 
 export interface ResourceDef {
   id: Id;
@@ -150,6 +151,8 @@ export interface ChapterBalance {
   warnTurn: number;
   /** getStat의 기본값. 새 스탯 키는 여기에 추가하는 것만으로 생긴다. */
   stats: Record<StatKey, number>;
+  /** 1 = 높을수록 부족에 좋다, -1 = 낮을수록 좋다. 미리보기 색과 "비용 없는 선택지" 검사에 쓴다 */
+  statPolarity: Record<StatKey, 1 | -1>;
   /** 장 전체에 항상 걸리는 모디파이어 (예: 결속이 높으면 행동 +1) */
   globalModifiers: ModifierDef[];
   upkeep: UpkeepDef[];
@@ -158,7 +161,10 @@ export interface ChapterBalance {
   cohesionResource: Id;
   /** 얻은 양을 누적 카운터에 더하는 자원 (예: lore → lore_total) */
   totalCounters: Record<Id, Id>;
-  starvation: { resource: Id; cohesionPerDeficit: number; popLossRate: number; hungerTurnsForLoss: number };
+  /** flag: 식량이 모자란 턴에 세우고 배부른 턴에 지우는 플래그 (굶주림 이벤트의 트리거) */
+  starvation: { resource: Id; cohesionPerDeficit: number; popLossRate: number; hungerTurnsForLoss: number; flag: Id };
+  events: { maxPerTurn: number; secondEventChance: number; /** 같은 태그가 연속으로 나올 수 있는 최대 턴 수 */ tagStreakMax: number };
+  hand: { sizeStat: StatKey };
   growth: { cohesionMin: number; rateStat: StatKey };
   depletion: { perTurn: number; max: number; recoverPerTurn: number };
   /** 인구가 줄 때 먼저 빠지는 역할 순서 */
@@ -189,7 +195,13 @@ export interface ChapterDefinition {
     tribeTraits: TribeTraitDef[];
     regions: RegionDef[];
     endings: EndingDef[];
+    events: EventDef[];
+    actions: ActionCardDef[];
   };
+  /** 시작 덱 (같은 id를 여러 번 넣으면 여러 장) */
+  startingDeck: Id[];
+  /** 그 턴에 연대기 후보가 없을 때 쓰는 문장. 처음 맞는 묶음에서 턴 번호로 하나를 고른다 */
+  chronicleFallbacks: { when: Condition[]; keys: string[] }[];
   theme: ThemeDef;
 }
 

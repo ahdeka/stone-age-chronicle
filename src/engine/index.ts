@@ -2,9 +2,13 @@
 
 export type * from './types';
 export { createGame, type StartSource } from './core/createGame';
-export { reduce } from './core/reduce';
-export { evaluate, evaluateAll, findChief, matchPerson } from './conditions/evaluate';
+export { reduce, applyCommand } from './core/reduce';
+export { evaluate, evaluateAll, findChief, matchPerson, type Actors } from './conditions/evaluate';
 export { getStat, stat, type StatValue, type StatPart } from './stats/stats';
 export { serialize, deserialize, SAVE_FORMAT, type SaveFile, type LoadResult } from './save/save';
 export { SAVE_VERSION } from './save/version';
 export { seedToState, nextFloat, nextInt, chance, weightedIndex, shuffled, cloneRng } from './rng/rng';
+export { findEvent, optionStatuses, isEligible, type OptionStatus } from './events/events';
+export { findAction, cardStatus, canAssign, type CardStatus } from './actions/actions';
+export { previewEffects, type PreviewItem } from './effects/preview';
+export { seasonIndex } from './chronicle/chronicle';

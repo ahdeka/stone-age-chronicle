@@ -18,4 +18,6 @@ export const personTraits: PersonTraitDef[] = [
   { id: 'fertile', modifiers: [] },
   { id: 'frail', modifiers: [] },
   { id: 'seasoned', modifiers: [] },
+  /** 이야기 상태 표식: 홀로 길을 떠난 젊은이 (young_hunter → youth_returns) */
+  { id: 'restless', modifiers: [] },
 ];

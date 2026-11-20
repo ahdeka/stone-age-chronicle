@@ -3,7 +3,10 @@
 
 import type { ChapterDefinition, GameState, RoleOutput } from '../types';
 import { allTrue } from '../conditions/evaluate';
-import { addResource, applyEffects, type EffectCtx } from '../effects/apply';
+import { discardHand, drawHand } from '../actions/deck';
+import { finalizeChronicle } from '../chronicle/chronicle';
+import { addResource, applyEffects, setFlag, type EffectCtx } from '../effects/apply';
+import { drawEvents } from '../events/events';
 import { nextFloat } from '../rng/rng';
 import { stat } from '../stats/stats';
 import { clamp, round4 } from './lookup';
@@ -27,12 +30,21 @@ export function beginTurn(def: ChapterDefinition, s: GameState): void {
   s.modifiers = s.modifiers.filter((m) => m.lastTurn >= s.turn);
 
   // A3. 계절 효과: 계절 모디파이어는 getStat이 현재 계절을 보고 자동으로 켠다.
-  // A4. 전통 axisDrift (M4) / A5. 이웃 AI (M5) / A6. 이벤트 뽑기 (M2)
+  // A4. 전통 axisDrift (M4) / A5. 이웃 AI (M5)
+  // A6. 이벤트 뽑기
+  drawEvents(def, s);
   // A7. 턴 시작 스냅샷: turnLog를 비우는 것으로 대신한다 (요약은 로그에서 계산).
 
-  // [C] 행동 단계 준비 — 이벤트가 생기면(M2) phase='event'가 먼저 온다
-  const a = def.balance.actions;
+  if (s.events.pending.length > 0) s.phase = 'event';
+  else startActionPhase(def, s);
+}
+
+/** [C] 행동 단계 시작: 손패를 채우고 행동 수를 정한다. 이벤트 결과(결속 등)가 반영된 뒤에 계산한다. */
+export function startActionPhase(def: ChapterDefinition, s: GameState): void {
+  drawHand(def, s); // C1
+  const a = def.balance.actions; // C2
   s.actions.playsLeft = clamp(Math.round(stat(def, s, a.stat)), a.min, a.max);
+  s.actions.busy = [];
   s.phase = 'action';
 }
 
@@ -63,9 +75,7 @@ function produce(def: ChapterDefinition, s: GameState): void {
     const workers = s.tribe.roles[role.id] ?? 0;
     for (const out of role.outputs) {
       const amount = roleOutputAmount(def, s, workers, out);
-      const gained = addResource(ctx(def, s, `role.${role.id}`), out.resource, amount);
-      const counter = def.balance.totalCounters[out.resource];
-      if (counter !== undefined && gained > 0) s.counters[counter] = round4((s.counters[counter] ?? 0) + gained);
+      addResource(ctx(def, s, `role.${role.id}`), out.resource, amount);
     }
   }
 }
@@ -98,12 +108,14 @@ function store(def: ChapterDefinition, s: GameState): void {
 function starve(def: ChapterDefinition, s: GameState, shortage: Record<string, number>): void {
   const b = def.balance.starvation;
   const deficit = shortage[b.resource] ?? 0;
+  const c = ctx(def, s, 'starvation');
   if (deficit <= 0) {
     s.tribe.hunger = 0;
+    setFlag(c, b.flag, false);
     return;
   }
   s.tribe.hunger += 1;
-  const c = ctx(def, s, 'starvation');
+  setFlag(c, b.flag, true);
   addResource(c, def.balance.cohesionResource, -deficit * b.cohesionPerDeficit);
   if (s.tribe.hunger >= b.hungerTurnsForLoss) {
     const loss = Math.max(1, Math.ceil(s.tribe.population * b.popLossRate));
@@ -175,7 +187,7 @@ function checkEndings(def: ChapterDefinition, s: GameState): void {
 }
 
 export function resolveTurn(def: ChapterDefinition, s: GameState): void {
-  // D1. 손패 정리 (M2)
+  discardHand(s); // D1
   produce(def, s); // D2
   const shortage = consume(def, s); // D3
   store(def, s); // D4
@@ -186,7 +198,7 @@ export function resolveTurn(def: ChapterDefinition, s: GameState): void {
   agePeople(def, s); // D9
   // D10. 이웃 상태 갱신 (M5)
   checkEndings(def, s); // D11
-  // D12. 연대기 문장 확정 (M2)
+  finalizeChronicle(def, s); // D12
 
   // D13. 요약을 굳히고 다음 턴으로
   s.history.push({ turn: s.turn, season: s.season, reign: s.reign, log: s.turnLog });

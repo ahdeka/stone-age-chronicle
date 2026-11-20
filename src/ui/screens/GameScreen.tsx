@@ -1,11 +1,18 @@
-// M1 상태 확인용 최소 화면. 레이아웃은 최종 구조(상단 바 / 좌측 부족 / 중앙 / 우측 연대기 / 하단 턴 종료)를 미리 따른다.
+// 게임 화면: 상단 자원/계절 바 / 좌측 부족 패널 / 중앙 카드 영역 / 우측 연대기 / 하단 턴 종료 (CLAUDE.md UI/UX)
 
 import { useEffect, useState } from 'react';
-import { reduce, type ChapterDefinition, type Command, type GameState, type LogEntry } from '../../engine';
+import { optionStatuses, reduce, type ChapterDefinition, type Command, type GameState, type LogEntry } from '../../engine';
 import { commonBalance } from '../../data/balance';
+import { Chronicle } from '../components/Chronicle';
+import { DebugPanel } from '../components/DebugPanel';
+import { EventCard } from '../components/EventCard';
+import { Hand } from '../components/Hand';
+import { ExportButton, LoadButton } from '../components/SaveControls';
+import { fmtDelta, fmtInt } from '../format';
+import { useDeltas, type Delta } from '../hooks/useDeltas';
 import { Icon } from '../icons/Icon';
 import { useT } from '../i18n';
-import { ExportButton, LoadButton } from '../components/SaveControls';
+import g from '../components/game.module.css';
 import s from './screens.module.css';
 
 interface Props {
@@ -15,15 +22,26 @@ interface Props {
   onQuit: () => void;
 }
 
-const fmt = (v: number) => Math.floor(v + 1e-9);
-const fmtDelta = (v: number) => {
-  const r = Math.round(v * 10) / 10;
-  return `${r > 0 ? '+' : r < 0 ? '−' : '±'}${Math.abs(r)}`;
-};
+function Floats({ deltas, target }: { deltas: Delta[]; target: string }) {
+  return (
+    <>
+      {deltas
+        .filter((d) => d.target === target)
+        .map((d) => (
+          <span key={d.id} className={d.delta > 0 ? g.floatUp : g.floatDown} aria-hidden>
+            {d.delta > 0 ? '▲' : '▼'}
+            {fmtDelta(d.delta)}
+          </span>
+        ))}
+    </>
+  );
+}
 
 export function GameScreen({ def, state, onChange, onQuit }: Props) {
   const { t, label } = useT();
   const [error, setError] = useState<string | null>(null);
+  const [assignees, setAssignees] = useState<Record<string, string>>({});
+  const deltas = useDeltas(state);
 
   const dispatch = (cmd: Command) => {
     const r = reduce(def, state, cmd);
@@ -35,8 +53,7 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
   // ── 역할 배분 초안: 합계가 인구와 맞을 때만 엔진에 보낸다 ──
   const [draft, setDraft] = useState(state.tribe.roles);
   useEffect(() => setDraft(state.tribe.roles), [state.tribe.roles]);
-  const assigned = Object.values(draft).reduce((a, b) => a + b, 0);
-  const unassigned = state.tribe.population - assigned;
+  const unassigned = state.tribe.population - Object.values(draft).reduce((a, b) => a + b, 0);
   const changeRole = (role: string, d: number) => {
     const next = { ...draft, [role]: Math.max(0, (draft[role] ?? 0) + d) };
     const sum = Object.values(next).reduce((a, b) => a + b, 0);
@@ -46,14 +63,31 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
   };
 
   const canEnd = state.phase === 'action' && unassigned === 0;
-  const endTurn = () => canEnd && dispatch({ type: 'endActionPhase' });
+  const endTurn = () => {
+    if (!canEnd) return;
+    setAssignees({});
+    dispatch({ type: 'endActionPhase' });
+  };
+  const play = (cardUid: string) => dispatch({ type: 'playAction', cardUid, personId: assignees[cardUid] || undefined });
 
-  // ── 키보드: Space / Enter로 턴 종료 (입력 칸이나 버튼에 포커스가 있을 때는 그쪽 동작을 따른다) ──
+  // ── 키보드: 1~4 선택지, 1~5 카드, Space/Enter 턴 종료 ──
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA') return;
-      if (e.key === ' ' || e.key === 'Enter') {
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      const n = Number(e.key);
+      if (state.phase === 'event' && n >= 1 && n <= 4) {
+        const inst = state.events.pending[0];
+        const opt = inst && optionStatuses(def, state, inst).filter((o) => o.visible)[n - 1];
+        if (inst && opt?.available) dispatch({ type: 'chooseOption', eventUid: inst.uid, optionId: opt.option.id });
+        return;
+      }
+      if (state.phase === 'action' && n >= 1 && n <= 5) {
+        const card = state.deck.hand[n - 1];
+        if (card) play(card.uid);
+        return;
+      }
+      if ((e.key === ' ' || e.key === 'Enter') && tag !== 'BUTTON') {
         e.preventDefault();
         endTurn();
       }
@@ -62,38 +96,39 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const seasonName = t(`season.${state.season}.name`);
-  const timeLabel = t('time.reignSeason', { reign: state.reign, season: seasonName });
+  const timeLabel = t('time.reignSeason', { reign: state.reign, season: t(`season.${state.season}.name`) });
   const last = state.history[state.history.length - 1];
 
   return (
     <div className={s.game}>
-      {/* 상단: 시간과 자원 */}
       <header className={s.topbar}>
         <div className={s.time}>
-          <strong>{timeLabel}</strong>
+          <strong className={g.seasonName} key={state.turn}>
+            {timeLabel}
+          </strong>
           <span className={s.muted}>
             {label(state.tribe.name)} · {t(`era.${state.eraId}.name`)} · {t(`lifestyle.${state.tribe.lifestyle}.name`)}
           </span>
           {state.turn >= def.balance.warnTurn && state.phase !== 'ended' && <span className={s.warn}>{t('time.legendEnding')}</span>}
         </div>
         <ul className={s.resources}>
-          <li>
+          <li className={g.resItem}>
             <Icon name="population" />
             <span>{t('ui.population')}</span>
             <strong>{state.tribe.population}</strong>
+            <Floats deltas={deltas} target="population" />
           </li>
           {def.resources.map((r) => (
-            <li key={r.id}>
+            <li key={r.id} className={g.resItem}>
               <Icon name={r.icon} />
               <span>{t(`resource.${r.id}.name`)}</span>
-              <strong>{fmt(state.tribe.resources[r.id] ?? 0)}</strong>
+              <strong>{fmtInt(state.tribe.resources[r.id] ?? 0)}</strong>
+              <Floats deltas={deltas} target={`resource:${r.id}`} />
             </li>
           ))}
         </ul>
       </header>
 
-      {/* 좌측: 부족 패널 */}
       <aside className={s.left}>
         <section className={s.panel}>
           <h2>{t('ui.roles')}</h2>
@@ -126,15 +161,16 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
               const v = state.tribe.axes[a.id] ?? 0;
               const pct = ((v - a.min) / (a.max - a.min)) * 100;
               return (
-                <li key={a.id}>
+                <li key={a.id} className={g.axisItem}>
                   <div className={s.axisLabels}>
                     <span>◀ {t(`axis.${a.id}.neg`)}</span>
                     <span className={s.muted}>{Math.round(v)}</span>
                     <span>{t(`axis.${a.id}.pos`)} ▶</span>
                   </div>
                   <div className={s.axisTrack} aria-hidden>
-                    <div className={s.axisMark} style={{ left: `${pct}%` }} />
+                    <div className={`${s.axisMark} ${g.axisMarkMove}`} style={{ left: `${pct}%` }} />
                   </div>
+                  <Floats deltas={deltas} target={`axis:${a.id}`} />
                 </li>
               );
             })}
@@ -153,6 +189,7 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
                   <li key={p.id}>
                     <strong>{label(p.name)}</strong>
                     {p.office && <span className={s.tag}>{t(`office.${p.office}.name`)}</span>}
+                    {state.actions.busy.includes(p.id) && <span className={s.tag}>✓</span>}
                     <div className={s.muted}>
                       {t(`stage.${p.stage}.name`)}
                       {near ? ` · ${t('ui.stageNear')}` : ''} · {p.traits.map((tr) => t(`trait.person.${tr}.name`)).join(', ')}
@@ -164,20 +201,31 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
         </section>
       </aside>
 
-      {/* 중앙: 지금은 지난 계절 요약 (M2에서 이벤트/카드 영역) */}
       <main className={s.center}>
-        {state.phase === 'ended' && state.ending ? (
-          <section className={s.card}>
+        {state.phase === 'ended' && state.ending && (
+          <section className={g.endingCard}>
             <h2>{t(`ending.${state.ending.id}.title`)}</h2>
-            <p>{t(`ending.${state.ending.id}.text`)}</p>
+            <p className={g.body}>{t(`ending.${state.ending.id}.text`)}</p>
           </section>
-        ) : (
-          <p className={s.notice}>{t('ui.m1Notice')}</p>
         )}
-        <section className={s.card}>
-          <h2>{t('ui.lastSeason')}</h2>
-          {last ? <Summary log={last.log} /> : <p className={s.muted}>{t('ui.nothingHappened')}</p>}
-        </section>
+        {state.phase === 'event' && <EventCard def={def} state={state} onChoose={(eventUid, optionId) => dispatch({ type: 'chooseOption', eventUid, optionId })} />}
+        {state.phase === 'action' && (
+          <Hand
+            def={def}
+            state={state}
+            assignees={assignees}
+            onAssign={(uid, pid) => setAssignees((a) => ({ ...a, [uid]: pid }))}
+            onPlay={play}
+          />
+        )}
+        {last && state.phase !== 'ended' && (
+          <details className={s.card} open={state.phase === 'action'}>
+            <summary>
+              <h2 className={g.inlineH}>{t('ui.lastSeason')}</h2>
+            </summary>
+            <Summary log={last.log} />
+          </details>
+        )}
         {error && (
           <p role="alert" className={s.error}>
             {t(error)}
@@ -185,8 +233,8 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
         )}
       </main>
 
-      {/* 우측: 연대기 자리 (M2) — 지금은 저장 도구 */}
       <aside className={s.right}>
+        <Chronicle state={state} />
         <section className={s.panel}>
           <ExportButton state={state} />
           <LoadButton onLoad={onChange} />
@@ -194,9 +242,9 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
             {t('ui.newGame')}
           </button>
         </section>
+        {import.meta.env.DEV && <DebugPanel def={def} state={state} dispatch={dispatch} replace={onChange} />}
       </aside>
 
-      {/* 하단: 턴 종료 */}
       <footer className={s.footer}>
         <button type="button" className={s.primary} onClick={endTurn} disabled={!canEnd}>
           {state.phase === 'ended' ? t('ui.ended') : t('ui.endTurn')}
@@ -207,32 +255,39 @@ export function GameScreen({ def, state, onChange, onQuit }: Props) {
   );
 }
 
-/** 지난 계절의 변화를 출처별로 묶어 보여 준다. 색과 함께 부호(+/−)를 항상 표시한다. */
+/** 지난 계절의 변화를 출처별로 묶어 보여 준다. 색과 함께 부호(▲▼ +/−)를 항상 표시한다. */
 function Summary({ log }: { log: LogEntry[] }) {
   const { t, has } = useT();
-  const rows: { source: string; text: string; delta: number }[] = [];
   const byKey = new Map<string, number>();
+  const add = (k: string, d: number) => byKey.set(k, (byKey.get(k) ?? 0) + d);
   for (const l of log) {
-    if (l.kind === 'resource') byKey.set(`${l.source}|resource.${l.key}.name`, (byKey.get(`${l.source}|resource.${l.key}.name`) ?? 0) + l.delta);
-    if (l.kind === 'population') byKey.set(`${l.source}|ui.population`, (byKey.get(`${l.source}|ui.population`) ?? 0) + l.delta);
+    if (l.kind === 'resource') add(`${l.source}|resource.${l.key}.name`, l.delta);
+    if (l.kind === 'population') add(`${l.source}|ui.population`, l.delta);
   }
-  for (const [k, delta] of byKey) {
-    const [source, nameKey] = k.split('|') as [string, string];
-    rows.push({ source: has(`source.${source}`) ? t(`source.${source}`) : source, text: t(nameKey), delta });
-  }
-  const stages = log.filter((l) => l.kind === 'stage');
-  if (rows.length === 0 && stages.length === 0) return <p>{t('ui.nothingHappened')}</p>;
+  const sourceName = (src: string) => {
+    if (has(`source.${src}`)) return t(`source.${src}`);
+    const ev = /^event\.([^.]+)\./.exec(src);
+    if (ev && has(`event.${ev[1]}.title`)) return t(`event.${ev[1]}.title`);
+    const ac = /^action\.([^.]+)$/.exec(src);
+    if (ac && has(`action.${ac[1]}.name`)) return t(`action.${ac[1]}.name`);
+    return src;
+  };
+  const rows = [...byKey].filter(([, d]) => Math.abs(d) >= 0.05);
+  if (rows.length === 0) return <p>{t('ui.nothingHappened')}</p>;
   return (
     <ul className={s.summary}>
-      {rows.map((r, i) => (
-        <li key={i}>
-          <span className={s.muted}>{r.source}</span>
-          <span>{r.text}</span>
-          <strong className={r.delta >= 0 ? s.good : s.bad}>
-            {r.delta >= 0 ? '▲' : '▼'} {fmtDelta(r.delta)}
-          </strong>
-        </li>
-      ))}
+      {rows.map(([k, delta]) => {
+        const [source, nameKey] = k.split('|') as [string, string];
+        return (
+          <li key={k}>
+            <span className={s.muted}>{sourceName(source)}</span>
+            <span>{t(nameKey)}</span>
+            <strong className={delta >= 0 ? s.good : s.bad}>
+              {delta >= 0 ? '▲' : '▼'} {fmtDelta(delta)}
+            </strong>
+          </li>
+        );
+      })}
     </ul>
   );
 }
