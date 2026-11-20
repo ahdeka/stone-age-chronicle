@@ -25,7 +25,7 @@ const calledOff = [{ type: 'flag' as const, id: 'hunt_called_off', sinceMonths: 
 export const ch1Policies: PolicyTemplate[] = [
   {
     id: 'reindeer_big_hunt',
-    category: 'food',
+    category: 'hunt',
     appearsWhen: [{ type: 'animal', id: 'reindeer', state: ['migrating'] }],
     relevance: [{ when: [{ type: 'foodDays', max: 25 }], add: 20 }],
     priority: 60,
@@ -33,7 +33,7 @@ export const ch1Policies: PolicyTemplate[] = [
     crew: { min: 8, max: 14, keepHome: 4, prefer: 'hunt' },
     place: 'reindeer_ford',
     leader: { seat: 'hunt_leader' },
-    scene: { bg: '{place}', subjects: ['sub.reindeer_herd', 'sub.hunters'], overlay: '{weather}' },
+    scene: { bg: '{place}', subjects: ['sub.reindeer_run', 'sub.hunters', 'sub.reeds'], overlay: '{weather}' },
     knowledgeProgress: { meat_drying: 1 },
     steps: {
       early: [
@@ -78,7 +78,7 @@ export const ch1Policies: PolicyTemplate[] = [
   },
   {
     id: 'river_gather',
-    category: 'food',
+    category: 'gather',
     appearsWhen: [{ type: 'season', in: ['spring', 'summer', 'autumn'] }],
     priority: 30,
     cooldown: 0,

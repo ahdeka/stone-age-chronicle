@@ -1,0 +1,171 @@
+/* 상단 바, 하단 결정 바, 설정 */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(18, 16, 14, 0.94);
+  border-bottom: 1px solid var(--border);
+}
+
+.topInner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tribe {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.when {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.statWarn {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+}
+
+.iconPlain {
+  color: var(--icon);
+}
+
+.iconWarn {
+  color: var(--warn-text);
+}
+
+.warnText {
+  color: var(--warn-text);
+}
+
+/* ── 하단 결정 바 ── */
+
+.bar {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 6;
+  width: min(760px, calc(100% - 32px));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 22px;
+  border-radius: 20px;
+  background: rgba(28, 25, 21, 0.97);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+}
+
+.barText {
+  font-size: var(--fs-body);
+}
+
+.barButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── 설정 ── */
+
+.settingsWrap {
+  position: relative;
+}
+
+.settingsBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: var(--touch);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--icon);
+}
+
+.settings {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  width: min(320px, calc(100vw - 32px));
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--sheet);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: var(--fs-md);
+}
+
+.settingsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.segment {
+  display: flex;
+  gap: 6px;
+}
+
+.segment button {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--inset);
+}
+
+.segment button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 40px;
+}

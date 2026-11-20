@@ -1,7 +1,7 @@
 // 순마다의 마을 살림 (DESIGN.md §4.2 4~8번): 마을 일, 먹기, 장작, 부패, 건강
 
-import type { ChapterDefinition, GameState, Person } from '../types';
-import { addCohesion, injurePerson, killPerson, ledger, type RunCtx } from '../effects/apply';
+import type { ChapterDefinition, GameState, Line, Person } from '../types';
+import { addCohesion, alert, applyNarrative, injurePerson, killPerson, ledger, type RunCtx } from '../effects/apply';
 import { findAilment, findPlace, findPolicy, monthDef, phaseNo } from '../core/lookup';
 import { ageYears, bandDef, dailyFood, isVulnerable, laborUnits, living } from '../people/people';
 import { chance } from '../rng/rng';
@@ -14,13 +14,20 @@ function days(def: ChapterDefinition): number {
   return def.balance.daysPerPhase;
 }
 
+/** 마을에서 일하는 사람 (원정대 제외, 일할 수 있는 사람) */
+export function villageWorkers(def: ChapterDefinition, state: GameState): Person[] {
+  const away = new Set(state.work.chosen?.crew ?? []);
+  return living(state).filter((p) => !away.has(p.id) && laborUnits(def, state, p) > 0);
+}
+
 /** 마을 일손 (원정대 제외), 굶주림 효율 반영 */
 export function villageUnits(def: ChapterDefinition, state: GameState): number {
-  const away = new Set(state.work.chosen?.crew ?? []);
-  const units = living(state)
-    .filter((p) => !away.has(p.id))
-    .reduce((a, p) => a + laborUnits(def, state, p), 0);
+  const units = villageWorkers(def, state).reduce((a, p) => a + laborUnits(def, state, p), 0);
   return units * (def.balance.ration.efficiency[state.hungerStage] ?? 1);
+}
+
+function push(state: GameState, line: Line): void {
+  state.work.reports[state.work.reports.length - 1]!.lines.push(line);
 }
 
 export function chores(ctx: RunCtx): void {
@@ -53,10 +60,12 @@ export function chores(ctx: RunCtx): void {
     food += got;
   }
   ledger(state, 'food', food, 'village.gather');
-  ctx.state.work.reports[ctx.state.work.reports.length - 1]!.lines.push({
-    key: 'line.village',
-    params: { wood: Math.round(wood), food: Math.round(food) },
-  });
+  // 마을 서술: 몇 명이 무엇을 얼마나 했는가 (변형은 계절, 날씨, 장작 사정을 따른다)
+  state.work.vars['wood'] = Math.round(wood);
+  state.work.vars['gathered'] = Math.round(food);
+  state.work.vars['villagers'] = villageWorkers(def, state).length;
+  if (state.work.vars['villagers'] === 0) push(state, { key: 'line.village.empty', group: 'village' });
+  else applyNarrative({ ...ctx, group: 'village', source: 'village' }, def.hooks.villageNarrative);
 }
 
 export function consume(ctx: RunCtx): void {
@@ -73,14 +82,15 @@ export function consume(ctx: RunCtx): void {
   else if (have >= need * r.reduced) ratio = r.reduced;
   else ratio = have / need;
   const eaten = eat(def, state.stores.food, need * ratio, monthDef(def, state).temp);
-  ledger(state, 'food', -eaten, 'upkeep.food');
+  ledger(state, 'food', -eaten, 'upkeep.food', { people: people.length, days: d });
 
   const stage = ratio >= 1 - 1e-9 ? 0 : ratio >= r.reduced - 1e-9 ? 1 : 2;
   if (stage !== state.hungerStage) {
     state.work.notable = true;
-    state.work.reports[state.work.reports.length - 1]!.lines.push({ key: `line.hunger.${stage}` });
+    push(state, { key: `line.hunger.${stage}`, group: 'village' });
   }
   state.hungerStage = stage;
+  state.work.maxHunger = Math.max(state.work.maxHunger, stage);
   for (const p of people) {
     if (stage === 0) p.hungerDays = Math.max(0, p.hungerDays - r.recoverPerPhase);
     else p.hungerDays += d * (1 - ratio);
@@ -100,7 +110,7 @@ export function burnFirewood(ctx: RunCtx): void {
   ledger(state, 'firewood', -state.stores.firewood, 'upkeep.firewood');
   state.stores.firewood = 0;
   const c = def.balance.cold;
-  state.work.reports[state.work.reports.length - 1]!.lines.push({ key: 'line.cold' });
+  push(state, { key: 'line.cold', group: 'village' });
   state.work.notable = true;
   addCohesion(state, def, c.cohesion * short);
   for (const p of living(state).sort(byId)) {
@@ -129,8 +139,10 @@ export function health(ctx: RunCtx): void {
     const healed = p.ailments.filter((a) => a.healsAt <= now);
     if (healed.length > 0) {
       p.ailments = p.ailments.filter((a) => a.healsAt > now);
-      for (const a of healed)
-        state.work.reports[state.work.reports.length - 1]!.lines.push({ key: 'line.healed', params: { name: p.name, ailment: { key: `ailment.${a.kind}` } } });
+      for (const a of healed) {
+        push(state, { key: 'line.healed', params: { name: p.name, ailment: { key: `ailment.${a.kind}` } }, group: 'people' });
+        alert(state, { kind: 'healed', personId: p.id, what: a.kind });
+      }
     }
     // 병으로 인한 죽음
     for (const a of p.ailments) {

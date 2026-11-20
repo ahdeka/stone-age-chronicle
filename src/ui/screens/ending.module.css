@@ -1,0 +1,28 @@
+.lead {
+  margin: 0;
+  font-size: calc(1.25rem * var(--font-scale));
+  line-height: 1.8;
+  color: var(--prose-strong);
+}
+
+.list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--fs-body);
+  line-height: 1.75;
+  color: var(--prose);
+}
+
+.month {
+  color: var(--accent);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}

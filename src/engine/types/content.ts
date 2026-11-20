@@ -1,6 +1,6 @@
 // 콘텐츠 타입: 방침, 활동(등급 판정), 사건, 서술, 장면 (DESIGN.md §3.5)
 
-import type { AgeBand, Id, Phase, Tier } from './common';
+import type { AgeBand, Hint, Id, Phase, Tier } from './common';
 import type { Condition, PersonQuery } from './condition';
 import type { Effect, StatKey, WhoRef } from './effect';
 
@@ -99,6 +99,8 @@ export interface PolicyTemplate {
 export interface EventOption {
   id: Id;
   requires?: Condition[];
+  /** 판정(activity)이 없는 선택지의 위험 단서 (작가가 정한다). 판정이 있으면 엔진이 계산한다 */
+  hint?: Hint;
   activity?: ActivityDef;
   effects: Effect[];
   narrative?: Id;

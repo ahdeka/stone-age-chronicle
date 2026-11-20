@@ -3,12 +3,12 @@ import { deserialize, type GameState } from '../../engine';
 import { getChapter } from '../../data/registry';
 import { useT } from '../i18n';
 import { downloadSave } from '../storage';
-import s from '../screens/screens.module.css';
+import u from '../ui.module.css';
 
 export function ExportButton({ state }: { state: GameState }) {
   const { t } = useT();
   return (
-    <button type="button" className={s.secondary} onClick={() => downloadSave(state)}>
+    <button type="button" className={u.btnText} onClick={() => downloadSave(state)}>
       {t('ui.export')}
     </button>
   );
@@ -29,7 +29,7 @@ export function LoadButton({ onLoad }: { onLoad: (state: GameState) => void }) {
 
   return (
     <>
-      <button type="button" className={s.secondary} onClick={() => input.current?.click()}>
+      <button type="button" className={u.btnGhost} onClick={() => input.current?.click()}>
         {t('ui.import')}
       </button>
       <input
@@ -44,7 +44,7 @@ export function LoadButton({ onLoad }: { onLoad: (state: GameState) => void }) {
         }}
       />
       {error && (
-        <p role="alert" className={s.error}>
+        <p role="alert" style={{ color: 'var(--warn-text)', margin: 0, flexBasis: '100%' }}>
           {t(error)}
         </p>
       )}

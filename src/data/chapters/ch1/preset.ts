@@ -63,8 +63,29 @@ export const ch1People: PresetPerson[] = rows.map(([id, sex, age, extra]) => ({
   ...(elderParents[id] ? { parents: elderParents[id] } : {}),
 }));
 
+const P = 'preset.grey_river';
+
 export const ch1Preset: StartPreset = {
   id: 'grey_river',
+  presentation: {
+    chapterLabel: `${P}.chapter`,
+    introLines: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${P}.intro.${n}`),
+    title: 'tribe.name',
+    meta: `${P}.meta`,
+    tagline: `${P}.tagline`,
+    land: {
+      title: `${P}.land.title`,
+      subtitle: `${P}.land.subtitle`,
+      intro: `${P}.land.intro`,
+      facts: ['terrain', 'climate', 'rain', 'river', 'soil', 'danger'].map((f) => ({
+        mark: `${P}.land.${f}.mark`,
+        label: `${P}.land.${f}.label`,
+        value: `${P}.land.${f}.value`,
+      })),
+    },
+    chronicleOpening: `${P}.chronicle`,
+  },
+  shelterUnits: 5,
   startMonthIndex: CH1_START_MONTH_INDEX,
   campPlace: 'river_bend',
   shelter: 'tent',

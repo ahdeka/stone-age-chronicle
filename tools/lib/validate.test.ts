@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { chapters, commonStrings } from '../../src/data/registry';
 import { tweakDef } from '../../src/test/fixtures';
+import { SCENE_IDS } from '../../src/assets/sceneIds';
 import { validate } from './validate';
 
 const strings = { ...commonStrings.ko, ...chapters['ch1']!.strings.ko };
@@ -43,6 +44,16 @@ describe('콘텐츠 검증기', () => {
     const m = msgs(def);
     expect(m.some((x) => x.startsWith('warn:event.wolves_circle_camp.watch') && x.includes('비용'))).toBe(true);
     expect(m.some((x) => x.startsWith('error:event.wolves_circle_camp.ignore') && x.includes('가짜 선택지'))).toBe(true);
+  });
+
+  it('매니페스트에 없는 그림과 없는 측정기를 잡는다', () => {
+    const def = tweakDef((d) => {
+      d.content.policies[0]!.scene = { bg: 'bg.moon_base' };
+      d.goals[0]!.paths[0]!.measure = { id: 'nope', target: 1 };
+    });
+    const m = msgs(def).concat(validate(def, strings, SCENE_IDS).map((i) => i.msg));
+    expect(m.some((x) => x.includes('매니페스트에 없는 그림: bg.moon_base'))).toBe(true);
+    expect(m.some((x) => x.includes('없는 측정기: nope'))).toBe(true);
   });
 
   it('도달할 수 없는 사건과 세우지 않는 깃발을 경고한다', () => {

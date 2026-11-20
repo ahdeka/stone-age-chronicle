@@ -17,6 +17,25 @@ describe('저장/불러오기', () => {
     expect(JSON.stringify(b)).toBe(JSON.stringify(a));
   });
 
+  it('v1(재설계 M1) 저장 파일은 v2로 옮겨진다', () => {
+    const s = newGame('mig');
+    const v1 = structuredClone(s) as unknown as Record<string, unknown>;
+    v1['saveVersion'] = 1;
+    delete (v1['shelter'] as Record<string, unknown>)['units'];
+    const w = v1['work'] as Record<string, unknown>;
+    delete w['advice'];
+    delete w['maxHunger'];
+    for (const r of w['reports'] as Record<string, unknown>[]) delete r['rows'];
+    const file = JSON.stringify({ format: SAVE_FORMAT, generation: 'monthly', saveVersion: 1, chapterId: 'ch1', savedAt: null, state: v1 });
+    const r = deserialize(file);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.saveVersion).toBe(2);
+    expect(r.state.shelter.units).toBe(1);
+    expect(r.state.work.advice).toEqual([]);
+    expect(r.state.work.reports[0]!.rows).toEqual([]);
+  });
+
   it('이전 설계(카드 방식)의 저장 파일은 거부한다', () => {
     const old = JSON.stringify({ format: SAVE_FORMAT, saveVersion: 2, chapterId: 'ch1', savedAt: null, state: { turn: 3 } });
     expect(deserialize(old)).toEqual({ ok: false, error: 'error.save.oldDesign' });

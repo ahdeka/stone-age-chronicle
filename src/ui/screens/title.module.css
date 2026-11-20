@@ -1,0 +1,81 @@
+.page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+}
+
+.scene svg {
+  height: 100%;
+}
+
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(8, 7, 6, 0.94) 0%, rgba(8, 7, 6, 0.75) 45%, rgba(8, 7, 6, 0.1) 80%);
+}
+
+.box {
+  position: relative;
+  max-width: 640px;
+  padding: 18vh 48px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .box {
+    padding: 14vh 16px 32px;
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2.5rem, 7vw, 4rem);
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: calc(1.25rem * var(--font-scale));
+  color: var(--icon);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.seed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 320px;
+  font-size: var(--fs-sm);
+}
+
+.seed input {
+  min-height: var(--touch);
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--inset);
+}
+
+.error {
+  color: var(--warn-text);
+}

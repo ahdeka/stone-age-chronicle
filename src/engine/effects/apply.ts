@@ -7,8 +7,10 @@ import type {
   GameState,
   Id,
   Label,
+  LineGroup,
   LineParam,
   LineParamValue,
+  Alert,
   Person,
   PhaseReport,
   WhoRef,
@@ -27,6 +29,8 @@ export interface RunCtx {
   crew: Id[];
   /** 장부에 남을 출처 키 (예: 'policy.big_hunt', 'event.wolves.fire') */
   source: string;
+  /** 서술 줄이 속할 무리 */
+  group: LineGroup;
 }
 
 // ── 보고 ──
@@ -37,11 +41,25 @@ export function currentReport(state: GameState): PhaseReport {
   return r;
 }
 
-export function ledger(state: GameState, res: Id, delta: number, source: string): void {
+/** 장부에 남긴다: 달 장부(정산표)와 지금 단계의 행(진행 화면)에 함께 */
+export function ledger(state: GameState, res: Id, delta: number, source: string, params?: Record<string, number>): void {
   if (Math.abs(delta) < 1e-9) return;
-  state.work.ledger.push({ res, source, delta });
+  state.work.ledger.push({ res, source, delta, ...(params ? { params } : {}) });
   const r = state.work.reports[state.work.reports.length - 1];
-  if (r) r.deltas[res] = (r.deltas[res] ?? 0) + delta;
+  if (!r) return;
+  if (res !== 'haul') r.deltas[res] = (r.deltas[res] ?? 0) + delta;
+  const row = r.rows.find((x) => x.res === res && x.source === source && Math.sign(x.delta) === Math.sign(delta));
+  if (row) {
+    row.delta += delta;
+    if (params) {
+      row.params ??= {};
+      for (const [k, v] of Object.entries(params)) row.params[k] = (row.params[k] ?? 0) + v;
+    }
+  } else r.rows.push({ res, source, delta, ...(params ? { params: { ...params } } : {}) });
+}
+
+export function alert(state: GameState, a: Alert): void {
+  state.work.reports[state.work.reports.length - 1]?.alerts.push(a);
 }
 
 export function personLabel(p: Person): Label {
@@ -60,7 +78,7 @@ export function resolveParams(ctx: RunCtx, params: Record<string, LineParam> | u
   for (const [k, v] of Object.entries(state.work.vars)) base[k] = Math.round(v);
   for (const [slot, id] of Object.entries(ctx.actors)) {
     const p = state.people[id];
-    if (p) base[`actor:${slot}`] = p.name;
+    if (p) base[`actor_${slot}`] = p.name;
   }
   for (const [k, v] of Object.entries(params ?? {})) {
     if (typeof v === 'string' && v.startsWith('$')) {
@@ -72,7 +90,7 @@ export function resolveParams(ctx: RunCtx, params: Record<string, LineParam> | u
 }
 
 export function pushLine(ctx: RunCtx, key: string, params?: Record<string, LineParam>): void {
-  currentReport(ctx.state).lines.push({ key, params: resolveParams(ctx, params) });
+  currentReport(ctx.state).lines.push({ key, params: resolveParams(ctx, params), group: ctx.group });
 }
 
 // ── 수량 ──
@@ -119,7 +137,8 @@ export function killPerson(ctx: RunCtx, p: Person, cause: Id): void {
   state.work.deaths.push(p.id);
   state.work.notable = true;
   addCohesion(state, def, -def.balance.cohesion.deathCost);
-  currentReport(state).lines.push({ key: 'line.death', params: { name: p.name, cause: { key: `cause.${cause}` } } });
+  currentReport(state).lines.push({ key: 'line.death', params: { name: p.name, cause: { key: `cause.${cause}` } }, group: 'people' });
+  alert(state, { kind: 'death', personId: p.id, what: cause });
   offerChronicle(state, 'chron.death', def.balance.chronicle.deathImportance, { name: p.name, cause: { key: `cause.${cause}` } });
 }
 
@@ -130,7 +149,8 @@ export function injurePerson(ctx: RunCtx, p: Person, ailment: Id, severity: 1 | 
   const healsAt = phaseNo(state) + Math.max(1, Math.round(span * (0.5 + severity * 0.25)));
   p.ailments.push({ kind: ailment, severity, healsAt });
   state.work.notable = true;
-  currentReport(state).lines.push({ key: 'line.ailing', params: { name: p.name, ailment: { key: `ailment.${ailment}` } } });
+  currentReport(state).lines.push({ key: 'line.ailing', params: { name: p.name, ailment: { key: `ailment.${ailment}` } }, group: 'people' });
+  alert(state, { kind: a.type === 'sickness' ? 'sick' : 'injury', personId: p.id, what: ailment });
 }
 
 // ── 그 밖의 상태 ──
@@ -155,7 +175,7 @@ export function grantKnowledge(ctx: RunCtx, id: Id): void {
   if (state.knowledge.has.includes(id)) return;
   state.knowledge.has.push(id);
   state.work.notable = true;
-  currentReport(state).lines.push({ key: 'line.knowledge', params: { knowledge: { key: `knowledge.${id}` } } });
+  currentReport(state).lines.push({ key: 'line.knowledge', params: { knowledge: { key: `knowledge.${id}` } }, group: 'info' });
   offerChronicle(state, 'chron.knowledge', 60, { knowledge: { key: `knowledge.${id}` } });
 }
 
@@ -199,14 +219,17 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       const a = findAnimal(def, e.animal);
       const n = Math.max(0, Math.round(rollAmount(state, e.count)));
       const meat = n * a.meatKg;
-      if (ctx.crew.length > 0) addLot(state.work.haul, a.foodKind, meat);
-      else {
+      if (ctx.crew.length > 0) {
+        // 원정지의 짐: 마을 식량은 운반할 때 늘어난다
+        addLot(state.work.haul, a.foodKind, meat);
+        ledger(state, 'haul', meat, `catch.${a.id}`, { n });
+      } else {
         addLot(state.stores.food, a.foodKind, meat);
-        ledger(state, 'food', meat, ctx.source);
+        ledger(state, 'food', meat, `catch.${a.id}`, { n });
       }
       for (const [g, per] of Object.entries(a.goods ?? {})) {
         state.stores.goods[g] = (state.stores.goods[g] ?? 0) + per * n;
-        ledger(state, g, per * n, ctx.source);
+        ledger(state, g, per * n, `catch.${a.id}`);
       }
       state.work.vars['caught'] = (state.work.vars['caught'] ?? 0) + n;
       state.work.vars['meat'] = (state.work.vars['meat'] ?? 0) + meat;
@@ -240,7 +263,10 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
     }
     case 'heal': {
       const p = resolveWho(ctx, e.who);
-      if (p) p.ailments = [];
+      if (p && p.ailments.length > 0) {
+        for (const a of p.ailments) alert(state, { kind: 'healed', personId: p.id, what: a.kind });
+        p.ailments = [];
+      }
       return;
     }
     case 'animal': {
@@ -267,7 +293,11 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       return;
     }
     case 'shelter':
-      state.shelter = { kind: e.kind, place: e.place ?? state.shelter.place };
+      state.shelter = {
+        kind: e.kind,
+        place: e.place ?? state.shelter.place,
+        units: e.units ?? (e.kind === state.shelter.kind ? state.shelter.units : 1),
+      };
       state.work.notable = true;
       return;
     case 'flag':

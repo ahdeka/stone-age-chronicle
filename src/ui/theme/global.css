@@ -1,26 +1,69 @@
-/* 기본 토큰. 장 테마(chapter.theme.tokens)가 실행 중에 같은 변수를 덮어쓴다 (applyTheme). */
+/* 기본 토큰. 장 테마(chapter.theme.tokens)가 실행 중에 같은 변수를 덮어쓴다 (applyTheme).
+   값은 화면 시안의 디자인 토큰이다 (docs/design/design-handoff/README.md). */
 :root {
-  --bg: #16130f;
-  --surface: #221d17;
-  --card: #2b241c;
-  --text: #ece2cf;
-  --text-muted: #bfaf94;
-  --text-faint: #9a8b74;
-  --accent: #f0a050;
-  --ochre: #c98a4b;
-  --danger: #e9785f;
-  --good: #9dc08b;
+  --bg: #12100e;
+  --bg-deep: #0c0b0a;
+  --surface: #1c1915;
+  --inset: #14110e;
+  --sheet: #191613;
+  --raised: #2a241d;
+  --border: #2e2821;
+  --border-strong: #4a3e30;
+  --border-soft: #3a3229;
+  --border-hover: #6b5a44;
+  --button-line: #5a4d3c;
+  --text: #f1e8d8;
+  --prose: #ddd2bf;
+  --prose-strong: #ebe1d0;
+  --quote: #e6dccb;
+  --text-muted: #b3a690;
+  --text-faint: #8f8370;
+  --text-disabled: #a39680;
+  --text-past: #a89c88;
+  --icon: #cbbfa9;
+  --accent: #e0a15a;
+  --accent-hover: #f0bd7f;
+  --accent-ink: #17120c;
+  --line: #c9813a;
+  --bone: #d9cbb2;
+  --warn-bg: #2a1c16;
+  --warn-border: #6b3a26;
+  --warn-text: #f2a283;
+  --warn-soft: #f6c3ad;
+  --alert-bg: #241a16;
+  --alert-border: #5a3426;
+  --alert-text: #e6c9bb;
+  --up: #9fd0a8;
+  --down: #f2a283;
+  --risk-sure-bg: #1d2a33;
+  --risk-sure: #a9cde3;
+  --risk-fair-bg: #2e2817;
+  --risk-fair: #e6cd86;
+  --risk-risky-bg: #38201a;
+  --risk-risky: #f2a283;
+  --risk-unknown-bg: #28223a;
+  --risk-unknown: #c9b8ec;
 
-  /* 글자 크기 3단계 설정은 이 값 하나로 바꾼다 (DESIGN.md §16) */
+  --font-serif: 'Noto Serif KR', 'Nanum Myeongjo', 'Batang', serif;
+  --font-sans: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+
+  /* 글자 크기 3단계 (설정에서 바꾼다) */
   --font-scale: 1;
-  --fs-body: calc(1.0625rem * var(--font-scale)); /* 17px */
-  --fs-small: calc(0.9375rem * var(--font-scale)); /* 15px — 이보다 작게 쓰지 않는다 */
-  --fs-title: calc(1.375rem * var(--font-scale));
-  --lh-body: 1.65;
-  --measure: 34em;
+  --fs-xs: calc(0.8125rem * var(--font-scale)); /* 13px: 배지, 눈금 글자 */
+  --fs-sm: calc(0.875rem * var(--font-scale)); /* 14px */
+  --fs-md: calc(0.9375rem * var(--font-scale)); /* 15px */
+  --fs-body: calc(1.0625rem * var(--font-scale)); /* 17px: 본문 */
+  --fs-lg: calc(1.25rem * var(--font-scale));
+  --fs-xl: calc(1.625rem * var(--font-scale));
+  --fs-2xl: calc(2.125rem * var(--font-scale));
 
-  --radius: 6px;
-  --gap: 12px;
+  --radius-card: 16px;
+  --radius-inner: 12px;
+  --radius-pill: 26px;
+  --touch: 44px;
+
+  /* 움직임 속도 배율 (설정: 느리게 1.5 / 보통 1 / 빠르게 0.6) */
+  --motion-scale: 1;
 
   color-scheme: dark;
 }
@@ -34,15 +77,15 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family:
-    'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: var(--fs-body);
-  line-height: var(--lh-body);
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
 }
@@ -51,7 +94,43 @@ button {
   cursor: pointer;
 }
 
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 움직임 줄이기: 운영체제 설정 또는 게임 설정. 모든 애니메이션과 전환을 거의 즉시 끝낸다 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }

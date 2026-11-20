@@ -1,0 +1,287 @@
+/* 월초 상황 화면 (시안 TurnModal) */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding-bottom: 130px;
+}
+
+.layout {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+@media (max-width: 640px) {
+  .layout {
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
+.main {
+  flex: 999 1 640px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.side {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  min-height: 420px;
+}
+
+.heroScene {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+
+.heroShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(10, 9, 8, 0.96) 0%, rgba(10, 9, 8, 0.78) 38%, rgba(10, 9, 8, 0) 72%);
+}
+
+.heroText {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .hero {
+    min-height: 460px;
+  }
+  .heroText {
+    padding: 20px;
+  }
+}
+
+.headline {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.news {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: calc(1.125rem * var(--font-scale));
+  line-height: 1.7;
+  color: var(--prose);
+  min-height: 5em;
+}
+
+.news p {
+  margin: 0;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.landIntro {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.8;
+  color: var(--prose);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.fact {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--inset);
+  border: 1px solid #2a241d;
+}
+
+.factMark {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--raised);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.factText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.factLabel {
+  font-size: var(--fs-xs);
+}
+
+.factValue {
+  font-size: var(--fs-md);
+  line-height: 1.55;
+}
+
+.people {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.person {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--inset);
+  border: 1px solid #2a241d;
+}
+
+.personText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.personRole {
+  font-size: var(--fs-xs);
+}
+
+.goal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goalHead {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-md);
+}
+
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 6px;
+  background: var(--accent);
+  transition: width calc(0.8s * var(--motion-scale)) ease-out;
+}
+
+.paths {
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* 아직 잴 수 없는 길: 흐리게 (투명도 대신 흐린 글자색과 점선 밑줄) */
+.unmeasured {
+  color: var(--text-faint);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.bands {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  text-align: center;
+}
+
+.bandBox {
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: var(--inset);
+}
+
+.bandNum {
+  font-size: calc(1.375rem * var(--font-scale));
+  font-weight: 700;
+}
+
+.bandLabel {
+  font-size: var(--fs-xs);
+}
+
+.link {
+  align-self: flex-start;
+  min-height: var(--touch);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.memory {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--prose);
+}
+
+.memoryEmpty {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.6;
+}
+
+.chron {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.75;
+  color: var(--prose);
+}
+
+.chronMonth {
+  color: var(--accent);
+}

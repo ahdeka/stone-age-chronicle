@@ -1,0 +1,209 @@
+/* 장면 레이어의 선과 움직임. 움직임 길이는 --motion-scale(속도 설정)을 곱한다.
+   움직임 줄이기(운영체제 또는 설정)이면 global.css가 모두 멈춘다. */
+
+.ln {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lnThin {
+  fill: none;
+  stroke: #d9a066;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lnBone {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+.lnStranger {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.lnReed {
+  fill: none;
+  stroke: #4a4030;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+@keyframes herd {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-140px);
+  }
+}
+@keyframes run {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-260px);
+  }
+}
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  60% {
+    opacity: 0.75;
+    transform: scale(0.97);
+  }
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes rise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-30px, -200px);
+    opacity: 0;
+  }
+}
+@keyframes fall {
+  0% {
+    transform: translate(0, -40px);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(50px, 480px);
+    opacity: 0;
+  }
+}
+@keyframes streak {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(-220px, 120px);
+  }
+}
+@keyframes rainfall {
+  from {
+    transform: translate(0, -60px);
+  }
+  to {
+    transform: translate(-20px, 480px);
+  }
+}
+@keyframes drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-80px);
+  }
+}
+@keyframes eyes {
+  0%,
+  44%,
+  52%,
+  100% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 0;
+  }
+}
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.herd {
+  animation: herd calc(18s * var(--motion-scale)) ease-in-out infinite alternate;
+}
+.run {
+  animation: run calc(7s * var(--motion-scale)) linear infinite;
+}
+.reed {
+  animation: sway calc(4s * var(--motion-scale)) ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.fire {
+  animation: flicker calc(1.4s * var(--motion-scale)) ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.star {
+  animation: twinkle calc(3.4s * var(--motion-scale)) ease-in-out infinite;
+}
+.ember {
+  animation: rise calc(4.5s * var(--motion-scale)) linear infinite;
+}
+.fall {
+  animation: fall calc(9s * var(--motion-scale)) linear infinite;
+}
+.streak {
+  animation: streak calc(1.6s * var(--motion-scale)) linear infinite;
+}
+.rain {
+  animation: rainfall calc(0.9s * var(--motion-scale)) linear infinite;
+}
+.drift {
+  animation: drift calc(30s * var(--motion-scale)) ease-in-out infinite alternate;
+}
+.eyes {
+  animation: eyes calc(5s * var(--motion-scale)) ease-in-out infinite;
+}
+.bob {
+  animation: bob calc(1.2s * var(--motion-scale)) ease-in-out infinite;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -1,4 +1,4 @@
-// 테마 명암비 검사 (DESIGN.md §16): 긴 본문 7:1(AAA), 나머지 글자 4.5:1(AA)
+// 테마 명암비 검사: 긴 본문 7:1(AAA), 짧은 글자와 배지 4.5:1(AA). 화면 시안의 토큰을 그대로 검사한다.
 
 import { describe, expect, it } from 'vitest';
 import { chapters } from './registry';
@@ -15,22 +15,41 @@ export function contrast(a: string, b: string): number {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
 
-const BACKGROUNDS = ['bg', 'surface', 'card'];
-const LONG_TEXT = { tokens: ['text', 'text-muted'], min: 7 };
-const SHORT_TEXT = { tokens: ['text-faint', 'accent', 'ochre', 'danger', 'good'], min: 4.5 };
+const BACKGROUNDS = ['bg', 'bg-deep', 'surface', 'inset', 'sheet'];
+/** 서술, 대사, 소개 문단처럼 긴 글 */
+const LONG_TEXT = ['text', 'prose', 'prose-strong', 'quote', 'text-muted'];
+/** 짧은 정보 (흐린 글자는 짧은 정보에만 쓴다) */
+const SHORT_TEXT = ['text-faint', 'accent', 'warn-text', 'up', 'down', 'icon', 'text-past'];
+/** 글자색 / 배경색 짝 */
+const PAIRS: [string, string][] = [
+  ['risk-sure', 'risk-sure-bg'],
+  ['risk-fair', 'risk-fair-bg'],
+  ['risk-risky', 'risk-risky-bg'],
+  ['risk-unknown', 'risk-unknown-bg'],
+  ['warn-soft', 'warn-bg'],
+  ['warn-text', 'warn-bg'],
+  ['alert-text', 'alert-bg'],
+  ['accent-ink', 'accent'],
+  ['text-disabled', 'raised'],
+  ['text', 'raised'],
+];
 
 describe('theme contrast', () => {
   for (const [id, entry] of Object.entries(chapters)) {
     const tokens = entry.definition.theme.tokens;
-    it(`${id}: 긴 본문 색은 모든 배경에서 7:1 이상`, () => {
-      for (const bg of BACKGROUNDS)
-        for (const fg of LONG_TEXT.tokens)
-          expect(contrast(tokens[fg]!, tokens[bg]!), `${fg} on ${bg}`).toBeGreaterThanOrEqual(LONG_TEXT.min);
+    const tok = (k: string) => {
+      const v = tokens[k];
+      if (!v) throw new Error(`${id}: 토큰 없음 ${k}`);
+      return v;
+    };
+    it(`${id}: 긴 글은 모든 배경에서 7:1 이상`, () => {
+      for (const bg of BACKGROUNDS) for (const fg of LONG_TEXT) expect(contrast(tok(fg), tok(bg)), `${fg} on ${bg}`).toBeGreaterThanOrEqual(7);
     });
-    it(`${id}: 나머지 글자 색은 모든 배경에서 4.5:1 이상`, () => {
-      for (const bg of BACKGROUNDS)
-        for (const fg of SHORT_TEXT.tokens)
-          expect(contrast(tokens[fg]!, tokens[bg]!), `${fg} on ${bg}`).toBeGreaterThanOrEqual(SHORT_TEXT.min);
+    it(`${id}: 짧은 글자는 모든 배경에서 4.5:1 이상`, () => {
+      for (const bg of BACKGROUNDS) for (const fg of SHORT_TEXT) expect(contrast(tok(fg), tok(bg)), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    });
+    it(`${id}: 배지·경고·버튼 짝은 4.5:1 이상`, () => {
+      for (const [fg, bg] of PAIRS) expect(contrast(tok(fg), tok(bg)), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
     });
   }
 });

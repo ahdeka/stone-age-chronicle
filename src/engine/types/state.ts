@@ -91,9 +91,13 @@ export interface BoundPolicy {
 
 export type LineParamValue = string | number | Label;
 
+/** 서술 줄이 속한 무리. 화면은 같은 무리의 연속된 줄을 한 문단으로 묶는다 */
+export type LineGroup = 'crew' | 'village' | 'event' | 'people' | 'info';
+
 export interface Line {
   key: string;
   params?: Record<string, LineParamValue>;
+  group?: LineGroup;
 }
 
 export interface LedgerLine {
@@ -101,16 +105,49 @@ export interface LedgerLine {
   res: Id;
   source: string;
   delta: number;
+  /** 행 이름의 변수 (예: 잡은 마릿수, 먹은 사람 수). 같은 행을 합칠 때 숫자는 더한다 */
+  params?: Record<string, number>;
+}
+
+/** 사람에게 일어난 일 (진행 화면의 알림 카드) */
+export interface Alert {
+  kind: 'injury' | 'sick' | 'death' | 'healed';
+  personId: Id;
+  /** 부상·병 id 또는 죽음의 원인 id */
+  what: Id;
 }
 
 export interface PhaseReport {
   slot: EventSlot | 'settlement';
   weather?: Id;
+  /** 이 단계가 벌어진 곳 */
+  place?: Id;
   scene: SceneSpec;
   lines: Line[];
   tier?: Tier;
   /** 이 단계의 순수 증감 (애니메이션용) */
   deltas: Record<Id, number>;
+  /** 이 단계의 장부 행 (출처별로 합친 것). res 'haul'은 원정지의 짐 */
+  rows: LedgerLine[];
+  alerts: Alert[];
+  /** 단계 시작과 끝의 마을 식량·장작 (굴러가는 숫자용) */
+  from: { food: number; firewood: number };
+  to?: { food: number; firewood: number };
+}
+
+/** 월초 보고: 머리글, 소식, 상황 칩, 장면, 조언 */
+export interface Briefing {
+  headline: Line;
+  news: Line[];
+  chips: { key: string; params?: Record<string, LineParamValue>; tone: 'warn' | 'normal' | 'good' }[];
+  scene: SceneSpec;
+}
+
+export interface Advice {
+  personId: Id;
+  /** 이 조언자가 가장 높게 친 후보 (방침 uid). 없으면 일반 조언 */
+  policyUid?: Id;
+  line: Line;
 }
 
 export type Decision =
@@ -145,6 +182,10 @@ export interface MonthWork {
   villageChecked: boolean;
   /** 월초 현황 (정산표의 시작 값) */
   start: { food: number; firewood: number; population: number };
+  brief?: Briefing;
+  advice: Advice[];
+  /** 이번 달에 겪은 가장 깊은 굶주림 단계 (목표 측정용) */
+  maxHunger: number;
 }
 
 export interface MonthReport {
@@ -176,7 +217,8 @@ export interface GameState {
   startMonthIndex: number;
   step: Step;
   campPlace: Id;
-  shelter: { kind: Id; place: Id };
+  /** units: 거처 채 수 (천막 다섯 채) */
+  shelter: { kind: Id; place: Id; units: number };
   people: Record<Id, Person>;
   chiefLine: number;
   stores: Stores;

@@ -39,7 +39,8 @@ export type Effect =
   | { type: 'heal'; who: WhoRef }
   | { type: 'animal'; id: Id; state?: Id; at?: Id | null; known?: boolean; vars?: Record<string, number> }
   | { type: 'place'; id: Id; discovered?: boolean; addFact?: Id; stock?: { yield: Id; delta: number } }
-  | { type: 'shelter'; kind: Id; place?: Id }
+  /** units: 채 수 (없으면 같은 종류는 그대로, 다른 종류는 1) */
+  | { type: 'shelter'; kind: Id; place?: Id; units?: number }
   | { type: 'flag'; id: Id; set: boolean }
   | { type: 'counter'; id: Id; delta: number }
   | { type: 'knowledge'; id: Id; progress?: number; grant?: boolean }

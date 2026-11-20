@@ -15,4 +15,16 @@ export const commonBalance = {
   events: { villageChancePerMonth: 0.35, maxPerMonth: 2 },
   cohesion: { max: 100, deathCost: 4, lowThreshold: 10 },
   chronicle: { deathImportance: 50 },
+  /** 화면 기준값 (시안: 식량 16일분 미만이면 경고) */
+  ui: {
+    foodWarnDays: 16,
+    firewoodWarnDays: 10,
+    cohesionBands: [
+      { min: 75, id: 'firm' },
+      { min: 45, id: 'normal' },
+      { min: 25, id: 'shaky' },
+      { min: 0, id: 'broken' },
+    ],
+    maxNews: 3,
+  },
 } satisfies Partial<ChapterBalance>;

@@ -1,0 +1,63 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  background: rgba(6, 5, 4, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.dialog {
+  width: min(860px, 100%);
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: var(--sheet);
+  border: 1px solid var(--border-strong);
+  outline: none;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.seat {
+  font-size: var(--fs-xs);
+  color: var(--accent);
+}
+
+.ailing {
+  color: var(--warn-text);
+}
+
+.sub {
+  margin: 18px 0 8px;
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+}
+
+.dead {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}

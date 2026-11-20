@@ -19,7 +19,27 @@ export interface SaveFile {
 
 /** n → n+1 변환. 예: migrations[1] = v1 상태를 v2로 바꾸는 함수 */
 type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
-export const migrations: Record<number, Migration> = {};
+export const migrations: Record<number, Migration> = {
+  /** v1 → v2: 새 필드를 기본값으로 채운다. 월초 보고와 조언은 다음 달부터 생긴다 */
+  1: (st) => {
+    const shelter = (st['shelter'] ?? {}) as Record<string, unknown>;
+    const work = (st['work'] ?? {}) as Record<string, unknown>;
+    const fixReport = (r: Record<string, unknown>) => ({ rows: [], alerts: [], from: { food: 0, firewood: 0 }, ...r });
+    const reports = Array.isArray(work['reports']) ? (work['reports'] as Record<string, unknown>[]).map(fixReport) : [];
+    const history = Array.isArray(st['history'])
+      ? (st['history'] as Record<string, unknown>[]).map((h) => ({
+          ...h,
+          reports: Array.isArray(h['reports']) ? (h['reports'] as Record<string, unknown>[]).map(fixReport) : [],
+        }))
+      : [];
+    return {
+      ...st,
+      shelter: { units: 1, ...shelter },
+      work: { advice: [], maxHunger: 0, ...work, reports },
+      history,
+    };
+  },
+};
 
 export function serialize(state: GameState, savedAt: string | null = null): string {
   const file: SaveFile = {

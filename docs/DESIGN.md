@@ -644,23 +644,28 @@ interface MemoryState {
 
 **합계 약 42개**: 장면 조합은 8 × 3 × (주체 0~3) × 6이라 사실상 무한하다.
 
-### 11.2 매니페스트
+### 11.2 매니페스트 (M2 확정: 인라인 SVG 컴포넌트 또는 이미지 파일)
 ```ts
-// src/assets/manifest.ts
+// src/assets/manifest.ts — 콘텐츠는 id만 안다. 무엇으로 그릴지는 매니페스트만 안다.
 export const manifest: Record<SceneId, SceneAsset> = {
-  'bg.river_ford':  { kind: 'bg', src: bgRiverFord, aspect: '16:9' },
-  'sub.wolves':     { kind: 'subject', src: subWolves, anchor: 'ground', defaultSlot: 'right' },
-  'ov.blizzard':    { kind: 'overlay', src: ovBlizzard, blend: 'normal', animate: 'drift' },
-  'portrait.bawi':  { kind: 'portrait', src: ptBawi },
+  'bg.steppe':     { kind: 'bg', svg: BgSteppe },                       // 지금: 인라인 SVG 컴포넌트
+  'sub.reindeer_herd': { kind: 'subject', svg: SubReindeerHerd, motion: 'herd' },
+  'ov.snow':       { kind: 'overlay', svg: OvSnow, motion: 'fall' },
+  'portrait.bawi': { kind: 'portrait', svg: PortraitBawi },
+  // 나중에 일러스트로 바꿀 때: 같은 id를 이미지 파일로 연결한다. 콘텐츠 데이터는 고치지 않는다.
+  // 'bg.steppe':  { kind: 'bg', image: bgSteppeWebp },
 };
 ```
-- SVG 파일을 Vite가 URL로 가져온다. 나중에 래스터로 바꿀 때는 `src`만 교체한다.
+- 한 항목은 `svg`(React SVG 조각) 또는 `image`(파일 URL) 중 하나를 가진다. `SceneView`는 둘을 같은 자리에 겹쳐 그린다.
+- **인라인 SVG로 정한 이유**(M2 결정): 이미지로 넣은 SVG에는 페이지 CSS가 닿지 않는다. 그러면 레이어 움직임(무리 이동, 갈대, 불, 눈)을 "빨리 보기", 속도 설정, `prefers-reduced-motion`으로 조절할 수 없고, 테마 색도 바꿀 수 없다.
+- 장면 레이어는 모두 같은 좌표(`viewBox 0 0 1200 440`)로 그린다. 썸네일과 큰 장면은 `preserveAspectRatio="xMidYMid slice"`로 잘라 쓴다. 인트로처럼 화면 전체를 채우는 장면도 같은 레이어를 쓴다.
+- `motion`은 레이어의 움직임 종류다(`herd`, `run`, `reed`, `fire`, `star`, `ember`, `fall`, `drift`). 움직임은 CSS 클래스로 걸고, 앱의 움직임 설정이 끄거나 늦춘다.
 - 주체 배치는 슬롯(`left`, `center`, `right`, `far`)으로만 정한다. 좌표 체계는 두지 않는다.
-- `SceneSpec`의 `'{place}'`, `'{weather}'` 같은 자리표시자는 엔진이 `ResolvedScene`으로 확정한다. 저장과 재현이 가능하다.
+- `SceneSpec`의 `'{place}'`, `'{weather}'` 같은 자리표시자는 엔진이 확정한다. 저장과 재현이 가능하다.
 - 검증기는 모든 콘텐츠의 장면 id가 매니페스트에 있는지 검사한다.
 
 ### 11.3 스타일
-동굴벽화풍. 황토·숯·뼈색과 불빛 주황을 쓰고, 굵은 선과 실루엣으로 그린다. viewBox는 장면 레이어 960×540, 초상 200×200으로 통일한다. 색은 CSS 변수로 받아 장 테마를 바꿀 수 있게 한다.
+동굴벽화풍. 황토·숯·뼈색과 불빛 주황을 쓰고, 굵은 선과 실루엣으로 그린다. viewBox는 장면 레이어 1200×440, 초상 56×56으로 통일한다. 색은 CSS 변수로 받아 장 테마를 바꿀 수 있게 한다. 화면 시안은 `docs/design/design-handoff/`(README의 디자인 토큰과 움직임 원칙)를 따른다.
 
 ---
 
@@ -700,6 +705,10 @@ export const manifest: Record<SceneId, SceneAsset> = {
   - 흡수당함(이웃 관계에서 굴복 사건을 받아들이거나 강제당함)
 
 ---
+
+### 13.1 진행도 표시 (M2 결정)
+- 목표 데이터(이름, 길)는 M2에 넣는다. 지금 잴 수 있는 길만 진행도를 계산하고, 아직 잴 수 없는 길은 0%가 아니라 **흐리게** 표시한다.
+- 진행도 계산은 `engine/goals/progress.ts`의 측정기(measure) 등록표로 분리한다. 길 데이터는 측정기 id와 목표값만 가진다. M5에서 측정기를 늘리거나 바꿔도 화면과 콘텐츠는 그대로다.
 
 ## 14. 2장 확장 지점
 
@@ -875,3 +884,70 @@ export const manifest: Record<SceneId, SceneAsset> = {
 - **원정대**는 기본적으로 족장을 빼고 뽑는다(`includeChief`로 바꿀 수 있다). 숙련 높은 순 → id 순이라 난수가 없고, 미리보기와 실제가 같다.
 - **장면**: M1은 레이어 id만 보고에 담고 화면에 글로 표시한다. 검증기는 id 형식만 검사한다. 매니페스트와 SVG는 M2에서 만든다.
 - **세이브**: `generation: 'monthly'` 필드로 이전 설계(카드)의 세이브를 확실히 거부한다. 버전은 1부터 다시 시작한다.
+
+---
+
+## 21. M2 화면 구현에서 정한 것 (시안 기준)
+
+- **화면 흐름**: 시작 화면(시드·이어 하기·불러오기, 시안에 없음) → 인트로 → 월초 상황 화면 ⇄ 결정 팝업 → 진행 화면(상순·중순·하순·정산) → 다음 달. 결말 화면은 진행 화면과 같은 틀이다.
+- **결정 팝업 하나로**: 방침, 월초 사건(예약된 손님), 중순 사건, 남은 고기 처리가 모두 `DecisionPopup`을 쓴다. 고른 것은 팝업을 닫아도 남고, 확정해야 엔진 명령이 나간다(엔진은 그대로).
+- **월초 보고**는 엔진이 데이터 규칙(`ChapterDefinition.briefing`)으로 만든다: 머리글(처음 맞는 것), 소식(우선순위 순 최대 3개), 상황 칩, 장면.
+- **조언**은 입장(`advisors.stances`) 점수로 후보를 고르고, 다른 조언자가 고른 후보는 피한다. 대사는 자리+방침 > 자리+분야 > 입장 순으로 구체적인 것을 쓴다.
+- **진행 화면**: 단계 보고에 무리 이름표(사냥대·마을·사건), 단계별 장부 행, 알림, 시작·끝 식량이 담긴다. 원정에서 잡은 고기는 운반 전까지 "원정지의 짐"으로 따로 보인다(운반 한계를 화면에서 배운다).
+- **우리말 수**: 문자열에서 `{n:num}`(셋), `{n:count}`(세 명), `{n:days}`(열여드레)를 쓴다.
+- **시안과 다른 작은 점**
+  - 비활성 버튼 글자 `#8f8370` → `#a39680` (배경 `#2a241d`에서 4.13:1이라 4.5:1을 맞추려고).
+  - 배지·눈금 글자는 시안대로 13px이다. 본문은 17px 이상을 지킨다.
+  - "마을 N명"은 원정대를 뺀 일할 수 있는 사람 수(노인 포함)다. 시안의 "마을 4명"은 성인만 센 값이다.
+  - 그림 id 목록은 React·CSS 없이 읽을 수 있게 `src/assets/sceneIds.ts`에 따로 두고, 매니페스트가 타입으로 같은 목록을 빠짐없이 연결한다.
+
+---
+
+## 22. 인수인계 (새 세션이 먼저 읽을 것)
+
+### 22.1 지금 상태 (M2 화면까지)
+- 검증: `npm run typecheck`, `npm test`(14개 파일, 98개), `npm run validate:content`(오류 0, 경고 0), `npm run build` 모두 통과.
+- 콘텐츠는 아직 M1 시험용 수준이다: 방침 5개(대사냥, 강가 어로, 겨울 준비, 버티기, 여울 고기 회수), 사건 4개(두 소식, 늑대 눈빛, 낯선 사람들, 얼음이 녹으면 다시), 서술 12개. M2 목표(방침 15+, 사건 20+)까지 채워야 한다.
+
+### 22.2 코드 지도
+| 하고 싶은 일 | 볼 곳 |
+|---|---|
+| 한 달 진행 순서, 결정 지점, 정산 | `src/engine/month/month.ts` (`startMonth`, `run`, `chooseOption`, `settle`) |
+| 순마다 마을 일·먹기·장작·부패·건강 | `src/engine/month/upkeep.ts` |
+| 월초 보고(머리글·소식·칩·장면) | `src/engine/month/briefing.ts` + 데이터 `src/data/chapters/ch1/briefing.ts` |
+| 조언자 대사 고르기 | `src/engine/advice/advice.ts` + 데이터 `ch1/advisors.ts` |
+| 방침 후보, 원정대 구성, 위험 단서 | `src/engine/policy/candidates.ts`, `src/engine/outcome/tier.ts` |
+| 등급 판정과 대가 표 | `src/engine/outcome/activity.ts` |
+| 효과 적용, 장부 행, 알림 | `src/engine/effects/apply.ts` (`ledger`, `alert`, `killPerson`) |
+| 시대 목표 진행도 | `src/engine/goals/progress.ts` (`MEASURES`) + 데이터 `ch1/goals.ts` |
+| 1장 수치 | `src/data/chapters/ch1/balance.ts`, 공통 `src/data/balance.ts` |
+| 문자열 | 공통 `src/data/common/ko.ts`, 1장 `src/data/chapters/ch1/ko.ts` |
+| 그림 추가 | `src/assets/scenes/layers.tsx`(그림) → `src/assets/sceneIds.ts`(id 목록) → `src/assets/manifest.ts`(연결). 셋을 같이 고친다 |
+| 화면 흐름 | `src/ui/App.tsx` → `screens/GameView.tsx` → `SituationScreen` / `PhaseScreen` / `EndingScreen` |
+| 결정 팝업 내용 | `src/ui/components/Decision.tsx` (`decisionModel`) |
+
+### 22.3 콘텐츠를 넣을 때의 규칙 (검증기가 대부분 잡는다)
+- 방침마다 문자열 `policy.<id>.name`, `.summary`, `.cost`가 필요하다. 원정대 이름표를 바꾸려면 `.crewLabel`.
+- 사건 선택지마다 `event.<id>.opt.<opt>`, 대가 문구 `.cost`(선택), 잠김 힌트 `.lock`(선택). 판정이 없는 선택지는 `hint`를 직접 정한다.
+- 예약 사건을 "아직 남은 일"에 보이려면 `event.<id>.memo`를 둔다. 없으면 숨은 약속이다.
+- 서술은 효과를 먼저 적용한 뒤 나온다. 그래서 `{caught}`, `{meat}`처럼 그 활동의 결과를 쓸 수 있다. 활동마다 `caught`, `meat`, `found`를 새로 센다.
+- 문장 변수에는 받침에 따라 바뀌는 조사를 바로 붙이지 않는다. 우리말 수는 `{n:num}`, `{n:count}`, `{n:days}`.
+- 줄의 무리(`group`)가 진행 화면의 문단과 이름표를 정한다: `crew`(원정대), `village`(마을), `event`(사건 제목이 이름표), `people`(알림 카드로만), `info`(이름표 없음).
+- 잡을 수 있는 짐승을 추가하면 `row.catch.<id>` 문자열이 필요하다. 병·부상을 추가하면 `ailment.<id>`, `.effect`, `cause.<id>`가 필요하다.
+
+### 22.4 알아 둘 함정
+- **검증 도구(tsx)는 CSS를 불러올 수 없다.** 그래서 그림 id 목록을 `sceneIds.ts`로 따로 두었다. `tools/`에서 `src/ui`나 `manifest.ts`를 import하지 않는다.
+- **i18n 변수 이름에 `:`를 쓰지 않는다.** `{이름:서식}`이 서식 문법이다. 사건 인물 변수는 `{actor_<슬롯>}`이다.
+- **깃발 값은 마지막으로 세운 달이다.** "이번 달에 세웠는가"는 `{ type: 'flag', id, sinceMonths: { max: 0 } }`로 묻는다.
+- **원정대는 기본적으로 족장을 빼고 뽑는다.** 바꾸려면 `crew.includeChief`.
+- **엔진은 결정 지점까지 미리 계산한다.** 화면의 "계속"은 엔진 명령이 아니다. 방침 카드를 고르는 것도 화면 상태이고, "한 달을 시작한다"를 누를 때 `choosePolicy`가 나간다.
+- **세이브는 버전 2다.** `GameState` 구조를 바꾸면 `SAVE_VERSION`을 올리고 `migrations`에 변환을 넣는다(`src/engine/save/`).
+- **npm 설치가 회사망에서 인증서 오류로 막힌다**(CLAUDE.md "미해결"). 새 의존성이 필요하면 먼저 사용자에게 알린다.
+
+### 22.5 다음 작업 순서 제안 (M2 콘텐츠와 밸런스)
+1. 연결 지도 C1~C7(§18)을 기준으로 기록 1~4달의 방침과 사건을 넣는다. 겨울 식량원: 올가미(고갈), 동굴곰(바위굴과 발톱 자국), 붉은사슴(서리의 단서), 얼음 낚시(지식), 갈대호수 교역.
+2. 회수 방침의 장소 바인딩, 상순 첫 수확 운반 여부를 정한다(CLAUDE.md "나중에 할 일").
+3. 평온한 달 한 화면 요약 UI(§19). 엔진 판정(`MonthReport.quiet`)은 이미 있다.
+4. 시뮬레이터에 greedy 전략, §10.8 목표치 비교, 기준 시나리오 재현 테스트를 넣고 밸런스를 맞춘다.
+5. `MIN_VARIANTS`를 2로 올리고 서술 변형을 채운다.
+6. ⚑ 플레이테스트 체크포인트: 멈추고 질문지를 제시한다.

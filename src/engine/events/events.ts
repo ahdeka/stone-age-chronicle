@@ -1,6 +1,7 @@
 // 사건 고르기와 선택 처리 (DESIGN.md §4.2, §8)
 
-import type { ChapterDefinition, EventDef, EventOption, EventSlot, GameState, Id } from '../types';
+import type { ChapterDefinition, EventDef, EventOption, EventSlot, GameState, Hint, Id, Person } from '../types';
+import { hintFor } from '../outcome/tier';
 import { allTrue, matchPerson } from '../conditions/evaluate';
 import { findEvent } from '../core/lookup';
 import { living } from '../people/people';
@@ -56,10 +57,21 @@ export function villageEventIds(def: ChapterDefinition): Id[] {
 export interface OptionStatus {
   option: EventOption;
   available: boolean;
+  /** 판정이 있으면 계산한 단서, 없으면 작가가 정한 단서 (기본: 거의 확실하다) */
+  hint: Hint;
 }
 
 export function optionStatuses(def: ChapterDefinition, state: GameState, ev: EventDef, actors: Record<string, Id>): OptionStatus[] {
-  return ev.options.map((option) => ({ option, available: allTrue(def, state, option.requires, actors) }));
+  const chosen = state.work.chosen;
+  const crew = (chosen?.crew ?? []).map((id) => state.people[id]).filter((p): p is Person => !!p && p.alive);
+  const leaderId = actors['leader'] ?? chosen?.leaderId;
+  const leader = leaderId ? state.people[leaderId] : undefined;
+  const all = { ...(chosen?.leaderId ? { leader: chosen.leaderId } : {}), ...actors };
+  return ev.options.map((option) => ({
+    option,
+    available: allTrue(def, state, option.requires, all),
+    hint: option.activity ? hintFor(def, state, option.activity, { crew, ...(leader ? { leader } : {}), actors: all }) : (option.hint ?? 'sure'),
+  }));
 }
 
 export function markUsed(state: GameState, ev: EventDef): void {

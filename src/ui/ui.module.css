@@ -1,0 +1,259 @@
+/* 공용 모양: 카드, 알약 버튼, 칩, 위험 배지, 등장 움직임 (화면 시안의 클래스를 옮김) */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 138, 90, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(232, 138, 90, 0.18);
+  }
+}
+@keyframes callPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 161, 90, 0.55);
+  }
+  60% {
+    box-shadow: 0 0 0 14px rgba(224, 161, 90, 0);
+  }
+}
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.in {
+  animation: fadeUp calc(0.9s * var(--motion-scale)) ease-out both;
+}
+.d1 {
+  animation-delay: calc(0.15s * var(--motion-scale));
+}
+.d2 {
+  animation-delay: calc(0.35s * var(--motion-scale));
+}
+.d3 {
+  animation-delay: calc(0.55s * var(--motion-scale));
+}
+.d4 {
+  animation-delay: calc(0.75s * var(--motion-scale));
+}
+.d5 {
+  animation-delay: calc(0.95s * var(--motion-scale));
+}
+.d6 {
+  animation-delay: calc(1.15s * var(--motion-scale));
+}
+.pop {
+  animation: pop calc(0.5s * var(--motion-scale)) ease-out both;
+}
+.warnPulse {
+  animation: pulse calc(2.4s * var(--motion-scale)) ease-in-out infinite;
+}
+.call {
+  animation: callPulse calc(2s * var(--motion-scale)) ease-out infinite;
+}
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.12em;
+  background: var(--accent);
+  animation: blink 1s steps(1) infinite;
+}
+
+.serif {
+  font-family: var(--font-serif);
+}
+
+.card {
+  padding: 24px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cardSm {
+  padding: 20px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.h2accent {
+  margin: 0;
+  font-size: calc(1.125rem * var(--font-scale));
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.faint {
+  color: var(--text-faint);
+}
+
+.small {
+  font-size: var(--fs-sm);
+}
+
+.label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+.btnPrimary,
+.btnGhost,
+.btnDisabled,
+.btnText {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 24px;
+  border-radius: 25px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btnPrimary {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.btnPrimary:hover {
+  background: var(--accent-hover);
+}
+
+.btnGhost {
+  border: 1px solid var(--button-line);
+  background: transparent;
+  color: var(--text);
+}
+
+.btnGhost:hover {
+  border-color: var(--border-hover);
+}
+
+.btnDisabled {
+  border: none;
+  background: var(--raised);
+  color: var(--text-disabled);
+  font-weight: 700;
+  cursor: not-allowed;
+}
+
+.btnText {
+  min-height: var(--touch);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--inset);
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.chipWarn {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn-soft);
+}
+
+.chipGood {
+  border-color: #3a5a42;
+}
+
+.risk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sure {
+  background: var(--risk-sure-bg);
+  color: var(--risk-sure);
+}
+.fair {
+  background: var(--risk-fair-bg);
+  color: var(--risk-fair);
+}
+.risky {
+  background: var(--risk-risky-bg);
+  color: var(--risk-risky);
+}
+.unknown {
+  background: var(--risk-unknown-bg);
+  color: var(--risk-unknown);
+}
+
+.icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

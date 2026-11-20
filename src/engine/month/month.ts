@@ -7,9 +7,9 @@
 //
 // "계속" 버튼은 엔진 명령이 아니다. 화면이 work.reports를 하나씩 보여 줄 뿐이다.
 
-import type { ChapterDefinition, EventSlot, GameState, Id, Line, MonthWork, Phase, PolicyStep } from '../types';
+import type { ChapterDefinition, EventSlot, GameState, Id, LedgerLine, LineGroup, MonthWork, Phase, PhaseReport, PolicyStep, SceneSpec } from '../types';
 import { PHASES } from '../types';
-import { allTrue, firewoodDays, foodDays, matchPerson, workers } from '../conditions/evaluate';
+import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
 import {
   addCohesion,
   applyEffects,
@@ -20,10 +20,12 @@ import {
   pushLine,
   type RunCtx,
 } from '../effects/apply';
-import { byId, findEvent, findPlace, findPolicy, monthDef, nextUid } from '../core/lookup';
+import { findEvent, findPlace, findPolicy, monthDef, nextUid } from '../core/lookup';
+import { buildAdvice } from '../advice/advice';
+import { buildBriefing, resolveSceneSpec } from './briefing';
 import { markUsed, optionStatuses, pickEvent, villageEventIds } from '../events/events';
 import { runActivity } from '../outcome/activity';
-import { band, countBand, living, population } from '../people/people';
+import { band, living, population } from '../people/people';
 import { generateCandidates } from '../policy/candidates';
 import { chance } from '../rng/rng';
 import { stat } from '../stats/stats';
@@ -48,11 +50,34 @@ export function freshWork(weather: [Id, Id, Id], start: MonthWork['start']): Mon
     vars: {},
     villageChecked: false,
     start,
+    advice: [],
+    maxHunger: 0,
   };
 }
 
+/** 새 단계 보고를 연다 */
+function openReport(state: GameState, slot: PhaseReport['slot'], scene: SceneSpec, extra: Partial<PhaseReport> = {}): PhaseReport {
+  const r: PhaseReport = {
+    slot,
+    scene,
+    lines: [],
+    deltas: {},
+    rows: [],
+    alerts: [],
+    from: { food: totalKg(state.stores.food), firewood: state.stores.firewood },
+    ...extra,
+  };
+  state.work.reports.push(r);
+  return r;
+}
+
+function closeReport(state: GameState): void {
+  const r = state.work.reports[state.work.reports.length - 1];
+  if (r) r.to = { food: totalKg(state.stores.food), firewood: state.stores.firewood };
+}
+
 /** 지금 진행 맥락 (방침의 원정대와 이끄는 사람) */
-export function runCtx(def: ChapterDefinition, state: GameState, extraActors: Record<string, Id> = {}, source?: string): RunCtx {
+export function runCtx(def: ChapterDefinition, state: GameState, extraActors: Record<string, Id> = {}, source?: string, group?: LineGroup): RunCtx {
   const chosen = state.work.chosen;
   return {
     def,
@@ -60,48 +85,11 @@ export function runCtx(def: ChapterDefinition, state: GameState, extraActors: Re
     actors: { ...(chosen?.leaderId ? { leader: chosen.leaderId } : {}), ...extraActors },
     crew: chosen?.crew ?? [],
     source: source ?? (chosen ? `policy.${chosen.policyId}` : 'month'),
+    group: group ?? (chosen && chosen.crew.length > 0 ? 'crew' : 'village'),
   };
 }
 
 // ── 월초 ──
-
-function briefingLines(def: ChapterDefinition, state: GameState): Line[] {
-  const m = monthDef(def, state);
-  const lines: Line[] = [
-    { key: 'brief.month', params: { month: { key: `month.${m.id}` }, season: { key: `season.${m.season}` }, n: state.month } },
-    { key: 'brief.outlook', params: { weather: { key: `weather.${state.work.weather[1]}` } } },
-    {
-      key: 'brief.people',
-      params: {
-        total: population(state),
-        adults: countBand(def, state, 'adult'),
-        elders: countBand(def, state, 'elder'),
-        children: countBand(def, state, 'child'),
-        workers: Math.round(workers(def, state) * 10) / 10,
-      },
-    },
-    { key: 'brief.food', params: { kg: Math.round(totalKg(state.stores.food)), days: Math.floor(foodDays(def, state)) } },
-    { key: 'brief.firewood', params: { kg: Math.round(state.stores.firewood), days: Math.floor(firewoodDays(def, state)) } },
-  ];
-  for (const a of def.animals) {
-    const st = state.animals[a.id];
-    if (st?.known) lines.push({ key: `animal.${a.id}.${st.state}` });
-  }
-  for (const p of living(state)) {
-    for (const a of p.ailments) lines.push({ key: 'brief.ailing', params: { name: p.name, ailment: { key: `ailment.${a.kind}` } } });
-  }
-  const stale = def.balance.cache.staleAfterMonths;
-  for (const c of state.caches) {
-    const known = state.month - c.checkedMonth < stale;
-    lines.push(
-      known
-        ? { key: 'brief.cache.known', params: { place: { key: `place.${c.place}` }, kg: Math.round(totalKg(c.lots)) } }
-        : { key: 'brief.cache.unknown', params: { place: { key: `place.${c.place}` } } },
-    );
-  }
-  for (const c of state.clues) lines.push({ key: `clue.${c.id}` });
-  return lines;
-}
 
 export function startMonth(def: ChapterDefinition, state: GameState): void {
   const prevBands = new Map(living(state).map((p) => [p.id, band(def, state, p)]));
@@ -117,13 +105,16 @@ export function startMonth(def: ChapterDefinition, state: GameState): void {
   recoverPlaces(def, state);
   updateCaches(def, state);
 
-  state.work.reports.push({ slot: 'briefing', scene: def.scenes.briefing, lines: briefingLines(def, state), deltas: {} });
+  const brief = buildBriefing(def, state);
+  state.work.brief = brief;
+  openReport(state, 'briefing', brief.scene, { lines: [brief.headline, ...brief.news] });
   for (const p of living(state)) {
     const b = band(def, state, p);
-    if (prevBands.get(p.id) !== b) currentReport(state).lines.push({ key: `line.grew.${b}`, params: { name: p.name } });
+    if (prevBands.get(p.id) !== b) currentReport(state).lines.push({ key: `line.grew.${b}`, params: { name: p.name }, group: 'people' });
   }
-
+  // 거처와 겨울의 기록 (시대 목표 측정용)
   state.work.candidates = generateCandidates(def, state);
+  state.work.advice = buildAdvice(def, state);
   state.step = 'policy';
 
   // 기억: 기한이 된 예약 사건
@@ -150,7 +141,7 @@ function openEvent(def: ChapterDefinition, state: GameState, eventId: Id, slot: 
   state.work.events.push(ev.id);
   state.work.notable = true;
   state.work.decision = { uid: nextUid(state, 'd'), kind: 'event', eventId, slot, actors };
-  currentReport(state).lines.push({ key: `event.${ev.id}.title` });
+  currentReport(state).lines.push({ key: `event.${ev.id}.title`, group: 'event' });
   state.step = 'decision';
 }
 
@@ -169,17 +160,9 @@ export function choosePolicy(def: ChapterDefinition, state: GameState, uid: Id):
   return undefined;
 }
 
-function resolveScene(def: ChapterDefinition, state: GameState, phase: Phase) {
+function resolveScene(def: ChapterDefinition, state: GameState, phase: Phase): SceneSpec {
   const p = state.work.chosen ? findPolicy(def, state.work.chosen.policyId) : undefined;
-  const scene = p?.scene ?? def.scenes.briefing;
-  const placeId = state.work.place ?? state.campPlace;
-  const weather = state.work.weather[PHASES.indexOf(phase)] ?? '';
-  const overlay = scene.overlay === '{weather}' ? byId(def.weather, weather, 'weather').overlay : scene.overlay;
-  return {
-    bg: scene.bg === '{place}' ? findPlace(def, placeId).scene : scene.bg === '{camp}' ? findPlace(def, state.campPlace).scene : scene.bg,
-    ...(scene.subjects ? { subjects: scene.subjects } : {}),
-    ...(overlay ? { overlay } : {}),
-  };
+  return resolveSceneSpec(def, state, p?.scene ?? def.scenes.briefing, state.work.place ?? state.campPlace, state.work.weather[PHASES.indexOf(phase)] ?? '');
 }
 
 /** 단계 하나를 실행한다. 결정 지점이면 true (멈춤) */
@@ -292,8 +275,8 @@ export function chooseOption(def: ChapterDefinition, state: GameState, uid: Id, 
   if (!st) return 'error.unknownOption';
   if (!st.available) return 'error.optionLocked';
   delete state.work.decision;
-  const ctx = runCtx(def, state, d.actors, `event.${ev.id}`);
-  currentReport(state).lines.push({ key: 'line.chose', params: { option: { key: `event.${ev.id}.opt.${optionId}` } } });
+  const ctx = runCtx(def, state, d.actors, `event.${ev.id}`, 'event');
+  currentReport(state).lines.push({ key: 'line.chose', params: { option: { key: `event.${ev.id}.opt.${optionId}` } }, group: 'event' });
   if (st.option.narrative) applyNarrative(ctx, st.option.narrative);
   applyEffects(ctx, st.option.effects);
   if (st.option.activity) runActivity(ctx, st.option.activity);
@@ -302,6 +285,7 @@ export function chooseOption(def: ChapterDefinition, state: GameState, uid: Id, 
     state.step = 'policy';
     // 월초 사건의 결과로 상황이 바뀌었을 수 있다
     state.work.candidates = generateCandidates(def, state);
+    state.work.advice = buildAdvice(def, state);
     return undefined;
   }
   run(def, state);
@@ -315,12 +299,9 @@ export function run(def: ChapterDefinition, state: GameState): void {
   while (state.work.phasesDone < 3) {
     const phase = PHASES[state.work.phasesDone]!;
     if (state.work.reports.length < 2 + state.work.phasesDone) {
-      state.work.reports.push({
-        slot: phase,
+      openReport(state, phase, resolveScene(def, state, phase), {
         weather: state.work.weather[state.work.phasesDone] ?? '',
-        scene: resolveScene(def, state, phase),
-        lines: [],
-        deltas: {},
+        place: policy?.crew ? (state.work.place ?? state.campPlace) : state.campPlace,
       });
       state.work.stepIndex = 0;
     }
@@ -350,6 +331,7 @@ export function run(def: ChapterDefinition, state: GameState): void {
       state.work.haul = [];
     }
     upkeep(runCtx(def, state));
+    closeReport(state);
     state.work.phasesDone += 1;
     if (population(state) === 0) break;
   }
@@ -360,8 +342,8 @@ export function run(def: ChapterDefinition, state: GameState): void {
 
 function settle(def: ChapterDefinition, state: GameState): void {
   const w = state.work;
-  const ctx = runCtx(def, state, {}, 'settlement');
-  w.reports.push({ slot: 'settlement', scene: def.scenes.settlement, lines: [], deltas: {} });
+  const ctx = runCtx(def, state, {}, 'settlement', 'info');
+  const report = openReport(state, 'settlement', def.scenes.settlement, { from: { food: w.start.food, firewood: w.start.firewood } });
 
   // 남은 짐은 버린다 (처리 결정 없이 끝난 경우)
   w.haul = [];
@@ -380,13 +362,26 @@ function settle(def: ChapterDefinition, state: GameState): void {
   const low = state.cohesion < def.balance.cohesion.lowThreshold;
   state.counters['low_cohesion_months'] = low ? (state.counters['low_cohesion_months'] ?? 0) + 1 : 0;
 
-  const lines = currentReport(state).lines;
+  // 시대 목표 측정용 기록: 거처에서 지낸 달, 굶주림 없이 지낸 겨울 달
+  const shelterKey = `shelter_months.${state.shelter.kind}`;
+  state.counters[shelterKey] = (state.counters[shelterKey] ?? 0) + 1;
+  if (monthDef(def, state).season === 'winter') {
+    const streak = w.maxHunger === 0 ? (state.counters['winter_fed_streak'] ?? 0) + 1 : 0;
+    state.counters['winter_fed_streak'] = streak;
+    if (streak >= 3 && state.flags['winter_fed_full'] === undefined) state.flags['winter_fed_full'] = state.month;
+  } else state.counters['winter_fed_streak'] = 0;
+
+  // 정산표: 이번 달 장부를 출처별로 합친다 (원정지의 짐은 빼고)
+  report.rows = sumLedger(w.ledger.filter((l) => l.res !== 'haul'));
+  report.to = { food: totalKg(state.stores.food), firewood: state.stores.firewood };
+  const lines = report.lines;
   lines.push({
     key: 'settle.food',
     params: { from: Math.round(w.start.food), to: Math.round(totalKg(state.stores.food)), days: Math.floor(foodDays(def, state)) },
+    group: 'info',
   });
-  lines.push({ key: 'settle.firewood', params: { from: Math.round(w.start.firewood), to: Math.round(state.stores.firewood) } });
-  lines.push({ key: 'settle.population', params: { from: w.start.population, to: population(state) } });
+  lines.push({ key: 'settle.firewood', params: { from: Math.round(w.start.firewood), to: Math.round(state.stores.firewood) }, group: 'info' });
+  lines.push({ key: 'settle.population', params: { from: w.start.population, to: population(state) }, group: 'info' });
 
   // 연대기
   const m = monthDef(def, state);
@@ -410,6 +405,24 @@ function settle(def: ChapterDefinition, state: GameState): void {
     state.chronicle.push({ month: state.month, monthId: m.id, key: `ending.${ending.id}.chron` });
     state.step = 'ended';
   }
+}
+
+/** 같은 자원·출처의 행을 합친다 (숫자 변수도 더한다) */
+export function sumLedger(lines: readonly LedgerLine[]): LedgerLine[] {
+  const out: LedgerLine[] = [];
+  for (const l of lines) {
+    const row = out.find((x) => x.res === l.res && x.source === l.source && Math.sign(x.delta) === Math.sign(l.delta));
+    if (!row) {
+      out.push({ ...l, ...(l.params ? { params: { ...l.params } } : {}) });
+      continue;
+    }
+    row.delta += l.delta;
+    if (l.params) {
+      row.params ??= {};
+      for (const [k, v] of Object.entries(l.params)) row.params[k] = (row.params[k] ?? 0) + v;
+    }
+  }
+  return out;
 }
 
 export function nextMonth(def: ChapterDefinition, state: GameState): string | undefined {

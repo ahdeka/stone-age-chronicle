@@ -40,13 +40,13 @@ export const ch1Places: PlaceDef[] = [
     id: 'river_bend',
     kind: 'river',
     travelDays: 0,
-    scene: 'bg.river_ford',
+    scene: 'bg.camp_tents',
     // 순당 마을 일꾼 한 사람의 기대 수확 kg (시험 플레이 1달: 일손 6명이 한 달 약 90kg)
     yields: { spring: { gather: 4, fish: 2 }, summer: { gather: 9, fish: 3 }, autumn: { gather: 4, fish: 1.5 }, winter: { gather: 1, fish: 5 } },
     stockMax: { gather: 400, fish: 300 },
     recoverPerMonth: 0.3,
   },
-  { id: 'reindeer_ford', kind: 'ford', travelDays: 4, scene: 'bg.steppe', yields: {}, stockMax: {}, recoverPerMonth: 0 },
+  { id: 'reindeer_ford', kind: 'ford', travelDays: 4, scene: 'bg.river_ford', yields: {}, stockMax: {}, recoverPerMonth: 0 },
   { id: 'east_steppe', kind: 'steppe', travelDays: 2, scene: 'bg.steppe', yields: {}, stockMax: {}, recoverPerMonth: 0 },
   { id: 'north_forest', kind: 'forest', travelDays: 2, scene: 'bg.north_forest', yields: {}, stockMax: {}, recoverPerMonth: 0 },
   { id: 'north_cave', kind: 'cave', travelDays: 2, scene: 'bg.cave_mouth', yields: {}, stockMax: {}, recoverPerMonth: 0 },
@@ -127,11 +127,11 @@ export const ch1Weather: WeatherDef[] = [
 ];
 
 export const ch1Ailments: AilmentDef[] = [
-  { id: 'fracture', phases: [5, 7], noLabor: true, deathChance: 0 },
-  { id: 'claw', phases: [2, 4], noLabor: true, deathChance: 0.005 },
-  { id: 'frostbite', phases: [2, 3], noLabor: true, deathChance: 0 },
-  { id: 'cough', phases: [3, 6], noLabor: true, deathChance: 0.03 },
-  { id: 'fever', phases: [2, 4], noLabor: true, deathChance: 0.03 },
+  { id: 'fracture', type: 'injury', phases: [5, 7], noLabor: true, deathChance: 0 },
+  { id: 'claw', type: 'injury', phases: [2, 4], noLabor: true, deathChance: 0.005 },
+  { id: 'frostbite', type: 'injury', phases: [2, 3], noLabor: true, deathChance: 0 },
+  { id: 'cough', type: 'sickness', phases: [3, 6], noLabor: true, deathChance: 0.03 },
+  { id: 'fever', type: 'sickness', phases: [2, 4], noLabor: true, deathChance: 0.03 },
 ];
 
 export const ch1Traits: TraitDef[] = [

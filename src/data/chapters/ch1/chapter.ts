@@ -1,7 +1,10 @@
 // 1장 정의 조립: 구석기 → 신석기 (잿빛강 사람들)
 
 import type { ChapterDefinition } from '../../../engine';
+import { ch1AdvisorLines, ch1Stances } from './advisors';
 import { ch1AgeBands, ch1Balance } from './balance';
+import { ch1Briefing } from './briefing';
+import { ch1Goals } from './goals';
 import { ch1Months } from './calendar';
 import { ch1Events } from './events';
 import { ch1Narratives } from './narratives';
@@ -49,9 +52,14 @@ export const ch1: ChapterDefinition = {
     ],
   },
   scenes: {
-    briefing: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle'] },
-    settlement: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle'] },
+    briefing: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle', 'sub.reeds'], overlay: '{weather}' },
+    settlement: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle'], overlay: 'ov.night' },
+    intro: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle', 'sub.reeds'], overlay: 'ov.night' },
   },
+  briefing: ch1Briefing,
+  advisors: { stances: ch1Stances, lines: ch1AdvisorLines },
+  goals: ch1Goals,
+  hooks: { villageNarrative: 'village_work' },
   globalMods: [],
   balance: ch1Balance,
   presets: [ch1Preset],

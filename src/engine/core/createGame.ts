@@ -1,11 +1,12 @@
 // 시작 프리셋 → 게임 상태. 이전 장의 결과(ChapterResult)로 시작하는 길은 M5에서 붙인다 (DESIGN.md §3.6).
 
 import type { ChapterDefinition, GameState, Person, PlaceState } from '../types';
-import { byId } from './lookup';
+import { byId, monthDef } from './lookup';
 import { seedToState, nextInt } from '../rng/rng';
 import { SAVE_VERSION } from '../save/version';
 import { freshWork, startMonth } from '../month/month';
 import { addLot } from '../stores/food';
+import { population } from '../people/people';
 
 export interface NewGameOptions {
   presetId?: string;
@@ -57,7 +58,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     startMonthIndex: preset.startMonthIndex,
     step: 'policy',
     campPlace: preset.campPlace,
-    shelter: { kind: preset.shelter, place: preset.campPlace },
+    shelter: { kind: preset.shelter, place: preset.campPlace, units: preset.shelterUnits },
     people,
     chiefLine: 1,
     stores: { food, firewood: preset.firewood, goods: { ...preset.goods } },
@@ -81,5 +82,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     seq: 0,
   };
   startMonth(def, state);
+  // 연대기의 첫 문장 (기록자 시점)
+  state.chronicle.push({ month: 1, monthId: monthDef(def, state).id, key: preset.presentation.chronicleOpening, params: { pop: population(state) } });
   return state;
 }

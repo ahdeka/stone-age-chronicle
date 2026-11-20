@@ -1,6 +1,6 @@
 // 장 정의 (DESIGN.md §3.6). 엔진은 특정 장에 의존하지 않고 이 데이터만 읽는다.
 
-import type { AgeBand, Amount, Id, Sex, Tier } from './common';
+import type { AgeBand, Amount, Hint, Id, Sex, Tier } from './common';
 import type { Condition } from './condition';
 import type { ModifierDef } from './effect';
 import type { EventDef, Narrative, PolicyTemplate, SceneSpec } from './content';
@@ -84,6 +84,8 @@ export interface WeatherDef {
 
 export interface AilmentDef {
   id: Id;
+  /** 다침인가 병인가 (알림 카드의 모양) */
+  type: 'injury' | 'sickness';
   /** 회복까지 걸리는 순 수 [최소, 최대] */
   phases: readonly [number, number];
   noLabor: boolean;
@@ -127,8 +129,21 @@ export interface PresetPerson {
   isChief?: boolean;
 }
 
+/** 시작 프리셋의 화면용 글 (모두 문자열 키) — 인트로, 땅 정보, 연대기 첫 문장 */
+export interface PresetPresentation {
+  chapterLabel: string;
+  introLines: string[];
+  title: string;
+  meta: string;
+  tagline: string;
+  land: { title: string; subtitle: string; intro: string; facts: { mark: string; label: string; value: string }[] };
+  chronicleOpening: string;
+}
+
 export interface StartPreset {
   id: Id;
+  presentation: PresetPresentation;
+  shelterUnits: number;
   /** 시작 달의 인덱스 (calendar.months) */
   startMonthIndex: number;
   campPlace: Id;
@@ -141,6 +156,44 @@ export interface StartPreset {
   discovered: Id[];
   animals: Record<Id, AnimalState>;
   knowledge: Id[];
+}
+
+/** 월초 보고 규칙 (DESIGN.md §4.1). 조건은 위에서부터, 처음 맞는 것 */
+export interface BriefingRules {
+  headlines: { when: Condition[]; key: string }[];
+  /** 소식: 조건이 맞는 것 중 우선순위 높은 순으로 maxNews개. chip이 있으면 결정 팝업의 상황 칩으로도 쓴다 */
+  news: { when: Condition[]; key: string; priority: number; chip?: string; tone?: 'warn' | 'normal' | 'good' }[];
+  /** 소식과 별개인 상황 칩 */
+  chips: { when: Condition[]; key: string; tone: 'warn' | 'normal' | 'good' }[];
+  scenes: { when: Condition[]; scene: SceneSpec }[];
+}
+
+/** 조언자의 입장: 방침 분야와 위험 단서를 얼마나 좋아하는가 */
+export interface StanceDef {
+  id: Id;
+  categories: Record<Id, number>;
+  hints: Partial<Record<Hint, number>>;
+}
+
+/** 조언 대사. 자리(seat)나 입장(stance), 방침이나 분야로 고른다. 더 구체적인 것이 먼저 */
+export interface AdvisorLine {
+  seat?: Id;
+  stance?: Id;
+  policy?: Id;
+  category?: Id;
+  when?: Condition[];
+  text: string;
+}
+
+/** 시대 목표의 길. measure가 없으면 아직 잴 수 없는 길이다 (화면에서 흐리게) */
+export interface GoalPathDef {
+  id: Id;
+  measure?: { id: Id; target: number; params?: Record<string, string | number> };
+}
+
+export interface EraGoalDef {
+  id: Id;
+  paths: GoalPathDef[];
 }
 
 export interface ChapterBalance {
@@ -219,6 +272,14 @@ export interface ChapterBalance {
   };
   /** 기록용 연대기 기본 중요도 */
   chronicle: { deathImportance: number };
+  /** 화면 기준값 */
+  ui: {
+    foodWarnDays: number;
+    firewoodWarnDays: number;
+    /** 결속 구간: min 이상이면 그 이름 (높은 것부터) */
+    cohesionBands: { min: number; id: Id }[];
+    maxNews: number;
+  };
 }
 
 export interface ThemeDef {
@@ -249,8 +310,13 @@ export interface ChapterDefinition {
     narratives: Narrative[];
     endings: EndingDef[];
   };
-  /** 기본 장면 (보고와 정산) */
-  scenes: { briefing: SceneSpec; settlement: SceneSpec };
+  /** 기본 장면 (보고, 정산, 인트로) */
+  scenes: { briefing: SceneSpec; settlement: SceneSpec; intro: SceneSpec };
+  briefing: BriefingRules;
+  advisors: { stances: StanceDef[]; lines: AdvisorLine[] };
+  goals: EraGoalDef[];
+  /** 엔진이 쓰는 서술 고리: 마을 일 서술 */
+  hooks: { villageNarrative: Id };
   globalMods: ModifierDef[];
   balance: ChapterBalance;
   presets: StartPreset[];

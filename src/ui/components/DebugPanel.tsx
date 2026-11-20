@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { firstChoice, playMonths, reduce, type ChapterDefinition, type DebugOp, type GameState } from '../../engine';
 import { useT } from '../i18n';
-import base from '../screens/screens.module.css';
-import s from '../screens/status.module.css';
+import u from '../ui.module.css';
 
 export function DebugPanel({ def, state, onChange }: { def: ChapterDefinition; state: GameState; onChange: (s: GameState) => void }) {
   const tr = useT();
@@ -28,16 +27,31 @@ export function DebugPanel({ def, state, onChange }: { def: ChapterDefinition; s
   };
 
   return (
-    <details className={s.box}>
-      <summary>{tr.t('ui.debug')}</summary>
-      <div className={s.row}>
-        <button type="button" className={base.secondary} onClick={skip}>
+    <details
+      style={{
+        position: 'fixed',
+        left: 12,
+        bottom: 12,
+        zIndex: 30,
+        maxWidth: 'min(520px, calc(100vw - 24px))',
+        maxHeight: '60vh',
+        overflow: 'auto',
+        padding: '8px 12px',
+        borderRadius: 12,
+        background: 'var(--sheet)',
+        border: '1px solid var(--border-strong)',
+        fontSize: 'var(--fs-sm)',
+      }}
+    >
+      <summary style={{ cursor: 'pointer' }}>{tr.t('ui.debug')}</summary>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+        <button type="button" className={u.btnGhost} onClick={skip}>
           {tr.t('ui.debug.skip')}
         </button>
-        <button type="button" className={base.secondary} onClick={() => debug({ op: 'setFood', kind: 'raw_meat', kg: 1000 })}>
+        <button type="button" className={u.btnGhost} onClick={() => debug({ op: 'setFood', kind: 'raw_meat', kg: 1000 })}>
           {tr.t('ui.debug.food')}
         </button>
-        <button type="button" className={base.secondary} onClick={() => debug({ op: 'setFirewood', kg: 0 })}>
+        <button type="button" className={u.btnGhost} onClick={() => debug({ op: 'setFirewood', kg: 0 })}>
           {tr.t('ui.debug.firewood')}
         </button>
         <select value={eventId} onChange={(e) => setEventId(e.target.value)} aria-label={tr.t('ui.debug.event')}>
@@ -47,12 +61,12 @@ export function DebugPanel({ def, state, onChange }: { def: ChapterDefinition; s
             </option>
           ))}
         </select>
-        <button type="button" className={base.secondary} onClick={() => debug({ op: 'forceEvent', eventId })}>
+        <button type="button" className={u.btnGhost} onClick={() => debug({ op: 'forceEvent', eventId })}>
           {tr.t('ui.debug.event')}
         </button>
       </div>
       {error && <p role="alert">{error.startsWith('error.') ? tr.t(error) : error}</p>}
-      <pre className={s.meta} style={{ whiteSpace: 'pre-wrap' }}>
+      <pre style={{ whiteSpace: 'pre-wrap', color: 'var(--text-muted)' }}>
         {JSON.stringify(
           {
             seed: state.seed,

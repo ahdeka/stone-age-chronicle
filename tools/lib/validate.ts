@@ -2,7 +2,7 @@
 // 오류: 없는 id 참조, 중복 id, 없는 문자열, 고를 수 없는 구조 / 경고: 공짜 선택지, 문장 길이, 변형 부족, 도달 불가
 
 import type { ChapterDefinition, Condition, Effect, EventDef, PolicyStep, SceneSpec } from '../../src/engine';
-import { PHASES } from '../../src/engine';
+import { MEASURES, PHASES } from '../../src/engine';
 
 export interface Issue {
   level: 'error' | 'warn';
@@ -21,7 +21,8 @@ function sentences(s: string): number {
   return s.split(/(?<=[.!?])\s+/).filter((x) => x.trim().length > 0).length;
 }
 
-export function validate(def: ChapterDefinition, strings: Record<string, string>): Issue[] {
+/** sceneIds: 그림 매니페스트에 있는 id (없으면 형식만 검사) */
+export function validate(def: ChapterDefinition, strings: Record<string, string>, sceneIds?: ReadonlySet<string>): Issue[] {
   const issues: Issue[] = [];
   const err = (where: string, msg: string) => issues.push({ level: 'error', where, msg });
   const warn = (where: string, msg: string) => issues.push({ level: 'warn', where, msg });
@@ -218,6 +219,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
       return;
     }
     if (!/^(bg|sub|ov|portrait)\.[a-z_]+$/.test(id)) err(where, `장면 id 형식이 아니다: ${id}`);
+    else if (sceneIds && !sceneIds.has(id)) err(where, `매니페스트에 없는 그림: ${id}`);
   };
   const scene = (s: SceneSpec | undefined, where: string) => {
     if (!s) return;
@@ -316,6 +318,8 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   for (const ev of def.content.events) checkEvent(ev);
 
   // ── 서술 ──
+  need('narrative', def.hooks.villageNarrative, 'hooks');
+  usedNarratives.add(def.hooks.villageNarrative);
   for (const n of def.content.narratives) {
     const w = `narrative.${n.id}`;
     if (n.variants.length < MIN_VARIANTS) warn(w, `변형 ${n.variants.length}개 (최소 ${MIN_VARIANTS})`);
@@ -396,6 +400,67 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   need('food', def.balance.carry.dryKind, 'balance.carry');
   scene(def.scenes.briefing, 'scenes.briefing');
   scene(def.scenes.settlement, 'scenes.settlement');
+  scene(def.scenes.intro, 'scenes.intro');
+  for (const w of def.weather) if (w.overlay) sceneId(w.overlay, `weather.${w.id}`);
+  for (const sh of def.shelters) sceneId(sh.scene, `shelter.${sh.id}`);
+
+  // ── 화면용 글 (M2 화면 시안) ──
+  for (const pr of def.presets) {
+    const w = `preset.${pr.id}`;
+    const ps = pr.presentation;
+    for (const k of [ps.chapterLabel, ps.title, ps.meta, ps.tagline, ps.land.title, ps.land.subtitle, ps.land.intro, ps.chronicleOpening, ...ps.introLines])
+      str(k, w);
+    for (const f of ps.land.facts) for (const k of [f.mark, f.label, f.value]) str(k, w);
+  }
+  for (const m of def.calendar.months) str(`month.${m.id}.when`, `month.${m.id}`);
+  for (const sname of def.seasons) str(`brief.headline.${sname}`, 'briefing');
+  const br = def.briefing;
+  for (const h of br.headlines) {
+    str(h.key, 'briefing.headlines');
+    conds(h.when, 'briefing.headlines');
+  }
+  for (const n of br.news) {
+    str(n.key, 'briefing.news');
+    if (n.chip) str(n.chip, 'briefing.news');
+    conds(n.when, 'briefing.news');
+  }
+  for (const c of br.chips) {
+    str(c.key, 'briefing.chips');
+    conds(c.when, 'briefing.chips');
+  }
+  for (const sc of br.scenes) {
+    scene(sc.scene, 'briefing.scenes');
+    conds(sc.when, 'briefing.scenes');
+  }
+  // 조언: 조언자마다 입장이 있어야 하고, 대사 키가 있어야 한다
+  const stanceIds = new Set(def.advisors.stances.map((x) => x.id));
+  for (const pr of def.presets)
+    for (const pp of pr.people)
+      if (pp.advisor) {
+        if (!stanceIds.has(pp.advisor.stance)) err(`preset.${pr.id}`, `없는 입장: ${pp.advisor.stance}`);
+        str(`seat.${pp.advisor.seat}`, `preset.${pr.id}`);
+        str(`advice.generic.${pp.advisor.stance}`, 'advisors');
+        if (sceneIds && !sceneIds.has(`portrait.${pp.advisor.seat}`)) warn(`preset.${pr.id}`, `초상이 없는 자리: ${pp.advisor.seat}`);
+      }
+  for (const st of def.advisors.stances) str(`stance.${st.id}`, 'advisors');
+  for (const l of def.advisors.lines) {
+    str(l.text, 'advisors.lines');
+    if (l.policy) need('policy', l.policy, 'advisors.lines');
+    if (l.stance && !stanceIds.has(l.stance)) err('advisors.lines', `없는 입장: ${l.stance}`);
+    conds(l.when, 'advisors.lines');
+  }
+  // 시대 목표: 문자열과 측정기
+  for (const g of def.goals) {
+    str(`goal.${g.id}`, `goal.${g.id}`);
+    for (const pth of g.paths) {
+      str(`goal.${g.id}.${pth.id}`, `goal.${g.id}`);
+      if (pth.measure && !MEASURES[pth.measure.id]) err(`goal.${g.id}.${pth.id}`, `없는 측정기: ${pth.measure.id}`);
+    }
+  }
+  // 진행 화면의 장부 행과 알림, 방침 카드의 대가
+  for (const a of def.animals) if (a.meatKg > 0) str(`row.catch.${a.id}`, `animal.${a.id}`);
+  for (const a of def.ailments) str(`ailment.${a.id}.effect`, `ailment.${a.id}`);
+  for (const p of def.content.policies) str(`policy.${p.id}.cost`, `policy.${p.id}`);
 
   return issues;
 }

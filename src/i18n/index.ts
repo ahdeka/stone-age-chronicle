@@ -1,6 +1,7 @@
 // 아주 작은 번역기. 키가 없으면 키를 그대로 보여 주고(눈에 띄게) 개발 중에 경고한다.
 
 import type { Label } from '../engine';
+import { FORMATTERS } from './numerals';
 
 export type Strings = Record<string, string>;
 export type Params = Record<string, string | number>;
@@ -25,9 +26,12 @@ export function createTranslator(...tables: Strings[]): Translator {
       return `⟨${key}⟩`;
     }
     if (!params) return raw;
-    return raw.replace(/\{([\w:]+)\}/g, (m, name: string) => {
+    // {name} 또는 {name:서식}. 서식은 우리말 수 읽기 (numerals.ts)
+    return raw.replace(/\{([\w]+)(?::(\w+))?\}/g, (m, name: string, fmt: string | undefined) => {
       const v = params[name];
-      return v === undefined ? m : String(v);
+      if (v === undefined) return m;
+      const f = fmt ? FORMATTERS[fmt] : undefined;
+      return f && typeof v === 'number' ? f(Math.round(v)) : String(v);
     });
   };
 

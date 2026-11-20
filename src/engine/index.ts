@@ -15,3 +15,7 @@ export { serialize, deserialize, SAVE_FORMAT } from './save/save';
 export { SAVE_VERSION } from './save/version';
 export { seedToState, nextFloat, nextInt, chance, weightedIndex, shuffled, cloneRng } from './rng/rng';
 export { playMonth, playMonths, availableOptions, firstChoice, type Strategy } from './headless';
+export { coldestMonthFirewood, cohesionBand, crewSplit, ailingCount } from './display';
+export { goalProgress, MEASURES, type GoalProgress, type PathProgress } from './goals/progress';
+export { resolveSceneSpec } from './month/briefing';
+export { sumLedger } from './month/month';

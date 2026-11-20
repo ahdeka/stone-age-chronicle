@@ -16,6 +16,7 @@ export const ch1Events: EventDef[] = [
     options: [
       {
         id: 'stay_all',
+        hint: 'risky',
         effects: [
           { type: 'modifier', mod: { stat: 'hunt.bonus', op: 'add', value: 1 }, months: 1 },
           {
@@ -30,6 +31,7 @@ export const ch1Events: EventDef[] = [
       },
       {
         id: 'send_back',
+        hint: 'fair',
         requires: [{ type: 'actor', slot: 'leader' }],
         effects: [
           { type: 'modifier', mod: { stat: 'hunt.bonus', op: 'add', value: -1 }, months: 1 },
@@ -39,6 +41,7 @@ export const ch1Events: EventDef[] = [
       },
       {
         id: 'keep_fires',
+        hint: 'fair',
         effects: [
           { type: 'firewood', kg: -80 },
           { type: 'modifier', mod: { stat: 'yield.gather', op: 'mul', value: 0.5 }, months: 1 },
@@ -48,6 +51,7 @@ export const ch1Events: EventDef[] = [
       },
       {
         id: 'call_off',
+        hint: 'sure',
         effects: [
           { type: 'flag', id: 'hunt_called_off', set: true },
           { type: 'animal', id: 'wolves', state: 'roaming', at: null },
@@ -66,6 +70,7 @@ export const ch1Events: EventDef[] = [
     options: [
       {
         id: 'fires',
+        hint: 'sure',
         effects: [
           { type: 'firewood', kg: -60 },
           { type: 'animal', id: 'wolves', state: 'roaming', at: null },
@@ -74,6 +79,7 @@ export const ch1Events: EventDef[] = [
       },
       {
         id: 'watch',
+        hint: 'sure',
         effects: [
           { type: 'modifier', mod: { stat: 'yield.gather', op: 'mul', value: 0.6 }, months: 1 },
           { type: 'line', key: 'event.wolves_circle_camp.res.watch' },
@@ -81,6 +87,7 @@ export const ch1Events: EventDef[] = [
       },
       {
         id: 'ignore',
+        hint: 'risky',
         effects: [
           {
             type: 'random',
@@ -106,6 +113,7 @@ export const ch1Events: EventDef[] = [
     options: [
       {
         id: 'trade_hides',
+        hint: 'sure',
         requires: [{ type: 'goods', id: 'hide', min: 10 }],
         effects: [
           { type: 'goods', id: 'hide', delta: -10 },
@@ -117,6 +125,7 @@ export const ch1Events: EventDef[] = [
       },
       {
         id: 'decline',
+        hint: 'unknown',
         effects: [{ type: 'flag', id: 'turned_away_reed_lake', set: true }, { type: 'cohesion', delta: -1 }],
       },
     ],
@@ -133,11 +142,13 @@ export const ch1Events: EventDef[] = [
     options: [
       {
         id: 'trade',
+        hint: 'sure',
         requires: [{ type: 'goods', id: 'hide', min: 5 }],
         effects: [{ type: 'goods', id: 'hide', delta: -5 }, { type: 'food', kind: 'dried_fish', kg: 100 }],
       },
       {
         id: 'learn',
+        hint: 'sure',
         effects: [{ type: 'goods', id: 'hide', delta: -2 }, { type: 'knowledge', id: 'meat_drying', progress: 2 }],
       },
     ],
