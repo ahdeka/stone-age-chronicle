@@ -1,52 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { ch1, endTurns, newGame } from '../../test/fixtures';
-import { deserialize, migrations, serialize } from './save';
-import { SAVE_VERSION } from './version';
+import { ch1, newGame, pick } from '../../test/fixtures';
+import { firstChoice, playMonths } from '../headless';
+import { deserialize, serialize, SAVE_FORMAT } from './save';
 
-describe('save / load', () => {
-  it('왕복하면 상태가 완전히 같다', () => {
-    const s = endTurns(ch1, newGame('save'), 7);
-    const r = deserialize(serialize(s, '2026-11-19T00:00:00Z'));
+describe('저장/불러오기', () => {
+  it('결정 대기 중에 저장해도 그대로 돌아오고, 이어서 진행한 결과가 같다', () => {
+    const a = pick(ch1, newGame('save'), 'reindeer_big_hunt');
+    const r = deserialize(serialize(a, '2026-11-20T00:00:00Z'));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state).toEqual(s);
-    expect(r.savedAt).toBe('2026-11-19T00:00:00Z');
+    expect(r.savedAt).toBe('2026-11-20T00:00:00Z');
+    expect(r.state).toEqual(a);
+    const b = r.state;
+    playMonths(ch1, a, firstChoice, 4);
+    playMonths(ch1, b, firstChoice, 4);
+    expect(JSON.stringify(b)).toBe(JSON.stringify(a));
   });
 
-  it('불러온 상태에서 이어 진행해도 원래 진행과 같다 (RNG 포함)', () => {
-    const s = endTurns(ch1, newGame('continue'), 5);
-    const r = deserialize(serialize(s));
-    if (!r.ok) throw new Error(r.error);
-    expect(endTurns(ch1, r.state, 10)).toEqual(endTurns(ch1, s, 10));
+  it('이전 설계(카드 방식)의 저장 파일은 거부한다', () => {
+    const old = JSON.stringify({ format: SAVE_FORMAT, saveVersion: 2, chapterId: 'ch1', savedAt: null, state: { turn: 3 } });
+    expect(deserialize(old)).toEqual({ ok: false, error: 'error.save.oldDesign' });
   });
 
-  it('깨진 파일은 오류 키로 거부한다', () => {
-    expect(deserialize('{nope')).toEqual({ ok: false, error: 'error.save.notJson' });
-    expect(deserialize('{"format":"other"}')).toEqual({ ok: false, error: 'error.save.format' });
-    const file = JSON.parse(serialize(newGame()));
-    delete file.state.tribe;
-    expect(deserialize(JSON.stringify(file))).toEqual({ ok: false, error: 'error.save.corrupt' });
-  });
-
-  it('더 새로운 버전 파일은 거부한다', () => {
-    const file = JSON.parse(serialize(newGame()));
-    file.saveVersion = SAVE_VERSION + 1;
-    expect(deserialize(JSON.stringify(file))).toEqual({ ok: false, error: 'error.save.newer' });
-  });
-
-  it('옛 버전 파일은 마이그레이션을 순서대로 적용한다', () => {
-    const file = JSON.parse(serialize(newGame()));
-    file.saveVersion = 0;
-    file.state.saveVersion = 0;
-    migrations[0] = (st) => ({ ...st, migratedFrom0: true });
-    try {
-      const r = deserialize(JSON.stringify(file));
-      expect(r.ok).toBe(true);
-      if (!r.ok) return;
-      expect(r.state.saveVersion).toBe(SAVE_VERSION);
-      expect((r.state as unknown as Record<string, unknown>)['migratedFrom0']).toBe(true);
-    } finally {
-      delete migrations[0];
-    }
+  it('JSON이 아니거나, 형식이 다르거나, 더 새 버전이거나, 깨진 파일은 거부한다', () => {
+    expect(deserialize('{')).toEqual({ ok: false, error: 'error.save.notJson' });
+    expect(deserialize('{"format":"x"}')).toEqual({ ok: false, error: 'error.save.format' });
+    const good = JSON.parse(serialize(newGame())) as Record<string, unknown>;
+    expect(deserialize(JSON.stringify({ ...good, saveVersion: 999 }))).toEqual({ ok: false, error: 'error.save.newer' });
+    expect(deserialize(JSON.stringify({ ...good, state: { chapterId: 'ch1' } }))).toEqual({ ok: false, error: 'error.save.corrupt' });
   });
 });

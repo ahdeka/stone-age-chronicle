@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>진행 — 상순</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#12100e}
+a{color:#e0a15a}a:hover{color:#f0bd7f}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sceneIn{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:scale(1)}}
+@keyframes run{from{transform:translateX(0)}to{transform:translateX(-260px)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes pop{0%{opacity:0;transform:translateX(-8px)}100%{opacity:1;transform:translateX(0)}}
+@keyframes glowStep{0%,100%{box-shadow:0 0 0 0 rgba(224,161,90,0)}50%{box-shadow:0 0 0 6px rgba(224,161,90,0.22)}}
+.in{animation:fadeUp .9s ease-out both}
+.scene{animation:sceneIn 1.8s ease-out both}
+.run{animation:run 7s linear infinite}
+.leg{animation:bob .45s ease-in-out infinite}
+.reed{animation:sway 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.ln{fill:none;stroke:#c9813a;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ln-thin{fill:none;stroke:#d9a066;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ln-bone{fill:none;stroke:#d9cbb2;stroke-width:1.4;stroke-linecap:round;opacity:.5}
+.ln-reed{fill:none;stroke:#4a4030;stroke-width:3;stroke-linecap:round}
+.caret{display:inline-block;width:2px;height:1em;margin-left:3px;vertical-align:-0.12em;background:#e0a15a;animation:blink 1s steps(1) infinite}
+.para{margin:0;font-family:'Noto Serif KR',serif;font-size:19px;line-height:1.85;color:#ebe1d0}
+.row{animation:pop .5s ease-out both;display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #2e2821;font-size:16px}
+.step{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;font-size:14px;border:1px solid #3a3229;color:#8f8370}
+.step.done{color:#cbbfa9;border-color:#4a4034}
+.step.now{color:#17120c;background:#e0a15a;border-color:#e0a15a;font-weight:700;animation:glowStep 2s ease-in-out infinite}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #12100e; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif">
+  <div style="max-width: 1440px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+
+    <div class="in" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: 'Noto Serif KR', serif; font-size: 20px; font-weight: 700; color: #e0a15a">제1달 · 낙엽달</span>
+        <span style="font-size: 14px; color: #b3a690">방침: 순록 떼 대사냥 · 원정 14명, 이끄는 사람 바위</span>
+      </div>
+      <nav aria-label="이번 달 진행 단계" style="display: flex; flex-wrap: wrap; gap: 8px">
+        <span class="step done">✓ 방침</span>
+        <span class="step now">상순</span>
+        <span class="step">중순</span>
+        <span class="step">하순</span>
+        <span class="step">정산</span>
+      </nav>
+    </div>
+
+    <section style="position: relative; border-radius: 18px; overflow: hidden; border: 1px solid #2e2821; background: #0c0b0a">
+      <svg class="scene" viewBox="0 0 1200 440" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 440px">
+        <defs>
+          <linearGradient id="psky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" style="stop-color:#2a2621"></stop>
+            <stop offset="0.7" style="stop-color:#6a4a2a"></stop>
+            <stop offset="1" style="stop-color:#8a5a2c"></stop>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="1200" height="440" fill="url(#psky)"></rect>
+        <circle cx="300" cy="150" r="54" fill="#f0b46a" opacity="0.45"></circle>
+        <path d="M0 230 L120 200 L260 222 L420 190 L600 216 L780 186 L960 214 L1200 196 L1200 440 L0 440 Z" fill="#3a2b1f"></path>
+        <path d="M0 280 C200 266 400 284 600 270 C800 256 1000 276 1200 262 L1200 440 L0 440 Z" fill="#2a1f17"></path>
+        <path d="M0 330 C180 312 360 344 560 322 C760 300 960 330 1200 312 L1200 362 C960 380 760 350 560 372 C360 394 180 362 0 384 Z" fill="#33424a"></path>
+        <path class="ln-bone" d="M20 344 C200 326 360 356 560 334 M640 320 C800 306 980 330 1180 318"></path>
+        <g class="run">
+          <g transform="translate(700 0)">
+            <path class="ln-thin" d="M0 300 q20 -10 40 0 M8 300 l-4 18 M14 300 l4 18 M30 300 l-4 18 M36 300 l4 18 M0 296 l-8 -16 M-8 280 l-8 -6 M-8 280 l2 -12 M-8 280 l-14 2"></path>
+            <path class="ln-thin" d="M80 292 q20 -10 40 0 M88 292 l-4 18 M94 292 l4 18 M110 292 l-4 18 M116 292 l4 18 M80 288 l-8 -16 M72 272 l-8 -6 M72 272 l2 -12 M72 272 l-14 2"></path>
+            <path class="ln-thin" d="M150 304 q20 -10 40 0 M158 304 l-4 18 M164 304 l4 18 M180 304 l-4 18 M186 304 l4 18 M150 300 l-8 -16 M142 284 l-8 -6 M142 284 l2 -12 M142 284 l-14 2"></path>
+            <path class="ln-thin" d="M230 296 q20 -10 40 0 M238 296 l-4 18 M244 296 l4 18 M260 296 l-4 18 M266 296 l4 18 M230 292 l-8 -16 M222 276 l-8 -6 M222 276 l2 -12 M222 276 l-14 2"></path>
+            <path class="ln-thin" d="M310 306 q20 -10 40 0 M318 306 l-4 18 M324 306 l4 18 M340 306 l-4 18 M346 306 l4 18 M310 302 l-8 -16 M302 286 l-8 -6 M302 286 l2 -12 M302 286 l-14 2"></path>
+          </g>
+        </g>
+        <path d="M0 440 L0 396 C200 386 400 402 600 392 C800 382 1000 398 1200 388 L1200 440 Z" fill="#1a1410"></path>
+        <path class="ln-reed reed" d="M120 440 L128 360"></path>
+        <path class="ln-reed reed" d="M140 440 L152 350" style="animation-delay:.5s"></path>
+        <path class="ln-reed reed" d="M164 440 L170 366" style="animation-delay:1s"></path>
+        <path class="ln-reed reed" d="M1030 440 L1022 356" style="animation-delay:.3s"></path>
+        <path class="ln-reed reed" d="M1056 440 L1050 346" style="animation-delay:.9s"></path>
+        <path class="ln-reed reed" d="M1080 440 L1078 362" style="animation-delay:1.4s"></path>
+        <path class="ln" d="M190 420 l0 -26 M190 396 c6 -4 12 -4 16 2 M210 424 l0 -28 M210 398 l22 -26 M232 420 l0 -24"></path>
+        <circle cx="190" cy="388" r="6" fill="#c9813a"></circle>
+        <circle cx="210" cy="390" r="6" fill="#c9813a"></circle>
+        <circle cx="232" cy="390" r="6" fill="#c9813a"></circle>
+        <path class="ln" d="M990 420 l0 -26 M990 396 l-22 -26 M1010 424 l0 -26"></path>
+        <circle cx="990" cy="388" r="6" fill="#c9813a"></circle>
+        <circle cx="1010" cy="392" r="6" fill="#c9813a"></circle>
+      </svg>
+      <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10,9,8,0.9) 0%, rgba(10,9,8,0) 45%)"></div>
+      <div style="position: absolute; left: 28px; bottom: 22px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; letter-spacing: 0.2em; color: #e0a15a">상순 · 1~10일</span>
+        <span style="font-family: 'Noto Serif KR', serif; font-size: 28px; font-weight: 700">동쪽 초원의 여울</span>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 18px; padding: 24px 28px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821">
+        <sc-for list="{{paras}}" as="pp" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <sc-if value="{{pp.hasLabel}}" hint-placeholder-val="{{ false }}">
+              <span style="font-size: 13px; letter-spacing: 0.16em; color: #e0a15a">{{pp.label}}</span>
+            </sc-if>
+            <p class="para">{{pp.text}}<sc-if value="{{pp.typing}}" hint-placeholder-val="{{ false }}"><span class="caret"></span></sc-if></p>
+          </div>
+        </sc-for>
+      </section>
+
+      <aside style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <section style="padding: 22px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 4px">
+          <h2 style="margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #cbbfa9">식량</h2>
+          <div style="display: flex; align-items: baseline; gap: 10px">
+            <span style="font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums">{{food}}</span>
+            <span style="font-size: 18px; color: #b3a690">kg</span>
+            <span style="margin-left: auto; font-size: 15px; color: {{daysColor}}">약 {{days}}일분</span>
+          </div>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+            <div class="row"><span style="color: #ddd2bf">{{r.label}}</span><b style="color: {{r.color}}; font-variant-numeric: tabular-nums">{{r.value}}</b></div>
+          </sc-for>
+        </section>
+
+        <sc-if value="{{showPeople}}" hint-placeholder-val="{{ false }}">
+          <section class="in" style="padding: 18px 22px; border-radius: 16px; background: #241a16; border: 1px solid #5a3426; display: flex; gap: 12px; align-items: flex-start">
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M12 3 L22 20 L2 20 Z" fill="none" stroke="#f2a283" style="stroke-width:1.8;stroke-linejoin:round"></path><path d="M12 10 v4 M12 17 v0.5" stroke="#f2a283" style="stroke-width:2;stroke-linecap:round"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <b style="font-size: 16px">하람 — 허벅지를 뿔에 긁힘</b>
+              <span style="font-size: 14px; line-height: 1.6; color: #e6c9bb">걸을 수는 있다. 이번 달 사냥 힘이 조금 줄어든다.</span>
+            </div>
+          </section>
+        </sc-if>
+
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <sc-if value="{{ready}}" hint-placeholder-val="{{ false }}">
+            <a href="#" class="in" style="display: flex; justify-content: center; align-items: center; min-height: 52px; border-radius: 26px; background: #e0a15a; color: #17120c; font-size: 17px; font-weight: 700; text-decoration: none">중순으로 — 소식이 오고 있다</a>
+          </sc-if>
+          <sc-if value="{{notReady}}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{skip}}" style="min-height: 52px; border-radius: 26px; border: 1px solid #5a4d3c; background: transparent; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif; font-size: 16px; cursor: pointer">빨리 보기</button>
+          </sc-if>
+          <button type="button" onClick="{{replay}}" style="min-height: 44px; border-radius: 22px; border: none; background: transparent; color: #b3a690; font-family: 'Noto Sans KR', sans-serif; font-size: 15px; cursor: pointer">처음부터 다시 보기</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"typeSpeed":{"editor":"range","default":30,"min":12,"max":70,"step":2,"unit":"ms","section":"진행"},"$preview":{"width":1440,"height":1180}}'>
+var PARAS = [
+  { label: '사냥대', text: '사냥대는 나흘을 걸어 순록 떼의 이동로에 닿았다. 순록들은 초원을 가로지르는 얕은 여울을 건너고 있었다. 바위는 여울 양쪽 갈대밭에 사람들을 숨겼다.' },
+  { label: '', text: '첫 매복에서 순록 세 마리를 잡았다. 고기 약 150kg과 가죽 세 장. 하람이 뿔에 허벅지를 긁혔지만 걸을 수는 있다.' },
+  { label: '마을', text: '남은 어른 넷은 강가에서 뿌리를 캐고 마른 가지를 모았다. 서리는 아이들에게 불씨를 꺼뜨리지 않는 법을 가르쳤다.' }
+];
+var ROWS = [
+  { label: '순록 3마리', delta: 150 },
+  { label: '마을 채집', delta: 30 },
+  { label: '열흘 소비 (34명)', delta: -285 }
+];
+var START_FOOD = 520;
+var DAILY = 29;
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { elapsed: 0 };
+    this.start = Date.now();
+    this.offset = 0;
+  }
+  componentDidMount() {
+    var self = this;
+    this.start = Date.now();
+    this.timer = setInterval(function () {
+      self.setState({ elapsed: Date.now() - self.start + self.offset });
+    }, 40);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    var self = this;
+    var speed = this.props.typeSpeed ?? 30;
+    var e = this.state.elapsed;
+    var t = 1200;
+    var paras = [];
+    PARAS.forEach(function (p) {
+      if (e >= t) {
+        var n = Math.max(0, Math.min(p.text.length, Math.floor((e - t) / speed)));
+        paras.push({ label: p.label, hasLabel: p.label !== '', text: p.text.slice(0, n), typing: n < p.text.length });
+      }
+      t += p.text.length * speed + 600;
+    });
+    var ledgerStart = t;
+    var rows = [];
+    var food = START_FOOD;
+    ROWS.forEach(function (r, i) {
+      var rs = ledgerStart + i * 900;
+      if (e >= rs) {
+        var k = Math.min(1, (e - rs) / 700);
+        food += Math.round(r.delta * k);
+        rows.push({ label: r.label, value: (r.delta > 0 ? '+' : '−') + Math.abs(r.delta) + 'kg', color: r.delta > 0 ? '#9fd0a8' : '#f2a283' });
+      }
+    });
+    var end = ledgerStart + ROWS.length * 900 + 300;
+    var days = Math.max(0, Math.round(food / DAILY));
+    return {
+      paras: paras,
+      rows: rows,
+      food: String(food),
+      days: String(days),
+      daysColor: days < 16 ? '#f2a283' : '#cbbfa9',
+      showPeople: e >= 1200 + (PARAS[0].text.length + PARAS[1].text.length) * speed + 1200,
+      ready: e >= end,
+      notReady: e < end,
+      skip: function () { self.offset = end - (Date.now() - self.start); },
+      replay: function () { self.start = Date.now(); self.offset = 0; self.setState({ elapsed: 0 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

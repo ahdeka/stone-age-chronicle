@@ -1,48 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { ch1, newGame, tweakDef } from '../../test/fixtures';
-import { ch1Numbers } from '../../data/chapters/ch1/balance';
-import { getStat, stat } from './stats';
+import { monthDef } from '../core/lookup';
+import { firewoodPerDay, getStat, stat } from './stats';
 
-describe('stats', () => {
-  it('기본값 → add 합 → mul 곱 순서로 계산한다', () => {
+describe('스탯', () => {
+  it('기본값 → add 합 → mul 곱', () => {
     const def = tweakDef((d) => {
-      d.balance.globalModifiers.push(
-        { stat: 'yield.craft', op: 'mul', value: 2 },
-        { stat: 'yield.craft', op: 'add', value: 0.5 },
-      );
+      d.globalMods.push({ stat: 'yield.wood', op: 'mul', value: 2 }, { stat: 'yield.wood', op: 'add', value: 0.5 });
     });
-    const s = newGame('x', def);
-    // (기본 + 0.5) × 2
-    expect(stat(def, s, 'yield.craft')).toBeCloseTo((ch1.balance.stats['yield.craft']! + 0.5) * 2);
+    expect(stat(def, newGame('x', def), 'yield.wood')).toBeCloseTo((ch1.balance.stats['yield.wood']! + 0.5) * 2);
   });
 
-  it('계절 모디파이어는 그 계절에만 켜진다', () => {
+  it('날씨 모디파이어는 그 순에만 켜진다', () => {
     const s = newGame();
-    expect(s.season).toBe('spring');
-    expect(stat(ch1, s, 'consume.food')).toBeCloseTo(ch1.balance.stats['consume.food']!);
-    const winter = structuredClone(s);
-    winter.season = 'winter';
-    expect(stat(ch1, winter, 'consume.food')).toBeCloseTo(ch1.balance.stats['consume.food']! * ch1Numbers.season.winter.consume);
+    s.work.weather = ['blizzard', 'clear', 'clear'];
+    s.work.phasesDone = 0;
+    const blizzard = getStat(ch1, s, 'firewood.burnMul');
+    expect(blizzard.parts.map((p) => p.source)).toContain('weather.blizzard');
+    s.work.phasesDone = 1;
+    expect(stat(ch1, s, 'firewood.burnMul')).toBeLessThan(blizzard.value);
   });
 
-  it('when 조건이 맞을 때만 적용한다 (결속에 따른 행동 수)', () => {
+  it('장작 소모 = 달 기준 × 거처 배율 (바위굴은 절반)', () => {
     const s = newGame();
-    expect(stat(ch1, s, 'actions.perTurn')).toBe(2);
-    const high = structuredClone(s);
-    high.tribe.resources['cohesion'] = 70;
-    expect(stat(ch1, high, 'actions.perTurn')).toBe(3);
-    const low = structuredClone(s);
-    low.tribe.resources['cohesion'] = 24.5;
-    expect(stat(ch1, low, 'actions.perTurn')).toBe(1);
+    s.work.weather = ['clear', 'clear', 'clear'];
+    const tent = firewoodPerDay(ch1, s);
+    expect(tent).toBeCloseTo(monthDef(ch1, s).firewoodPerDay);
+    s.shelter.kind = 'rock_cave';
+    expect(firewoodPerDay(ch1, s)).toBeCloseTo(tent * 0.5);
   });
 
-  it('임시 모디파이어와 생활 방식이 반영되고 출처가 기록된다', () => {
+  it('지식은 조건부 모디파이어를 건다 (끌개는 겨울에만)', () => {
     const s = newGame();
-    s.modifiers.push({ mod: { stat: 'storage.food.perPop', op: 'add', value: 1 }, lastTurn: 9, sourceKey: 'test' });
-    s.tribe.lifestyle = 'settled';
-    const v = getStat(ch1, s, 'storage.food.perPop');
-    expect(v.value).toBeCloseTo((4 + 1) * 2);
-    expect(v.parts.map((p) => p.source)).toEqual(['base', 'lifestyle.settled', 'test']);
+    s.knowledge.has.push('sled');
+    expect(stat(ch1, s, 'carry.perPerson')).toBeCloseTo(ch1.balance.stats['carry.perPerson']!);
+    s.month += 1; // 서리달 (겨울)
+    expect(stat(ch1, s, 'carry.perPerson')).toBeGreaterThan(ch1.balance.stats['carry.perPerson']!);
   });
 
   it('모르는 스탯 키는 오류', () => {

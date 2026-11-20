@@ -1,53 +1,60 @@
-// 조건 언어 (DESIGN.md §4.1)
-// 조건 평가에는 난수를 쓰지 않는다. 확률은 이벤트 가중치와 효과(random, check)에서만 다룬다.
+// 조건 언어 (DESIGN.md §5.1). 조건 평가에는 난수를 쓰지 않는다.
 
-import type { Id } from './common';
-
-/** 범위 표기. 둘 다 포함한다. 연산자 문자열 대신 이것만 쓴다. */
-export interface NumRange {
-  min?: number;
-  max?: number;
-}
+import type { AgeBand, Id, NumRange, Sex } from './common';
 
 export interface PersonQuery {
-  office?: Id;
+  band?: AgeBand[];
+  sex?: Sex;
   trait?: Id;
-  stage?: Id[];
-  relation?: NumRange;
+  skill?: { id: Id; min: number };
+  /** 조언자 자리 (예: 'hunt_leader') */
+  seat?: Id;
+  isChief?: boolean;
+  /** true: 부상·병이 있다 / false: 없다 */
+  ailing?: boolean;
   /** 기본값 true */
   alive?: boolean;
 }
 
 export type Condition =
-  // 부족 상태
-  | ({ type: 'resource'; key: Id } & NumRange)
-  | ({ type: 'population' } & NumRange)
-  | ({ type: 'role'; role: Id } & NumRange)
-  | ({ type: 'axis'; axis: Id } & NumRange)
-  | { type: 'lifestyle'; is: Id }
-  | { type: 'tribeTrait'; id: Id }
-  // 진행
-  | { type: 'season'; in: Id[] }
-  | ({ type: 'turn' } & NumRange)
-  | ({ type: 'reign' } & NumRange)
-  | { type: 'era'; is: Id }
-  | { type: 'flag'; id: Id; present?: boolean; sinceTurns?: NumRange }
-  | ({ type: 'counter'; id: Id } & NumRange)
-  | { type: 'eventSeen'; id: Id; present?: boolean }
-  // 체계
-  | { type: 'knowledge'; id: Id; has?: boolean }
-  | { type: 'tradition'; id: Id }
-  | { type: 'region'; current?: Id; special?: string; tag?: string; depth?: NumRange }
-  | { type: 'regionDiscovered'; id: Id }
-  // 인물
+  // 물자 (마을에 있는 것만 센다)
+  | ({ type: 'food'; kinds?: Id[] } & NumRange)
+  | ({ type: 'foodDays' } & NumRange)
+  | ({ type: 'firewood' } & NumRange)
+  | ({ type: 'firewoodDays' } & NumRange)
+  | ({ type: 'goods'; id: Id } & NumRange)
+  | ({ type: 'cohesion' } & NumRange)
+  | ({ type: 'hungerStage' } & NumRange)
+  // 사람
+  | ({ type: 'population'; band?: AgeBand } & NumRange)
+  | ({ type: 'workers' } & NumRange)
   | { type: 'person'; match: PersonQuery; count?: NumRange }
-  | { type: 'chief'; match: PersonQuery }
-  /** 이벤트/행동에 바인딩된 인물. 슬롯이 비어 있으면 거짓. 행동 카드의 배정 인물은 슬롯 'assignee'. */
+  /** 사건에 바인딩된 인물, 또는 'leader'(방침을 이끄는 인물) */
   | { type: 'actor'; slot: string; match?: PersonQuery }
+  // 시간과 날씨
+  | { type: 'season'; in: Id[] }
+  | { type: 'monthOfYear'; in: Id[] }
+  | ({ type: 'month' } & NumRange)
+  /** now: 지금 순의 날씨 / outlook: 이번 달 어느 순이든 */
+  | { type: 'weather'; in: Id[]; at?: 'now' | 'outlook' }
+  // 세계
+  | { type: 'animal'; id: Id; state?: Id[]; at?: Id; known?: boolean }
+  | ({ type: 'animalVar'; id: Id; var: string } & NumRange)
+  | { type: 'place'; id: Id; discovered?: boolean; fact?: Id }
+  | ({ type: 'placeStock'; id: Id; yield: Id } & NumRange)
+  | { type: 'shelter'; in: Id[] }
+  // 진행과 기억
+  | { type: 'flag'; id: Id; present?: boolean; sinceMonths?: NumRange }
+  | ({ type: 'counter'; id: Id } & NumRange)
+  | { type: 'knowledge'; id: Id; has?: boolean }
+  | { type: 'clue'; id: Id; has?: boolean }
+  /** 은닉물. known: 상태를 최근에 확인했는가 */
+  | { type: 'cache'; at?: Id; known?: boolean; has?: boolean }
+  | { type: 'policy'; id?: Id; category?: Id }
   // 논리
   | { type: 'all'; of: Condition[] }
   | { type: 'any'; of: Condition[] }
   | { type: 'not'; of: Condition };
-// 'neighbor'는 M5에서 추가한다.
+// 'neighbor'는 이웃 집단을 넣는 M3에서 추가한다.
 
 export type ConditionType = Condition['type'];

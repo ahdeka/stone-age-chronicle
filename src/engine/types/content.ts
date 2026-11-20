@@ -1,0 +1,129 @@
+// 콘텐츠 타입: 방침, 활동(등급 판정), 사건, 서술, 장면 (DESIGN.md §3.5)
+
+import type { AgeBand, Id, Phase, Tier } from './common';
+import type { Condition, PersonQuery } from './condition';
+import type { Effect, StatKey, WhoRef } from './effect';
+
+/** 장면 레이어 조합. '{place}'는 방침 장소, '{camp}'는 거처, '{weather}'는 지금 날씨로 채운다 */
+export interface SceneSpec {
+  bg: Id;
+  subjects?: Id[];
+  overlay?: Id;
+}
+
+/** 등급 판정의 힘 항목 */
+export type PowerTerm =
+  /** 원정대: 사람마다 (1 + 숙련 × skillWeight) × weight */
+  | { src: 'crew'; weight: number; skill?: Id; skillWeight?: number }
+  /** 물자: perCrew면 (개수 / 원정대 수, 최대 1) × weight, 아니면 min(개수, cap) × weight */
+  | { src: 'goods'; id: Id; weight: number; perCrew?: boolean; cap?: number }
+  | { src: 'stat'; id: StatKey; weight: number }
+  | { src: 'when'; when: Condition[]; value: number }
+  | { src: 'leader'; skill?: Id; trait?: Id; weight: number }
+  | { src: 'const'; value: number };
+
+/** 숨은 변수: knownWhen이 거짓이면 위험 단서가 '결과를 알 수 없다'가 된다 */
+export interface HiddenVar {
+  id: Id;
+  knownWhen: Condition[];
+}
+
+export interface CostEntry {
+  weight: number;
+  when?: Condition[];
+  effects: Effect[];
+}
+
+export interface Outcome {
+  effects: Effect[];
+  narrative?: Id;
+  scene?: SceneSpec;
+}
+
+export interface ActivityDef {
+  power: PowerTerm[];
+  difficulty: number;
+  hidden?: HiddenVar[];
+  outcomes: Record<Tier, Outcome>;
+  /** 대가 있는 성공에서 1개, 참사에서 2개를 뽑는다 */
+  costs?: CostEntry[];
+}
+
+export interface CrewSpec {
+  min: number;
+  /** 'all': 남겨 둘 인원을 뺀 전부 */
+  max: number | 'all';
+  /** 마을에 남길 최소 노동 인원 */
+  keepHome: number;
+  prefer?: Id;
+  band?: AgeBand[];
+  /** 족장도 원정에 나서는가 (기본 false: 족장은 마을에 남는다) */
+  includeChief?: boolean;
+}
+
+export type PolicyStep = (
+  | { kind: 'narrate'; narrative?: Id; effects?: Effect[] }
+  | { kind: 'activity'; activity: ActivityDef }
+  | { kind: 'eventWindow'; pool: Id[]; chance: number }
+  /** 원정지의 짐을 마을로 옮긴다 (운반 한계, 왕복, 남은 고기 처리) */
+  | { kind: 'carry' }
+) & {
+  /** 이 조건이 거짓이면 건너뛴다 (예: 중순 사건에서 사냥을 접었으면 하순 사냥을 건너뜀) */
+  when?: Condition[];
+};
+
+export interface PolicyTemplate {
+  id: Id;
+  category: Id;
+  appearsWhen: Condition[];
+  relevance?: { when: Condition[]; add: number }[];
+  priority: number;
+  cooldown: number;
+  once?: boolean;
+  /** 버티기 방침: 후보에 늘 하나 들어간다 */
+  fallback?: boolean;
+  crew?: CrewSpec;
+  /** 원정지. 없으면 마을 근처 */
+  place?: Id;
+  leader?: PersonQuery;
+  /** 마을 일손 중 장작에 쓰는 비율을 고정한다 (없으면 장작 상황에 따라 자동) */
+  firewoodShare?: number;
+  /** 이번 달 동안 걸리는 모디파이어 (예: 배급 줄이기) */
+  monthMods?: { stat: StatKey; op: 'add' | 'mul'; value: number }[];
+  scene: SceneSpec;
+  steps: Partial<Record<Phase, PolicyStep[]>>;
+  /** 이 방침을 하면 자라는 지식 */
+  knowledgeProgress?: Record<Id, number>;
+}
+
+export interface EventOption {
+  id: Id;
+  requires?: Condition[];
+  activity?: ActivityDef;
+  effects: Effect[];
+  narrative?: Id;
+}
+
+export type EventSlot = Phase | 'briefing';
+
+export interface EventDef {
+  id: Id;
+  /** policy: 방침의 eventWindow pool로만 / village: 어느 방침이든 마을 소식으로 / scheduled: 예약으로만 */
+  scope: 'policy' | 'village' | 'scheduled';
+  slots: EventSlot[];
+  when: Condition[];
+  weight: number;
+  cooldown: number;
+  once?: boolean;
+  actors?: Record<string, PersonQuery>;
+  scene: SceneSpec;
+  speakers?: { who: WhoRef | { seat: Id }; line: string }[];
+  options: EventOption[];
+}
+
+export interface Narrative {
+  id: Id;
+  variants: { when?: Condition[]; text: string }[];
+  /** 서술이 남기는 사실 (발톱 자국 → 곰 굴 발견) */
+  facts?: Effect[];
+}

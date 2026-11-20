@@ -40,7 +40,7 @@ export function downloadSave(state: GameState): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `stone-age-chronicle-${state.seed}-t${state.turn}.json`;
+  a.download = `stone-age-chronicle-${state.seed}-m${state.month}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

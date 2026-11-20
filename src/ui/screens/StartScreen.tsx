@@ -1,7 +1,9 @@
+// 시작 화면: 시드 입력, 새로 시작, 이어 하기, 불러오기. 시작 브리핑 화면은 M2에서 만든다.
+
 import { useState } from 'react';
 import type { GameState } from '../../engine';
-import { useT } from '../i18n';
 import { LoadButton } from '../components/SaveControls';
+import { useT } from '../i18n';
 import s from './screens.module.css';
 
 interface Props {
@@ -11,32 +13,35 @@ interface Props {
   onLoad: (state: GameState) => void;
 }
 
-export function StartScreen({ canContinue, onContinue, onStart, onLoad }: Props) {
-  const { t } = useT();
-  const [seed, setSeed] = useState('');
+/** 시드 기본값: 시계를 엔진에 넣지 않으려고 UI에서 만든다 */
+function defaultSeed(): string {
+  return `seed-${Date.now().toString(36)}`;
+}
 
+export function StartScreen({ canContinue, onContinue, onStart, onLoad }: Props) {
+  const tr = useT();
+  const [seed, setSeed] = useState(defaultSeed);
   return (
     <main className={s.start}>
-      <h1 className={s.title}>{t('ui.title')}</h1>
-      <p className={s.subtitle}>{t('ui.subtitle')}</p>
+      <h1 className={s.title}>{tr.t('ui.title')}</h1>
+      <p className={s.subtitle}>{tr.t('ui.subtitle')}</p>
       <form
         className={s.startForm}
         onSubmit={(e) => {
           e.preventDefault();
-          // 엔진은 시드를 받기만 한다. 빈 시드의 기본값은 UI가 시계로 만든다.
-          onStart(seed.trim() || Date.now().toString(36));
+          onStart(seed.trim() || defaultSeed());
         }}
       >
         <label className={s.field}>
-          <span>{t('ui.seed')}</span>
-          <input value={seed} onChange={(e) => setSeed(e.target.value)} placeholder={t('ui.seedPlaceholder')} />
+          {tr.t('ui.seed')}
+          <input value={seed} onChange={(e) => setSeed(e.target.value)} />
         </label>
         <button type="submit" className={s.primary}>
-          {t('ui.newGame')}
+          {tr.t('ui.newGame')}
         </button>
         {canContinue && (
           <button type="button" className={s.secondary} onClick={onContinue}>
-            {t('ui.continue')}
+            {tr.t('ui.continue')}
           </button>
         )}
         <LoadButton onLoad={onLoad} />

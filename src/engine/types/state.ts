@@ -1,169 +1,204 @@
-// 게임 상태 (DESIGN.md §2.1). JSON으로 그대로 저장/복원된다: 함수, Map, Set, undefined 금지.
+// 게임 상태 (DESIGN.md §3.7). 전부 JSON으로 직렬화된다.
 
-import type { Id, Label } from './common';
-import type { Effect, ModifierDef } from './effect';
-import type { EndingKind } from './chapter';
+import type { Hint, Id, Label, RngState, Sex, Tier } from './common';
+import type { Condition } from './condition';
+import type { ModifierDef } from './effect';
+import type { EventSlot, SceneSpec } from './content';
 
-export type RngState = [number, number, number, number];
-
-export type Phase = 'event' | 'action' | 'ended';
-
-export interface Tribe {
-  name: Label;
-  traits: Id[];
-  population: number;
-  roles: Record<Id, number>;
-  resources: Record<Id, number>;
-  axes: Record<Id, number>;
-  lifestyle: Id;
-  growth: number;
-  hunger: number;
+export interface Ailment {
+  kind: Id;
+  severity: 1 | 2 | 3;
+  /** 절대 순 번호 (phaseNo) 이후 회복 */
+  healsAt: number;
 }
 
 export interface Person {
   id: Id;
   name: Label;
-  sex: 'f' | 'm';
-  stage: Id;
-  stageTurns: number;
-  office: Id | null;
-  traits: Id[];
-  relation: number;
-  parents: [Id | null, Id | null];
+  sex: Sex;
+  /** 태어난 달 (게임 시작 달 = 1, 그 전은 0 이하) */
+  birthMonth: number;
   alive: boolean;
-  bornTurn: number;
-  bornReign: number;
-  death: { turn: number; reign: number; causeKey: string } | null;
-  ambition: number;
+  diedMonth?: number;
+  cause?: Id;
+  parents: Id[];
+  traits: Id[];
+  skills: Partial<Record<Id, number>>;
+  advisor?: { seat: Id; stance: Id };
+  isChief?: boolean;
+  ailments: Ailment[];
+  /** 덜 먹은 날의 누적 (정상 배급이면 줄어든다) */
+  hungerDays: number;
 }
 
-export interface RegionState {
-  depletion: number;
+export interface FoodLot {
+  kind: Id;
+  kg: number;
 }
 
-export interface ScheduledEvent {
-  eventId: Id;
-  dueTurn: number;
-  chance: number;
-  /** 같은 턴 안의 순서를 정하는 등록 번호 */
-  seq: number;
+export interface Stores {
+  food: FoodLot[];
+  firewood: number;
+  goods: Record<Id, number>;
 }
 
-export interface ScheduledEffect {
-  dueTurn: number;
-  effects: Effect[];
-  seq: number;
-  sourceKey: string;
+export interface AnimalState {
+  state: Id;
+  at?: Id;
+  known: boolean;
+  vars: Record<string, number>;
 }
 
-export interface EventInstance {
-  uid: string;
-  eventId: Id;
-  /** 슬롯 → 인물 id */
-  actors: Record<string, Id>;
-  variant: string | null;
+export interface PlaceState {
+  discovered: boolean;
+  stock: Record<Id, number>;
+  facts: Id[];
 }
 
-export interface CardInstance {
-  uid: string;
-  cardId: Id;
+export interface Cache {
+  id: Id;
+  place: Id;
+  lots: FoodLot[];
+  month: number;
+  scent: number;
+  /** 마지막으로 상태를 확인한 달 */
+  checkedMonth: number;
 }
 
-/** 연대기 문장 템플릿 변수. 인물 이름은 그 시점의 값으로 굳혀 둔다. */
-export type ChronicleParam = Label | number;
+export interface Scheduled {
+  uid: Id;
+  event: Id;
+  from: number;
+  to: number;
+  when?: Condition[];
+}
+
+export interface TempModifier {
+  mod: ModifierDef;
+  /** 이 달까지 유효 */
+  until: number;
+  source: string;
+}
+
+export interface BoundPolicy {
+  uid: Id;
+  policyId: Id;
+  crew: Id[];
+  leaderId?: Id;
+  hint: Hint;
+  score: number;
+}
+
+export type LineParamValue = string | number | Label;
+
+export interface Line {
+  key: string;
+  params?: Record<string, LineParamValue>;
+}
+
+export interface LedgerLine {
+  /** 'food' | 'firewood' | 물자 id */
+  res: Id;
+  source: string;
+  delta: number;
+}
+
+export interface PhaseReport {
+  slot: EventSlot | 'settlement';
+  weather?: Id;
+  scene: SceneSpec;
+  lines: Line[];
+  tier?: Tier;
+  /** 이 단계의 순수 증감 (애니메이션용) */
+  deltas: Record<Id, number>;
+}
+
+export type Decision =
+  | { uid: Id; kind: 'event'; eventId: Id; slot: EventSlot; actors: Record<string, Id> }
+  | { uid: Id; kind: 'leftover'; kg: number };
+
+export interface MonthWork {
+  candidates: BoundPolicy[];
+  chosen?: BoundPolicy;
+  /** 이번 달 순별 날씨 */
+  weather: [Id, Id, Id];
+  /** 끝난 순 수 (0~3) */
+  phasesDone: number;
+  /** 진행 중인 순에서 다음에 실행할 방침 단계 번호 */
+  stepIndex: number;
+  /** 원정지의 짐 (운반 전) */
+  haul: FoodLot[];
+  decision?: Decision;
+  reports: PhaseReport[];
+  ledger: LedgerLine[];
+  deaths: Id[];
+  tiers: Tier[];
+  events: Id[];
+  /** 평온한 달 판정을 깨는 일이 있었는가 (§19) */
+  notable: boolean;
+  chronicle?: { key: string; importance: number; params?: Record<string, LineParamValue> };
+  /** 원정 장소 (보고 장면용) */
+  place?: Id;
+  /** 직전 활동의 결과 맥락 ($caught, $meat 등) */
+  vars: Record<string, number>;
+  /** 마을 사건 판정을 이번 달에 했는가 */
+  villageChecked: boolean;
+  /** 월초 현황 (정산표의 시작 값) */
+  start: { food: number; firewood: number; population: number };
+}
+
+export interface MonthReport {
+  month: number;
+  monthId: Id;
+  policyId?: Id;
+  reports: PhaseReport[];
+  ledger: LedgerLine[];
+  quiet: boolean;
+}
 
 export interface ChronicleEntry {
-  turn: number;
-  reign: number;
-  season: Id;
-  /** 이 족장 시절의 몇 번째 같은 계절인가 (1부터) */
-  seasonIndex: number;
+  month: number;
+  monthId: Id;
   key: string;
-  params: Record<string, ChronicleParam>;
+  params?: Record<string, LineParamValue>;
 }
 
-export interface ActiveModifier {
-  mod: ModifierDef;
-  /** 이 턴이 끝날 때까지 유효 */
-  lastTurn: number;
-  sourceKey: string;
-}
-
-/** 이번 턴의 변화 기록. 요약, 애니메이션, 연대기 후보가 이 하나를 공유한다. */
-export type LogEntry =
-  | { kind: 'resource'; key: Id; delta: number; source: string }
-  | { kind: 'population'; delta: number; source: string }
-  | { kind: 'axis'; axis: Id; delta: number; source: string }
-  | { kind: 'counter'; id: Id; delta: number; source: string }
-  | { kind: 'flag'; id: Id; set: boolean; source: string }
-  | { kind: 'modifier'; stat: string; turns: number; source: string }
-  | { kind: 'roll'; p: number; success: boolean; source: string }
-  | { kind: 'chronicle'; key: string; importance: number; source: string; params: Record<string, ChronicleParam> }
-  | { kind: 'stage'; personId: Id; to: Id; source: string }
-  | { kind: 'person'; personId: Id; relation: number; source: string }
-  | { kind: 'trait'; personId: Id; trait: Id; added: boolean; source: string }
-  | { kind: 'card'; cardId: Id; delta: number; source: string }
-  | { kind: 'event'; eventId: Id; optionId: string; source: string }
-  | { kind: 'action'; cardId: Id; personId: Id | null; source: string }
-  | { kind: 'note'; key: string; source: string };
-
-export interface TurnSummary {
-  turn: number;
-  season: Id;
-  reign: number;
-  log: LogEntry[];
-}
-
-export interface EndingRecord {
-  id: Id;
-  kind: EndingKind;
-  turn: number;
-}
+export type Step = 'policy' | 'decision' | 'settlement' | 'ended';
 
 export interface GameState {
   saveVersion: number;
   chapterId: Id;
+  presetId: Id;
   seed: string;
   rng: RngState;
-  turn: number;
-  season: Id;
-  reign: number;
-  reignStartTurn: number;
-  eraId: Id;
-  phase: Phase;
-
-  tribe: Tribe;
+  /** 1부터 증가 */
+  month: number;
+  startMonthIndex: number;
+  step: Step;
+  campPlace: Id;
+  shelter: { kind: Id; place: Id };
   people: Record<Id, Person>;
-  regions: { current: Id; discovered: Id[]; state: Record<Id, RegionState> };
-  knowledge: Id[];
-  traditions: Record<Id, { id: Id; adoptedTurn: number } | null>;
-
-  /** 값 = 설정된 턴 */
+  chiefLine: number;
+  stores: Stores;
+  cohesion: number;
+  /** 0 정상, 1 배급 감축, 2 굶주림 */
+  hungerStage: number;
+  places: Record<Id, PlaceState>;
+  animals: Record<Id, AnimalState>;
+  knowledge: { has: Id[]; progress: Record<Id, number> };
+  clues: { id: Id; until?: number }[];
+  caches: Cache[];
+  scheduled: Scheduled[];
+  modifiers: TempModifier[];
   flags: Record<Id, number>;
   counters: Record<Id, number>;
-
-  actions: {
-    playsLeft: number;
-    /** 이번 계절에 행동에 배정된 인물 (같은 인물을 두 번 쓰지 못한다) */
-    busy: Id[];
-  };
-  deck: { draw: CardInstance[]; hand: CardInstance[]; discard: CardInstance[] };
-  events: {
-    /** 이번 턴에 해결해야 할 이벤트. 앞에서부터 하나씩 */
-    pending: EventInstance[];
-    scheduled: ScheduledEvent[];
-    history: Record<Id, { count: number; lastTurn: number }>;
-    /** 최근 턴들에 나온 이벤트 태그 (태그 피로 판정용, 최신이 끝) */
-    recentTags: string[][];
-  };
+  /** 방침·사건 id → 다시 나올 수 있는 달 */
+  cooldowns: Record<Id, number>;
+  usedOnce: Id[];
+  narrativeRecent: Record<Id, number>;
+  work: MonthWork;
+  history: MonthReport[];
   chronicle: ChronicleEntry[];
-  delayed: ScheduledEffect[];
-  modifiers: ActiveModifier[];
-  /** 예약 항목 등록 순서용 단조 증가 번호 */
+  ending?: { id: Id; kind: string; month: number };
   seq: number;
-
-  turnLog: LogEntry[];
-  /** 직전에 끝난 턴들의 요약 (최근 것이 끝) */
-  history: TurnSummary[];
-  ending: EndingRecord | null;
 }

@@ -1,100 +1,85 @@
-// 게임 생성: (장 정의, 시작 출처) → 1턴 시작 상태 (DESIGN.md §2.5)
+// 시작 프리셋 → 게임 상태. 이전 장의 결과(ChapterResult)로 시작하는 길은 M5에서 붙인다 (DESIGN.md §3.6).
 
-import type { ChapterDefinition, GameState, Id, Person } from '../types';
-import { buildStartingDeck } from '../actions/deck';
-import { seedToState } from '../rng/rng';
+import type { ChapterDefinition, GameState, Person, PlaceState } from '../types';
+import { byId } from './lookup';
+import { seedToState, nextInt } from '../rng/rng';
 import { SAVE_VERSION } from '../save/version';
-import { rolesTotal } from './population';
-import { beginTurn } from './turn';
+import { freshWork, startMonth } from '../month/month';
+import { addLot } from '../stores/food';
 
-export type StartSource =
-  | { kind: 'preset'; presetId: Id; tribeTraits: Id[]; seed: string }
-  /** 이전 장 결과로 시작 — ChapterResult와 함께 M6에서 구현한다 */
-  | { kind: 'previous'; result: unknown; seed: string };
+export interface NewGameOptions {
+  presetId?: string;
+  seed: string;
+}
 
-export function createGame(def: ChapterDefinition, source: StartSource): GameState {
-  if (source.kind === 'previous') {
-    if (!def.importFromPrevious) throw new Error(`chapter ${def.id} cannot start from a previous chapter`);
-    throw new Error('starting from a previous chapter result is not implemented yet (M6)');
-  }
+export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameState {
+  const preset = opts.presetId ? byId(def.presets, opts.presetId, 'preset') : def.presets[0];
+  if (!preset) throw new Error(`chapter ${def.id} has no presets`);
+  const rng = seedToState(opts.seed);
 
-  const preset = def.startPresets.find((p) => p.id === source.presetId);
-  if (!preset) throw new Error(`unknown preset: ${source.presetId}`);
-  if (rolesTotal(preset.roles) !== preset.population) {
-    throw new Error(`preset ${preset.id}: roles must sum to population`);
-  }
-  for (const t of source.tribeTraits) {
-    if (!def.content.tribeTraits.some((x) => x.id === t)) throw new Error(`unknown tribe trait: ${t}`);
-  }
-
-  const people: Record<Id, Person> = {};
-  for (const p of preset.people) {
-    people[p.id] = {
-      id: p.id,
-      name: p.name,
-      sex: p.sex,
-      stage: p.stage,
-      stageTurns: p.stageTurns,
-      office: p.office,
-      traits: [...p.traits],
-      relation: p.relation,
-      parents: [p.parents[0], p.parents[1]],
+  const people: Record<string, Person> = {};
+  for (const pp of preset.people) {
+    // 태어난 달: 시작 달(1) 기준으로 나이만큼 거슬러 가고, 생일은 시드로 흩는다
+    const birthMonth = 1 - pp.age * 12 - nextInt(rng, 0, 11);
+    people[pp.id] = {
+      id: pp.id,
+      name: { key: `person.${pp.id}` },
+      sex: pp.sex,
+      birthMonth,
       alive: true,
-      bornTurn: 0,
-      bornReign: 0,
-      death: null,
-      ambition: 0,
+      parents: pp.parents ?? [],
+      traits: pp.traits ?? [],
+      skills: pp.skills ?? {},
+      ...(pp.advisor ? { advisor: pp.advisor } : {}),
+      ...(pp.isChief ? { isChief: true } : {}),
+      ailments: [],
+      hungerDays: 0,
     };
   }
 
-  const roles: Record<Id, number> = {};
-  for (const r of def.roles) roles[r.id] = preset.roles[r.id] ?? 0;
-  const resources: Record<Id, number> = {};
-  for (const r of def.resources) resources[r.id] = preset.resources[r.id] ?? 0;
-  const axes: Record<Id, number> = {};
-  for (const a of def.axes) axes[a.id] = preset.axes[a.id] ?? 0;
+  const places: Record<string, PlaceState> = {};
+  for (const p of def.places) {
+    const stock: Record<string, number> = {};
+    for (const [y, max] of Object.entries(p.stockMax)) if (max !== undefined) stock[y] = max;
+    places[p.id] = { discovered: preset.discovered.includes(p.id), stock, facts: [] };
+  }
+
+  const food: GameState['stores']['food'] = [];
+  for (const f of preset.food) addLot(food, f.kind, f.kg);
 
   const state: GameState = {
     saveVersion: SAVE_VERSION,
     chapterId: def.id,
-    seed: source.seed,
-    rng: seedToState(source.seed),
-    turn: 0,
-    season: '',
-    reign: 1,
-    reignStartTurn: 1,
-    eraId: preset.era,
-    phase: 'action',
-    tribe: {
-      name: preset.tribeName,
-      traits: [...source.tribeTraits],
-      population: preset.population,
-      roles,
-      resources,
-      axes,
-      lifestyle: preset.lifestyle,
-      growth: 0,
-      hunger: 0,
-    },
+    presetId: preset.id,
+    seed: opts.seed,
+    rng,
+    month: 0,
+    startMonthIndex: preset.startMonthIndex,
+    step: 'policy',
+    campPlace: preset.campPlace,
+    shelter: { kind: preset.shelter, place: preset.campPlace },
     people,
-    regions: { current: preset.region, discovered: [preset.region], state: { [preset.region]: { depletion: 0 } } },
-    knowledge: [...preset.knowledge],
-    traditions: {},
+    chiefLine: 1,
+    stores: { food, firewood: preset.firewood, goods: { ...preset.goods } },
+    cohesion: preset.cohesion,
+    hungerStage: 0,
+    places,
+    animals: structuredClone(preset.animals),
+    knowledge: { has: [...preset.knowledge], progress: {} },
+    clues: [],
+    caches: [],
+    scheduled: [],
+    modifiers: [],
     flags: {},
     counters: {},
-    actions: { playsLeft: 0, busy: [] },
-    deck: { draw: [], hand: [], discard: [] },
-    events: { pending: [], scheduled: [], history: {}, recentTags: [] },
-    chronicle: [],
-    delayed: [],
-    modifiers: [],
-    seq: 0,
-    turnLog: [],
+    cooldowns: {},
+    usedOnce: [],
+    narrativeRecent: {},
+    work: freshWork(['', '', ''], { food: 0, firewood: 0, population: 0 }),
     history: [],
-    ending: null,
+    chronicle: [],
+    seq: 0,
   };
-
-  buildStartingDeck(def, state);
-  beginTurn(def, state);
+  startMonth(def, state);
   return state;
 }

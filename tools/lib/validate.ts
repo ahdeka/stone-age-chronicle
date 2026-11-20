@@ -1,235 +1,429 @@
-// 콘텐츠 검증 (DESIGN.md §12): 중복 id, id 참조, 스탯 키, 문자열 키, 프리셋 정합성, 테마 토큰.
-// 이벤트·카드 검사(도달 불가, 비용 없는 선택지, 가짜 선택지, 라벨 길이, 본문 문장 수)는 validateCards.ts.
+// 콘텐츠 검증 (npm run validate:content). DESIGN.md §12, §18, CLAUDE.md "재미 검증 도구"
+// 오류: 없는 id 참조, 중복 id, 없는 문자열, 고를 수 없는 구조 / 경고: 공짜 선택지, 문장 길이, 변형 부족, 도달 불가
 
-import type { ChapterDefinition, Condition, Label, ModifierDef } from '../../src/engine';
-import { validateCards } from './validateCards';
+import type { ChapterDefinition, Condition, Effect, EventDef, PolicyStep, SceneSpec } from '../../src/engine';
+import { PHASES } from '../../src/engine';
 
 export interface Issue {
-  level: 'error' | 'warning';
+  level: 'error' | 'warn';
   where: string;
-  message: string;
+  msg: string;
 }
 
-const REQUIRED_THEME_TOKENS = ['bg', 'surface', 'card', 'text', 'text-muted', 'text-faint', 'accent', 'ochre', 'danger', 'good'];
+/** 서술 결과의 등급별 최소 변형 수 (M1: 1 → M2: 2 → M6: 3, DESIGN.md §12) */
+export const MIN_VARIANTS = 1;
+export const MAX_LABEL = 15;
+export const MAX_SPEECH = 40;
+export const SENTENCES = { min: 1, max: 3 };
+export const EVENT_TEXT_SENTENCES = { min: 2, max: 4 };
 
-export function validateChapter(def: ChapterDefinition, strings: Record<string, string>): Issue[] {
+function sentences(s: string): number {
+  return s.split(/(?<=[.!?])\s+/).filter((x) => x.trim().length > 0).length;
+}
+
+export function validate(def: ChapterDefinition, strings: Record<string, string>): Issue[] {
   const issues: Issue[] = [];
-  const err = (where: string, message: string) => issues.push({ level: 'error', where, message });
-  const warn = (where: string, message: string) => issues.push({ level: 'warning', where, message });
+  const err = (where: string, msg: string) => issues.push({ level: 'error', where, msg });
+  const warn = (where: string, msg: string) => issues.push({ level: 'warn', where, msg });
+  const ids = <T extends { id: string }>(list: readonly T[]) => new Set(list.map((x) => x.id));
 
-  // ── 1. 중복 id ──
-  const lists: [string, { id: string }[]][] = [
-    ['resources', def.resources],
-    ['axes', def.axes],
-    ['roles', def.roles],
-    ['seasons', def.seasons],
-    ['eras', def.eras],
-    ['lifestyles', def.lifestyles],
-    ['lifeStages', def.lifeStages],
-    ['offices', def.offices],
-    ['personTraits', def.content.personTraits],
-    ['tribeTraits', def.content.tribeTraits],
-    ['regions', def.content.regions],
-    ['endings', def.content.endings],
-    ['startPresets', def.startPresets],
-  ];
-  for (const [name, list] of lists) {
+  const sets = {
+    policy: ids(def.content.policies),
+    event: ids(def.content.events),
+    narrative: ids(def.content.narratives),
+    place: ids(def.places),
+    animal: ids(def.animals),
+    food: ids(def.foodKinds),
+    goods: new Set(def.goods),
+    shelter: ids(def.shelters),
+    weather: ids(def.weather),
+    ailment: ids(def.ailments),
+    trait: ids(def.traits),
+    knowledge: ids(def.knowledge),
+    clue: ids(def.clues),
+    month: ids(def.calendar.months),
+    season: new Set(def.seasons),
+    yield: ids(def.yields),
+  };
+  const need = (kind: keyof typeof sets, id: string, where: string) => {
+    if (!sets[kind].has(id)) err(where, `없는 ${kind} id: ${id}`);
+  };
+  const str = (key: string, where: string) => {
+    if (strings[key] === undefined) err(where, `문자열 없음: ${key}`);
+    return strings[key] ?? '';
+  };
+
+  // ── 중복 id ──
+  const dupCheck = (name: string, list: readonly { id: string }[]) => {
     const seen = new Set<string>();
-    for (const { id } of list) {
-      if (seen.has(id)) err(name, `중복 id: ${id}`);
-      seen.add(id);
+    for (const x of list) {
+      if (seen.has(x.id)) err(name, `중복 id: ${x.id}`);
+      seen.add(x.id);
     }
-  }
-
-  const ids = {
-    resource: new Set(def.resources.map((x) => x.id)),
-    axis: new Set(def.axes.map((x) => x.id)),
-    role: new Set(def.roles.map((x) => x.id)),
-    season: new Set(def.seasons.map((x) => x.id)),
-    era: new Set(def.eras.map((x) => x.id)),
-    lifestyle: new Set(def.lifestyles.map((x) => x.id)),
-    stage: new Set(def.lifeStages.map((x) => x.id)),
-    office: new Set(def.offices.map((x) => x.id)),
-    personTrait: new Set(def.content.personTraits.map((x) => x.id)),
-    tribeTrait: new Set(def.content.tribeTraits.map((x) => x.id)),
-    region: new Set(def.content.regions.map((x) => x.id)),
-    stat: new Set(Object.keys(def.balance.stats)),
   };
-  const ref = (where: string, kind: keyof typeof ids, id: string) => {
-    if (!ids[kind].has(id)) err(where, `존재하지 않는 ${kind} 참조: ${id}`);
-  };
+  dupCheck('policies', def.content.policies);
+  dupCheck('events', def.content.events);
+  dupCheck('narratives', def.content.narratives);
+  dupCheck('places', def.places);
+  dupCheck('animals', def.animals);
+  dupCheck('knowledge', def.knowledge);
 
-  // ── 2. 조건과 모디파이어 ──
-  const checkCondition = (where: string, c: Condition): void => {
+  // ── 참조 사용 기록 (도달 가능성 검사용) ──
+  const scheduledEvents = new Set<string>();
+  const pooledEvents = new Set<string>();
+  const usedNarratives = new Set<string>();
+  const flagsSet = new Set<string>();
+  const flagsRead: { id: string; where: string }[] = [];
+
+  function checkCond(c: Condition, where: string): void {
     switch (c.type) {
-      case 'resource':
-        return ref(where, 'resource', c.key);
-      case 'role':
-        return ref(where, 'role', c.role);
-      case 'axis':
-        return ref(where, 'axis', c.axis);
-      case 'lifestyle':
-        return ref(where, 'lifestyle', c.is);
-      case 'tribeTrait':
-        return ref(where, 'tribeTrait', c.id);
-      case 'season':
-        return c.in.forEach((s) => ref(where, 'season', s));
-      case 'era':
-        return ref(where, 'era', c.is);
-      case 'region':
-        if (c.current) ref(where, 'region', c.current);
-        return;
-      case 'regionDiscovered':
-        return ref(where, 'region', c.id);
-      case 'person':
-      case 'chief': {
-        const q = c.match;
-        if (q.office) ref(where, 'office', q.office);
-        if (q.trait) ref(where, 'personTrait', q.trait);
-        q.stage?.forEach((s) => ref(where, 'stage', s));
+      case 'animal': {
+        need('animal', c.id, where);
+        const a = def.animals.find((x) => x.id === c.id);
+        for (const st of c.state ?? []) if (a && !a.states.includes(st)) err(where, `${c.id}에 없는 상태: ${st}`);
+        if (c.at) need('place', c.at, where);
         return;
       }
+      case 'animalVar':
+        return need('animal', c.id, where);
+      case 'place':
+      case 'placeStock':
+        return need('place', c.id, where);
+      case 'goods':
+        return need('goods', c.id, where);
+      case 'food':
+        for (const k of c.kinds ?? []) need('food', k, where);
+        return;
+      case 'knowledge':
+        return need('knowledge', c.id, where);
+      case 'clue':
+        return need('clue', c.id, where);
+      case 'shelter':
+        for (const k of c.in) need('shelter', k, where);
+        return;
+      case 'season':
+        for (const k of c.in) need('season', k, where);
+        return;
+      case 'monthOfYear':
+        for (const k of c.in) need('month', k, where);
+        return;
+      case 'weather':
+        for (const k of c.in) need('weather', k, where);
+        return;
+      case 'cache':
+        if (c.at) need('place', c.at, where);
+        return;
+      case 'policy':
+        if (c.id) need('policy', c.id, where);
+        return;
+      case 'flag':
+        flagsRead.push({ id: c.id, where });
+        return;
+      case 'person':
+        if (c.match.trait) need('trait', c.match.trait, where);
+        return;
       case 'all':
       case 'any':
-        return c.of.forEach((x) => checkCondition(where, x));
+        for (const x of c.of) checkCond(x, where);
+        return;
       case 'not':
-        return checkCondition(where, c.of);
-      // flag / counter / eventSeen / knowledge / tradition 참조 검사는 생산자가 생기는 M2·M4에서
+        return checkCond(c.of, where);
       default:
         return;
     }
+  }
+  const conds = (cs: readonly Condition[] | undefined, where: string) => {
+    for (const c of cs ?? []) checkCond(c, where);
   };
-  const checkMods = (where: string, mods: readonly ModifierDef[]) => {
-    for (const m of mods) {
-      ref(where, 'stat', m.stat);
-      m.when?.forEach((c) => checkCondition(where, c));
-      if (m.sourceKey && strings[m.sourceKey] === undefined) err(where, `문자열 키 없음: ${m.sourceKey}`);
-    }
-  };
-  checkMods('balance.globalModifiers', def.balance.globalModifiers);
-  def.seasons.forEach((s) => checkMods(`season.${s.id}`, s.modifiers));
-  def.lifestyles.forEach((l) => checkMods(`lifestyle.${l.id}`, l.modifiers));
-  def.content.tribeTraits.forEach((t) => checkMods(`tribeTrait.${t.id}`, t.modifiers));
-  def.content.personTraits.forEach((t) => {
-    checkMods(`personTrait.${t.id}`, t.modifiers);
-    t.opposites?.forEach((o) => ref(`personTrait.${t.id}.opposites`, 'personTrait', o));
-  });
-  def.content.endings.forEach((e) => e.check.forEach((c) => checkCondition(`ending.${e.id}`, c)));
 
-  // ── 3. 역할, 소비, 저장, balance 참조 ──
-  const b = def.balance;
-  for (const r of def.roles) {
-    for (const o of r.outputs) {
-      ref(`role.${r.id}`, 'resource', o.resource);
-      ref(`role.${r.id}`, 'stat', o.stat);
-      if (o.bonusFrom) ref(`role.${r.id}`, 'resource', o.bonusFrom.resource);
+  function checkEffect(e: Effect, where: string): void {
+    switch (e.type) {
+      case 'food':
+        return need('food', e.kind, where);
+      case 'catch':
+        return need('animal', e.animal, where);
+      case 'goods':
+        return need('goods', e.id, where);
+      case 'injure':
+        need('ailment', e.ailment, where);
+        str(`ailment.${e.ailment}`, where);
+        return;
+      case 'death':
+        str(`cause.${e.cause}`, where);
+        return;
+      case 'animal': {
+        need('animal', e.id, where);
+        const a = def.animals.find((x) => x.id === e.id);
+        if (e.state && a && !a.states.includes(e.state)) err(where, `${e.id}에 없는 상태: ${e.state}`);
+        if (e.at) need('place', e.at, where);
+        return;
+      }
+      case 'place':
+        need('place', e.id, where);
+        if (e.stock) need('yield', e.stock.yield, where);
+        return;
+      case 'shelter':
+        need('shelter', e.kind, where);
+        if (e.place) need('place', e.place, where);
+        return;
+      case 'knowledge':
+        return need('knowledge', e.id, where);
+      case 'clue':
+        need('clue', e.id, where);
+        str(`clue.${e.id}`, where);
+        return;
+      case 'cache':
+        return need('place', e.at, where);
+      case 'schedule':
+        need('event', e.event, where);
+        scheduledEvents.add(e.event);
+        conds(e.when, where);
+        return;
+      case 'flag':
+        if (e.set) flagsSet.add(e.id);
+        return;
+      case 'modifier':
+        conds(e.mod.when, where);
+        if (def.balance.stats[e.mod.stat] === undefined) err(where, `없는 스탯: ${e.mod.stat}`);
+        return;
+      case 'random':
+        for (const o of e.outcomes) effects(o.effects, where);
+        return;
+      case 'if':
+        conds(e.when, where);
+        effects(e.then, where);
+        effects(e.else, where);
+        return;
+      case 'line':
+        str(e.key, where);
+        return;
+      case 'narrative':
+        need('narrative', e.id, where);
+        usedNarratives.add(e.id);
+        return;
+      case 'chronicle':
+        str(e.key, where);
+        return;
+      default:
+        return;
     }
   }
-  b.upkeep.forEach((u) => {
-    ref('balance.upkeep', 'resource', u.resource);
-    ref('balance.upkeep', 'stat', u.perCapitaStat);
-  });
-  b.storage.forEach((s) => {
-    ref('balance.storage', 'resource', s.resource);
-    ref('balance.storage', 'stat', s.capPerCapitaStat);
-    ref('balance.storage', 'stat', s.spoilStat);
-  });
-  ref('balance.cohesionResource', 'resource', b.cohesionResource);
-  ref('balance.starvation', 'resource', b.starvation.resource);
-  ref('balance.growth', 'stat', b.growth.rateStat);
-  ref('balance.actions', 'stat', b.actions.stat);
-  Object.keys(b.totalCounters).forEach((k) => ref('balance.totalCounters', 'resource', k));
-  b.roleLossOrder.forEach((r) => ref('balance.roleLossOrder', 'role', r));
-  ref('balance.newcomerRole', 'role', b.newcomerRole);
-  if (b.warnTurn >= b.turnLimit) err('balance', 'warnTurn은 turnLimit보다 작아야 한다');
-  if (b.actions.min > b.actions.max) err('balance.actions', 'min > max');
+  function effects(es: readonly Effect[] | undefined, where: string): void {
+    for (const e of es ?? []) checkEffect(e, where);
+  }
 
-  // ── 4. 생애 단계, 직책 ──
-  for (const st of def.lifeStages) {
-    if (st.next !== null) {
-      ref(`lifeStage.${st.id}`, 'stage', st.next);
-      if (st.turnsToNext <= 0) err(`lifeStage.${st.id}`, 'turnsToNext는 0보다 커야 한다');
+  const sceneId = (id: string, where: string) => {
+    if (id.startsWith('{')) {
+      if (!['{place}', '{camp}', '{weather}'].includes(id)) err(where, `알 수 없는 장면 자리표시자: ${id}`);
+      return;
     }
-  }
-  const chiefOffices = def.offices.filter((o) => o.isChief);
-  if (chiefOffices.length !== 1) err('offices', `족장 직책(isChief)은 정확히 하나여야 한다 (현재 ${chiefOffices.length})`);
+    if (!/^(bg|sub|ov|portrait)\.[a-z_]+$/.test(id)) err(where, `장면 id 형식이 아니다: ${id}`);
+  };
+  const scene = (s: SceneSpec | undefined, where: string) => {
+    if (!s) return;
+    sceneId(s.bg, where);
+    for (const x of s.subjects ?? []) sceneId(x, where);
+    if (s.overlay) sceneId(s.overlay, where);
+  };
 
-  // ── 5. 지역 ──
-  for (const r of def.content.regions) {
-    for (const s of def.seasons) if (r.foodMul[s.id] === undefined) err(`region.${r.id}`, `foodMul에 계절 ${s.id}가 없다`);
-    r.revealedFrom.forEach((x) => ref(`region.${r.id}.revealedFrom`, 'region', x));
-  }
-
-  // ── 6. 프리셋 ──
-  for (const p of def.startPresets) {
-    const w = `preset.${p.id}`;
-    Object.keys(p.roles).forEach((r) => ref(w, 'role', r));
-    Object.keys(p.resources).forEach((r) => ref(w, 'resource', r));
-    Object.keys(p.axes).forEach((a) => ref(w, 'axis', a));
-    const sum = Object.values(p.roles).reduce((a, x) => a + x, 0);
-    if (sum !== p.population) err(w, `역할 합계(${sum})가 인구(${p.population})와 다르다`);
-    ref(w, 'lifestyle', p.lifestyle);
-    ref(w, 'era', p.era);
-    ref(w, 'region', p.region);
-    const personIds = new Set<string>();
-    let chiefs = 0;
-    for (const person of p.people) {
-      const pw = `${w}.people.${person.id}`;
-      if (personIds.has(person.id)) err(pw, '중복 인물 id');
-      personIds.add(person.id);
-      ref(pw, 'stage', person.stage);
-      if (person.office) ref(pw, 'office', person.office);
-      if (person.office && person.office === chiefOffices[0]?.id) chiefs++;
-      person.traits.forEach((t) => ref(pw, 'personTrait', t));
-      if (person.traits.length < 1 || person.traits.length > 2) warn(pw, '인물 특성은 1~2개를 권장한다');
+  // ── 방침 ──
+  for (const p of def.content.policies) {
+    const w = `policy.${p.id}`;
+    str(`policy.${p.id}.name`, w);
+    str(`policy.${p.id}.summary`, w);
+    conds(p.appearsWhen, w);
+    for (const r of p.relevance ?? []) conds(r.when, w);
+    if (p.place) need('place', p.place, w);
+    for (const m of p.monthMods ?? []) if (def.balance.stats[m.stat] === undefined) err(w, `없는 스탯: ${m.stat}`);
+    for (const k of Object.keys(p.knowledgeProgress ?? {})) need('knowledge', k, w);
+    scene(p.scene, w);
+    let hasCarry = false;
+    for (const ph of PHASES) {
+      for (const st of (p.steps[ph] ?? []) as PolicyStep[]) {
+        const sw = `${w}.${ph}`;
+        conds(st.when, sw);
+        if (st.kind === 'narrate') {
+          if (st.narrative) {
+            need('narrative', st.narrative, sw);
+            usedNarratives.add(st.narrative);
+          }
+          effects(st.effects, sw);
+        } else if (st.kind === 'activity') {
+          for (const t of st.activity.power) if (t.src === 'stat' && def.balance.stats[t.id] === undefined) err(sw, `없는 스탯: ${t.id}`);
+          for (const [tier, out] of Object.entries(st.activity.outcomes)) {
+            if (out.narrative) {
+              need('narrative', out.narrative, `${sw}.${tier}`);
+              usedNarratives.add(out.narrative);
+            }
+            effects(out.effects, `${sw}.${tier}`);
+            scene(out.scene, `${sw}.${tier}`);
+          }
+          for (const c of st.activity.costs ?? []) {
+            conds(c.when, `${sw}.cost`);
+            effects(c.effects, `${sw}.cost`);
+          }
+          for (const h of st.activity.hidden ?? []) conds(h.knownWhen, `${sw}.hidden`);
+        } else if (st.kind === 'eventWindow') {
+          for (const id of st.pool) {
+            need('event', id, sw);
+            pooledEvents.add(id);
+          }
+        } else if (st.kind === 'carry') hasCarry = true;
+      }
     }
-    for (const person of p.people)
-      for (const parent of person.parents)
-        if (parent !== null && !personIds.has(parent)) err(`${w}.people.${person.id}`, `존재하지 않는 부모: ${parent}`);
-    if (chiefs !== 1) err(w, `족장이 정확히 한 명이어야 한다 (현재 ${chiefs})`);
-    if (p.people.length < 4 || p.people.length > 8) warn(w, `인물 수 ${p.people.length} (권장 4~8)`);
+    if (p.crew && !hasCarry && JSON.stringify(p.steps).includes('"haul":true')) warn(w, '짐을 만들지만 운반 단계가 없다');
+    if (p.crew && JSON.stringify(p.steps).includes('"type":"catch"') && !hasCarry) warn(w, '사냥감을 잡지만 운반 단계가 없다');
+  }
+  if (!def.content.policies.some((p) => p.fallback)) err('policies', '버티기 방침(fallback)이 하나도 없다');
+
+  // ── 사건 ──
+  const checkEvent = (ev: EventDef) => {
+    const w = `event.${ev.id}`;
+    str(`event.${ev.id}.title`, w);
+    const text = str(`event.${ev.id}.text`, w);
+    const n = sentences(text);
+    if (text && (n < EVENT_TEXT_SENTENCES.min || n > EVENT_TEXT_SENTENCES.max)) warn(w, `본문 ${n}문장 (권장 ${EVENT_TEXT_SENTENCES.min}~${EVENT_TEXT_SENTENCES.max})`);
+    conds(ev.when, w);
+    for (const q of Object.values(ev.actors ?? {})) if (q.trait) need('trait', q.trait, w);
+    scene(ev.scene, w);
+    for (const sp of ev.speakers ?? []) {
+      const line = str(sp.line, w);
+      if (line.length > MAX_SPEECH) warn(w, `대사 ${line.length}자 (최대 ${MAX_SPEECH}): ${sp.line}`);
+    }
+    if (ev.options.length < 2 || ev.options.length > 4) err(w, `선택지 ${ev.options.length}개 (2~4개)`);
+    const sigs = new Set<string>();
+    for (const o of ev.options) {
+      const ow = `${w}.${o.id}`;
+      const label = str(`event.${ev.id}.opt.${o.id}`, ow);
+      if (label.length > MAX_LABEL) warn(ow, `선택지 라벨 ${label.length}자 (최대 ${MAX_LABEL}): ${label}`);
+      conds(o.requires, ow);
+      effects(o.effects, ow);
+      if (o.narrative) {
+        need('narrative', o.narrative, ow);
+        usedNarratives.add(o.narrative);
+      }
+      if (o.activity) for (const out of Object.values(o.activity.outcomes)) effects(out.effects, ow);
+      if (!o.activity && !hasCost(o.effects)) warn(ow, '비용·위험·기회비용이 보이지 않는 선택지');
+      const sig = JSON.stringify({ e: o.effects, a: o.activity });
+      if (sigs.has(sig)) err(ow, '결과가 같은 선택지 (가짜 선택지)');
+      sigs.add(sig);
+    }
+    if (ev.scope === 'policy' && !pooledEvents.has(ev.id)) warn(w, '어느 방침의 사건 창에도 들어 있지 않다 (도달 불가)');
+    if (ev.scope === 'scheduled' && !scheduledEvents.has(ev.id)) warn(w, '어디서도 예약하지 않는다 (도달 불가)');
+  };
+  // 사건 검사 전에 모든 방침·사건의 예약과 풀을 모아 둔다 (위에서 방침은 끝남; 사건 안의 예약을 먼저 훑는다)
+  for (const ev of def.content.events) for (const o of ev.options) effects(o.effects, `event.${ev.id}.${o.id}`);
+  for (const ev of def.content.events) checkEvent(ev);
+
+  // ── 서술 ──
+  for (const n of def.content.narratives) {
+    const w = `narrative.${n.id}`;
+    if (n.variants.length < MIN_VARIANTS) warn(w, `변형 ${n.variants.length}개 (최소 ${MIN_VARIANTS})`);
+    for (const v of n.variants) {
+      const t = str(v.text, w);
+      const k = sentences(t);
+      if (t && (k < SENTENCES.min || k > SENTENCES.max)) warn(w, `${v.text}: ${k}문장 (권장 ${SENTENCES.min}~${SENTENCES.max})`);
+      conds(v.when, w);
+    }
+    effects(n.facts, w);
+    if (!usedNarratives.has(n.id)) warn(w, '아무 데서도 쓰지 않는 서술');
   }
 
-  // ── 7. 문자열 키 ──
-  const need = (where: string, key: string) => {
-    if (strings[key] === undefined) err(where, `문자열 키 없음: ${key}`);
-  };
-  const needLabel = (where: string, l: Label) => {
-    if ('key' in l) need(where, l.key);
-  };
-  need('chapter', `chapter.${def.id}.title`);
-  need('chapter.scale', def.scale.labelKey);
-  def.resources.forEach((r) => need('resources', `resource.${r.id}.name`));
-  def.axes.forEach((a) => {
-    need('axes', `axis.${a.id}.neg`);
-    need('axes', `axis.${a.id}.pos`);
-  });
-  def.roles.forEach((r) => need('roles', `role.${r.id}.name`));
-  def.seasons.forEach((s) => need('seasons', `season.${s.id}.name`));
-  def.eras.forEach((e) => need('eras', `era.${e.id}.name`));
-  def.lifestyles.forEach((l) => need('lifestyles', `lifestyle.${l.id}.name`));
-  def.lifeStages.forEach((s) => need('lifeStages', `stage.${s.id}.name`));
-  def.offices.forEach((o) => need('offices', `office.${o.id}.name`));
-  def.content.personTraits.forEach((t) => need('personTraits', `trait.person.${t.id}.name`));
-  def.content.tribeTraits.forEach((t) => need('tribeTraits', `trait.tribe.${t.id}.name`));
-  def.content.regions.forEach((r) => need('regions', `region.${r.id}.name`));
-  def.content.endings.forEach((e) => {
-    need('endings', `ending.${e.id}.title`);
-    need('endings', `ending.${e.id}.text`);
-  });
-  def.startPresets.forEach((p) => {
-    needLabel(`preset.${p.id}`, p.tribeName);
-    p.people.forEach((x) => needLabel(`preset.${p.id}.people.${x.id}`, x.name));
-  });
+  // ── 깃발: 읽기만 하고 세우지 않는 깃발 ──
+  for (const f of flagsRead) if (!flagsSet.has(f.id)) warn(f.where, `어디서도 세우지 않는 깃발: ${f.id}`);
 
-  // ── 8. 테마, 결말 ──
-  for (const t of REQUIRED_THEME_TOKENS) if (!def.theme.tokens[t]) err('theme', `토큰 없음: ${t}`);
-  if (!def.content.endings.some((e) => e.kind === 'survival')) err('endings', '생존(시간 종료) 결말이 하나 이상 필요하다');
-  Object.keys(b.statPolarity).forEach((k) => ref('balance.statPolarity', 'stat', k));
-  ref('balance.hand', 'stat', b.hand.sizeStat);
-
-  // ── 9. 이벤트와 행동 카드 ──
-  issues.push(...validateCards(def, strings));
+  // ── 세계와 문자열 ──
+  for (const m of def.calendar.months) {
+    str(`month.${m.id}`, `month.${m.id}`);
+    need('season', m.season, `month.${m.id}`);
+    for (const w of Object.keys(m.weather)) need('weather', w, `month.${m.id}`);
+  }
+  for (const s of def.seasons) str(`season.${s}`, 'seasons');
+  for (const w of def.weather) str(`weather.${w.id}`, `weather.${w.id}`);
+  for (const p of def.places) {
+    str(`place.${p.id}`, `place.${p.id}`);
+    sceneId(p.scene, `place.${p.id}`);
+    for (const y of Object.keys(p.stockMax)) need('yield', y, `place.${p.id}`);
+  }
+  for (const a of def.animals) {
+    for (const st of a.states) str(`animal.${a.id}.${st}`, `animal.${a.id}`);
+    for (const sc of a.schedule) {
+      need('month', sc.month, `animal.${a.id}`);
+      if (!a.states.includes(sc.to)) err(`animal.${a.id}`, `없는 상태로 전이: ${sc.to}`);
+      if (sc.at) need('place', sc.at, `animal.${a.id}`);
+    }
+    need('food', a.foodKind, `animal.${a.id}`);
+    for (const g of Object.keys(a.goods ?? {})) need('goods', g, `animal.${a.id}`);
+  }
+  for (const a of def.ailments) {
+    str(`ailment.${a.id}`, `ailment.${a.id}`);
+    str(`cause.${a.id}`, `ailment.${a.id}`);
+  }
+  for (const g of def.goods) str(`res.${g}`, 'goods');
+  for (const f of def.foodKinds) str(`food.${f.id}`, 'food');
+  for (const s of def.shelters) str(`shelter.${s.id}`, 'shelters');
+  for (const k of def.knowledge) str(`knowledge.${k.id}`, `knowledge.${k.id}`);
+  for (const c of def.clues) str(`clue.${c.id}`, `clue.${c.id}`);
+  for (const e of def.content.endings) {
+    str(`ending.${e.id}.title`, `ending.${e.id}`);
+    str(`ending.${e.id}.chron`, `ending.${e.id}`);
+    conds(e.check, `ending.${e.id}`);
+  }
+  for (const pr of def.presets) {
+    const w = `preset.${pr.id}`;
+    need('place', pr.campPlace, w);
+    need('shelter', pr.shelter, w);
+    for (const f of pr.food) need('food', f.kind, w);
+    for (const g of Object.keys(pr.goods)) need('goods', g, w);
+    for (const d of pr.discovered) need('place', d, w);
+    for (const a of def.animals) if (!pr.animals[a.id]) err(w, `동물 시작 상태 없음: ${a.id}`);
+    for (const [id, st] of Object.entries(pr.animals)) {
+      const a = def.animals.find((x) => x.id === id);
+      if (!a) err(w, `없는 동물: ${id}`);
+      else if (!a.states.includes(st.state)) err(w, `${id}에 없는 상태: ${st.state}`);
+    }
+    const ppl = new Set(pr.people.map((p) => p.id));
+    for (const p of pr.people) {
+      str(`person.${p.id}`, w);
+      for (const par of p.parents ?? []) if (!ppl.has(par)) err(w, `${p.id}의 부모가 없다: ${par}`);
+      for (const t of p.traits ?? []) need('trait', t, w);
+    }
+    if (pr.people.filter((p) => p.isChief).length !== 1) err(w, '족장은 정확히 한 명이어야 한다');
+  }
+  for (const k of ['ration', 'cold'] as const) need('ailment', def.balance[k].sickness, `balance.${k}`);
+  need('animal', def.balance.cache.raidAnimal, 'balance.cache');
+  need('knowledge', def.balance.carry.dryKnowledge, 'balance.carry');
+  need('food', def.balance.carry.dryKind, 'balance.carry');
+  scene(def.scenes.briefing, 'scenes.briefing');
+  scene(def.scenes.settlement, 'scenes.settlement');
 
   return issues;
+}
+
+/** 비용·위험이 보이는 효과가 있는가 (기회비용은 opportunity로 표시) */
+export function hasCost(es: readonly Effect[]): boolean {
+  return es.some((e) => {
+    switch (e.type) {
+      case 'food':
+      case 'firewood':
+        return typeof e.kg === 'number' ? e.kg < 0 : e.kg[0] < 0;
+      case 'goods':
+        return typeof e.delta === 'number' ? e.delta < 0 : e.delta[0] < 0;
+      case 'cohesion':
+        return e.delta < 0;
+      case 'injure':
+      case 'death':
+      case 'random':
+        return true;
+      case 'modifier':
+        return e.mod.op === 'add' ? e.mod.value < 0 : e.mod.value < 1;
+      case 'flag':
+        // 기회비용 깃발: 'opportunity.'로 시작하거나 다음 단계를 건너뛰게 하는 깃발
+        return e.set && e.id.startsWith('hunt_called_off');
+      case 'if':
+        return hasCost(e.then) || hasCost(e.else ?? []);
+      default:
+        return false;
+    }
+  });
 }

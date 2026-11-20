@@ -1,40 +1,18 @@
-// 장 공통 수치. 장 전용 수치는 chapters/<id>/balance.ts에 둔다. (매직 넘버 금지)
+// 장 공통 수치 (DESIGN.md §7, §10). 장별 수치는 chapters/<id>/balance.ts에 둔다.
+
+import type { ChapterBalance } from '../engine';
 
 export const commonBalance = {
-  /** 공통 스탯 기본값. 장 balance의 stats가 같은 키를 덮어쓸 수 있다. */
-  stats: {
-    /** check 효과의 로지스틱 폭: (힘 − 난이도) / scale */
-    'check.scale': 4,
+  daysPerPhase: 10,
+  /** 결과 등급: v = (힘 − 난이도) + 삼각 분포(±spread). 대가 있는 성공 구간(−1 ~ 0.5)을 넓게 잡는다 */
+  tier: {
+    spread: 3,
+    thresholds: { triumph: 2, success: 0.5, costly: -1, failure: -2.2 },
   },
-
-  /** 불확실성 단서 4단계 (DESIGN.md §4.3). 위에서부터 minP 이상이면 그 단계. */
-  uncertainty: {
-    tiers: [
-      { id: 'sure', minP: 0.8 },
-      { id: 'fair', minP: 0.5 },
-      { id: 'risky', minP: 0.2 },
-      { id: 'reckless', minP: 0 },
-    ],
-    /** 선견 인물이 보여 주는 확률 범위의 폭 */
-    foresightBucket: 0.2,
-  },
-
-  events: {
-    maxPerTurn: 2,
-    secondEventChance: 0.5,
-    /** 같은 태그는 연속 2턴까지만 */
-    tagStreakMax: 2,
-  },
-
-  axis: {
-    /** 이 값을 넘으면 그 성향의 이벤트·전통이 열리기 시작한다 */
-    lean: 30,
-    /** 극단 위기 임계값 */
-    extreme: 70,
-  },
-
-  ui: {
-    /** 다음 생애 단계까지 이 턴 수 이하면 "노년이 가까워 보인다" 같은 단서를 보인다 */
-    stageHintTurns: 3,
-  },
-} as const;
+  /** 위험 단서: 대가 있는 성공 이상의 확률 p로 정한다. '결과를 알 수 없다'는 숨은 변수로만 정해진다 */
+  hint: { sure: 0.85, fair: 0.55 },
+  policy: { slots: 5, urgentSlots: 3, urgentFoodDays: 5, maxPerCategory: 2, jitter: 5 },
+  events: { villageChancePerMonth: 0.35, maxPerMonth: 2 },
+  cohesion: { max: 100, deathCost: 4, lowThreshold: 10 },
+  chronicle: { deathImportance: 50 },
+} satisfies Partial<ChapterBalance>;

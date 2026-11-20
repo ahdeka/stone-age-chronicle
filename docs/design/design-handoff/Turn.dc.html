@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>제1달 — 월초 보고와 방침</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#12100e}
+a{color:#e0a15a}a:hover{color:#f0bd7f}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,138,90,0)}50%{box-shadow:0 0 0 6px rgba(232,138,90,0.18)}}
+@keyframes flicker{0%,100%{opacity:.85}35%{opacity:1}65%{opacity:.7}}
+@keyframes herd{from{transform:translateX(0)}to{transform:translateX(-120px)}}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.in{animation:fadeUp .9s ease-out both}
+.d1{animation-delay:.15s}.d2{animation-delay:.35s}.d3{animation-delay:.55s}.d4{animation-delay:.75s}.d5{animation-delay:.95s}.d6{animation-delay:1.15s}
+.warn{animation:pulse 2.4s ease-in-out infinite}
+.fire{animation:flicker 1.4s ease-in-out infinite}
+.herd{animation:herd 18s ease-in-out infinite alternate}
+.reed{animation:sway 4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.ln{fill:none;stroke:#c9813a;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ln-thin{fill:none;stroke:#c9813a;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ln-bone{fill:none;stroke:#d9cbb2;stroke-width:1.4;stroke-linecap:round;opacity:.55}
+.ico{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.caret{display:inline-block;width:2px;height:1em;margin-left:3px;vertical-align:-0.12em;background:#e0a15a;animation:blink 1s steps(1) infinite}
+.policy{display:flex;flex-direction:column;gap:0;text-align:left;padding:0;border-radius:14px;border:1px solid #3a3229;background:#1c1915;color:#f1e8d8;font-family:'Noto Sans KR',sans-serif;cursor:pointer;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.policy:hover{transform:translateY(-3px);border-color:#6b5a44}
+.policy.on{border-color:#e0a15a;box-shadow:0 0 0 2px rgba(224,161,90,0.35),0 12px 28px rgba(0,0,0,0.45);transform:translateY(-3px)}
+.risk{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:12px;font-size:13px;font-weight:500;white-space:nowrap}
+.risk.safe{background:#1d2a33;color:#a9cde3}
+.risk.fair{background:#2e2817;color:#e6cd86}
+.risk.danger{background:#38201a;color:#f2a283}
+.risk.unknown{background:#28223a;color:#c9b8ec}
+.advisor{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:14px;background:#1c1915;border:1px solid #2e2821}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #12100e; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif">
+
+  <header class="in" style="position: sticky; top: 0; z-index: 5; background: rgba(18,16,14,0.94); border-bottom: 1px solid #2e2821">
+    <div style="max-width: 1440px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: 'Noto Serif KR', serif; font-size: 20px; font-weight: 700; color: #e0a15a">잿빛강 사람들</span>
+        <span style="font-size: 14px; color: #b3a690">제1달 · 낙엽달 · 늦가을 · 맑음, 밤 서리</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: #cbbfa9"><circle class="ico" cx="9" cy="8" r="3.2"></circle><path class="ico" d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"></path><circle class="ico" cx="17" cy="9" r="2.4"></circle><path class="ico" d="M16 14.2c2.8.2 5 2.2 5 5.8"></path></svg>
+          <span style="font-size: 15px"><b>34명</b> <span style="color: #b3a690">성인 18 · 노인 4 · 아이 12</span></span>
+        </div>
+        <div class="warn" style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #2a1c16; border: 1px solid #6b3a26">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: #f2a283"><path class="ico" d="M14.5 4.5c3 0 5 2.2 5 5 0 3.6-3.6 5.8-7 5.8l-3.6 3.6a2 2 0 1 1-2.8-2.8l3.6-3.6C10.2 9 11.5 4.5 14.5 4.5z"></path></svg>
+          <span style="font-size: 15px"><b>식량 520kg</b> <span style="color: #f2a283">약 18일분</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: #cbbfa9"><path class="ico" d="M12 3c1.5 3 4.5 4.5 4.5 8.5a4.5 4.5 0 0 1-9 0C7.5 8.5 10 7 12 3z"></path><path class="ico" d="M4 21l16-3M4 18l16 3"></path></svg>
+          <span style="font-size: 15px"><b>장작 150kg</b> <span style="color: #b3a690">겨울엔 한 달 600kg</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: #cbbfa9"><path class="ico" d="M6 4c2 1 4 1 6 0 2 1 4 1 6 0l-1 6 2 4-3 6H8l-3-6 2-4z"></path></svg>
+          <span style="font-size: 15px"><b>가죽 12장</b></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: #cbbfa9"><circle class="ico" cx="12" cy="12" r="8"></circle><path class="ico" d="M8 13c1.2 1.6 2.4 2.4 4 2.4s2.8-.8 4-2.4"></path></svg>
+          <span style="font-size: 15px"><b>결속 60</b> <span style="color: #b3a690">보통</span></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div style="max-width: 1440px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <main style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+
+      <section class="in d1" style="position: relative; border-radius: 18px; overflow: hidden; border: 1px solid #2e2821; background: #0c0b0a">
+        <svg viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 420px">
+          <defs>
+            <linearGradient id="dusk" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" style="stop-color:#1a1716"></stop>
+              <stop offset="0.6" style="stop-color:#3b2a1d"></stop>
+              <stop offset="1" style="stop-color:#5a3a20"></stop>
+            </linearGradient>
+            <radialGradient id="tglow" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" style="stop-color:#f0a24a;stop-opacity:0.6"></stop>
+              <stop offset="1" style="stop-color:#b8612a;stop-opacity:0"></stop>
+            </radialGradient>
+          </defs>
+          <rect x="0" y="0" width="1000" height="420" fill="url(#dusk)"></rect>
+          <circle cx="780" cy="120" r="46" fill="#e7a05a" opacity="0.35"></circle>
+          <path d="M0 250 L90 190 L170 230 L270 160 L360 220 L470 180 L560 240 L680 170 L790 230 L900 190 L1000 220 L1000 420 L0 420 Z" fill="#241d19"></path>
+          <g class="herd">
+            <path class="ln-thin" d="M640 236 q18 -8 34 0 M650 236 v14 M668 236 v14 M640 232 l-6 -12 l4 -2 M634 220 l-6 -4 M634 220 l2 -8"></path>
+            <path class="ln-thin" d="M700 240 q18 -8 34 0 M710 240 v14 M728 240 v14 M700 236 l-6 -12 M694 224 l-6 -4 M694 224 l2 -8"></path>
+            <path class="ln-thin" d="M760 234 q18 -8 34 0 M770 234 v14 M788 234 v14 M760 230 l-6 -12 M754 218 l-6 -4 M754 218 l2 -8"></path>
+            <path class="ln-thin" d="M820 242 q18 -8 34 0 M830 242 v14 M848 242 v14 M820 238 l-6 -12 M814 226 l-6 -4 M814 226 l2 -8"></path>
+          </g>
+          <path d="M0 330 C160 300 300 320 460 296 C620 272 760 300 1000 286 L1000 320 C760 334 620 306 460 330 C300 354 160 334 0 364 Z" fill="#2a2e31"></path>
+          <path class="ln-bone" d="M30 336 C170 308 300 326 460 304 M560 290 C680 300 820 296 980 292"></path>
+          <path d="M120 300 C170 250 270 240 340 262 C380 274 410 300 420 330 L110 330 Z" fill="#14110e"></path>
+          <path d="M150 330 L178 280 L206 330 Z M220 334 L252 276 L284 334 Z M290 332 L316 288 L342 332 Z" fill="#2c2219"></path>
+          <path class="ln" d="M150 330 L178 280 L206 330 M220 334 L252 276 L284 334 M290 332 L316 288 L342 332"></path>
+          <ellipse class="fire" cx="250" cy="340" rx="90" ry="50" fill="url(#tglow)"></ellipse>
+          <path class="fire" d="M244 346 C242 334 248 328 251 320 C254 328 260 334 258 346 Z" fill="#f0a24a"></path>
+          <path d="M0 420 L0 370 C200 360 400 380 600 366 C800 352 900 372 1000 360 L1000 420 Z" fill="#100e0c"></path>
+          <path class="ln-thin reed" d="M560 420 L566 352"></path>
+          <path class="ln-thin reed" d="M580 420 L590 346" style="animation-delay:.6s"></path>
+          <path class="ln-thin reed" d="M960 420 L952 350" style="animation-delay:1.2s"></path>
+          <path class="ln-thin" d="M520 372 l6 -4 l6 4 M532 372 l6 -4 l6 4 M546 376 l6 -4 l6 4" opacity="0.7"></path>
+        </svg>
+        <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10,9,8,0.96) 0%, rgba(10,9,8,0.75) 34%, rgba(10,9,8,0) 70%)"></div>
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 13px; letter-spacing: 0.2em; color: #e0a15a">월초 보고</span>
+          <h1 style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 34px; font-weight: 700; line-height: 1.3">순록 떼가 내려오고, 늑대가 가까이 있다</h1>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-family: 'Noto Serif KR', serif; font-size: 18px; line-height: 1.7; color: #ddd2bf">
+            <sc-for list="{{news}}" as="n" hint-placeholder-count="3">
+              <p style="margin: 0">{{n.text}}<sc-if value="{{n.typing}}" hint-placeholder-val="{{ false }}"><span class="caret"></span></sc-if></p>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 14px">
+        <h2 class="in d2" style="margin: 0; font-size: 18px; font-weight: 700; color: #cbbfa9">조언자들</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+          <sc-for list="{{advisors}}" as="a" hint-placeholder-count="4">
+            <div class="advisor in {{a.delay}}">
+              <svg width="56" height="56" viewBox="0 0 56 56" role="img" aria-label="{{a.name}} 초상" style="flex: none">
+                <circle cx="28" cy="28" r="27" fill="#14110e" stroke="{{a.color}}"></circle>
+                <circle cx="28" cy="22" r="9" fill="{{a.color}}" opacity="0.85"></circle>
+                <path d="M12 48 C14 36 21 32 28 32 C35 32 42 36 44 48 Z" fill="{{a.color}}" opacity="0.85"></path>
+                <path class="ln-bone" d="M20 18 l-4 -6 M36 18 l4 -6"></path>
+              </svg>
+              <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+                <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px">
+                  <span style="font-size: 17px; font-weight: 700">{{a.name}}</span>
+                  <span style="font-size: 13px; color: #b3a690">{{a.role}}</span>
+                  <span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #2a241d; color: #e0c69a">{{a.stance}}</span>
+                </div>
+                <p style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 16px; line-height: 1.65; color: #e6dccb">“{{a.quote}}”</p>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 14px">
+        <div class="in d3" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px">
+          <h2 style="margin: 0; font-size: 22px; font-weight: 700">이번 달의 방침</h2>
+          <span style="font-size: 14px; color: #b3a690">하나를 고르면 한 달이 시작된다</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px">
+          <sc-for list="{{policies}}" as="p" hint-placeholder-count="5">
+            <button type="button" class="{{p.cls}}" onClick="{{p.pick}}" aria-pressed="{{p.on}}">
+              <sc-if value="{{p.isHunt}}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 120px; background: #15120f">
+                  <rect x="0" y="0" width="240" height="110" fill="#2a2118"></rect>
+                  <path d="M0 70 L60 50 L120 64 L180 46 L240 60 L240 110 L0 110 Z" fill="#1c1712"></path>
+                  <g class="herd">
+                    <path class="ln-thin" d="M120 70 q12 -6 24 0 M126 70 v10 M140 70 v10 M120 67 l-4 -9 M116 58 l-4 -3 M116 58 l1 -6"></path>
+                    <path class="ln-thin" d="M160 74 q12 -6 24 0 M166 74 v10 M180 74 v10 M160 71 l-4 -9 M156 62 l-4 -3 M156 62 l1 -6"></path>
+                    <path class="ln-thin" d="M200 70 q12 -6 24 0 M206 70 v10 M220 70 v10 M200 67 l-4 -9 M196 58 l-4 -3 M196 58 l1 -6"></path>
+                  </g>
+                  <path class="ln" d="M40 96 l0 -20 M40 80 l14 -16 M60 96 l0 -18 M60 80 l14 -16 M80 96 l0 -20 M80 80 l14 -16"></path>
+                </svg>
+              </sc-if>
+              <sc-if value="{{p.isRiver}}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 120px; background: #15120f">
+                  <rect x="0" y="0" width="240" height="110" fill="#1b2023"></rect>
+                  <path d="M0 64 C60 50 120 76 180 58 C210 50 230 56 240 54 L240 82 C200 88 160 74 120 92 C80 106 40 84 0 96 Z" fill="#2d3a40"></path>
+                  <path class="ln-bone" d="M10 74 C60 62 110 84 170 68"></path>
+                  <path class="ln-thin" d="M100 80 q12 -8 24 0 q-12 8 -24 0 M124 80 l8 -5 l0 10 z"></path>
+                  <path class="ln-thin reed" d="M30 110 L34 40"></path>
+                  <path class="ln-thin reed" d="M44 110 L50 50" style="animation-delay:.8s"></path>
+                  <path class="ln-thin reed" d="M210 110 L204 46" style="animation-delay:1.4s"></path>
+                </svg>
+              </sc-if>
+              <sc-if value="{{p.isWinter}}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 120px; background: #15120f">
+                  <rect x="0" y="0" width="240" height="110" fill="#1d1a18"></rect>
+                  <path d="M70 92 L100 40 L130 92 Z" fill="#2c2219"></path>
+                  <path class="ln" d="M70 92 L100 40 L130 92 M100 40 L100 92"></path>
+                  <path class="ln" d="M150 92 h60 M154 84 h52 M158 76 h44"></path>
+                  <path class="ln-bone" d="M40 30 l6 6 M46 30 l-6 6 M190 24 l6 6 M196 24 l-6 6 M120 18 l6 6 M126 18 l-6 6"></path>
+                </svg>
+              </sc-if>
+              <sc-if value="{{p.isSmall}}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 120px; background: #15120f">
+                  <rect x="0" y="0" width="240" height="110" fill="#241e17"></rect>
+                  <path d="M0 74 L240 66 L240 110 L0 110 Z" fill="#1a1511"></path>
+                  <path class="ln-thin" d="M160 70 q12 -6 24 0 M166 70 v10 M180 70 v10 M160 67 l-4 -9 M156 58 l-4 -3 M156 58 l1 -6"></path>
+                  <path class="ln" d="M110 92 l0 -18 M110 76 l14 -14 M130 92 l0 -18 M130 76 l14 -14"></path>
+                  <path d="M30 92 L52 56 L74 92 Z" fill="#2c2219"></path>
+                  <path class="ln" d="M30 92 L52 56 L74 92"></path>
+                </svg>
+              </sc-if>
+              <sc-if value="{{p.isScout}}" hint-placeholder-val="{{ false }}">
+                <svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 120px; background: #15120f">
+                  <rect x="0" y="0" width="240" height="110" fill="#1c1c1e"></rect>
+                  <path d="M0 60 C60 54 120 66 240 56 L240 110 L0 110 Z" fill="#202724"></path>
+                  <path d="M0 50 C80 44 160 58 240 48" stroke="#cbbfa9" stroke-opacity="0.18" fill="none" style="stroke-width:10"></path>
+                  <path d="M0 72 C80 66 160 80 240 70" stroke="#cbbfa9" stroke-opacity="0.14" fill="none" style="stroke-width:12"></path>
+                  <path class="ln" d="M60 96 l0 -16 M78 96 l0 -16 M96 96 l0 -16 M114 96 l0 -16" ></path>
+                  <path class="ln-bone" d="M130 88 C160 80 180 70 220 60" style="stroke-dasharray:4 6"></path>
+                </svg>
+              </sc-if>
+              <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 18px">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+                  <span style="font-size: 13px; color: #b3a690">{{p.num}}</span>
+                  <span class="{{p.riskCls}}">{{p.riskMark}} {{p.risk}}</span>
+                </div>
+                <span style="font-family: 'Noto Serif KR', serif; font-size: 20px; font-weight: 700; line-height: 1.35">{{p.title}}</span>
+                <span style="font-size: 15px; line-height: 1.6; color: #ddd2bf">{{p.desc}}</span>
+                <span style="font-size: 14px; line-height: 1.5; color: #b3a690">{{p.cost}}</span>
+                <span style="font-size: 13px; color: #8f8370; border-top: 1px solid #2e2821; padding-top: 8px">{{p.crew}}</span>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <div class="in d5" style="position: sticky; bottom: 16px; z-index: 4; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 16px; background: rgba(28,25,21,0.96); border: 1px solid #3a3229; box-shadow: 0 10px 30px rgba(0,0,0,0.5)">
+        <sc-if value="{{hasPick}}" hint-placeholder-val="{{ false }}">
+          <span style="font-size: 16px">선택한 방침: <b style="color: #e0a15a">{{pickTitle}}</b></span>
+          <a href="Phase.dc.html" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px; border-radius: 24px; background: #e0a15a; color: #17120c; font-size: 16px; font-weight: 700; text-decoration: none">이 방침으로 한 달을 시작한다</a>
+        </sc-if>
+        <sc-if value="{{noPick}}" hint-placeholder-val="{{ true }}">
+          <span style="font-size: 16px; color: #b3a690">방침을 하나 고르십시오. 조언자들의 말이 엇갈린다.</span>
+          <span style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px; border-radius: 24px; background: #2a241d; color: #8f8370; font-size: 16px; font-weight: 700">한 달을 시작한다</span>
+        </sc-if>
+      </div>
+    </main>
+
+    <aside style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <section class="in d2" style="padding: 20px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #e0a15a">시대 목표 · 구석기</h2>
+        <sc-for list="{{goals}}" as="g" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 15px"><b>{{g.name}}</b><span style="color: #b3a690">{{g.pct}}%</span></div>
+            <div aria-hidden="true" style="height: 6px; border-radius: 3px; background: #2e2821; overflow: hidden"><div style="height: 6px; width: {{g.pct}}%; background: #e0a15a"></div></div>
+            <span style="font-size: 13px; line-height: 1.5; color: #b3a690">{{g.paths}}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section class="in d3" style="padding: 20px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #e0a15a">부족</h2>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center">
+          <div style="padding: 10px 4px; border-radius: 10px; background: #14110e"><div style="font-size: 22px; font-weight: 700">18</div><div style="font-size: 13px; color: #b3a690">성인</div></div>
+          <div style="padding: 10px 4px; border-radius: 10px; background: #14110e"><div style="font-size: 22px; font-weight: 700">4</div><div style="font-size: 13px; color: #b3a690">노인</div></div>
+          <div style="padding: 10px 4px; border-radius: 10px; background: #14110e"><div style="font-size: 22px; font-weight: 700">12</div><div style="font-size: 13px; color: #b3a690">아이</div></div>
+        </div>
+        <span style="font-size: 14px; color: #b3a690">일손 20 · 다친 사람 없음 · 거처: 가죽 천막 5채</span>
+        <a href="#" style="font-size: 14px">부족원 명단 34명 보기</a>
+      </section>
+
+      <section class="in d4" style="padding: 20px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #e0a15a">아직 남은 일</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #b3a690">아직 없다. 이번 달의 선택이 기억될 것이다.</p>
+      </section>
+
+      <section class="in d5" style="padding: 20px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #e0a15a">연대기</h2>
+        <p style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 15px; line-height: 1.75; color: #ddd2bf"><span style="color: #e0a15a">제1달 낙엽달.</span> 서리 내린 잿빛강 굽이에서, 서른네 명이 첫 겨울을 앞두고 있었다.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1760}}'>
+var NEWS = [
+  '동쪽 초원에서 순록 떼가 남쪽으로 내려오고 있다. 보름 안에 지나가 버린다.',
+  '강가 진흙에 늑대 발자국이 여럿 찍혀 있다. 무리가 가까이 있다.',
+  '서리가 말한다. “이렇게 일찍 서리가 내리는 해는 겨울이 길다.”'
+];
+var ADVISORS = [
+  { name: '바위', role: '사냥 우두머리', stance: '대담', color: '#c9813a', quote: '순록 떼를 놓치면 겨울을 못 넘깁니다. 모두 데리고 나가게 해 주십시오.' },
+  { name: '서리', role: '이야기꾼 · 노인', stance: '신중', color: '#a9b8c9', quote: '고기보다 먼저 불과 지붕을 챙겨야 합니다. 얼어 죽는 건 굶어 죽는 것보다 빠릅니다.' },
+  { name: '노을', role: '약초꾼', stance: '실용', color: '#b9a35a', quote: '강가와 늪에는 아직 캘 뿌리와 물고기가 있어요. 위험하지 않게 조금씩 모으면 됩니다.' },
+  { name: '이끼', role: '장인', stance: '손재주', color: '#8fa87a', quote: '그물을 하나 더 짜면 강가에서 더 건질 수 있습니다. 시간이 조금 들 뿐입니다.' }
+];
+var POLICIES = [
+  { kind: 'hunt', title: '순록 떼 대사냥', desc: '성인 14명이 바위와 함께 동쪽 초원의 여울로 나간다.', cost: '성공하면 많은 고기와 가죽. 그동안 마을이 비고 겨울 준비가 늦어진다.', crew: '원정 14명 · 마을 4명 · 이끄는 사람 바위', risk: '위험해 보인다', rk: 'danger' },
+  { kind: 'river', title: '강가 어로와 채집', desc: '가까운 강가와 늪에서 뿌리와 물고기를 꾸준히 모은다.', cost: '다칠 일은 없지만 얻는 양이 많지 않다.', crew: '일손 20명 전원 · 가까운 곳', risk: '거의 확실하다', rk: 'safe' },
+  { kind: 'winter', title: '겨울 준비 우선', desc: '장작을 모으고 천막을 보강하며, 북쪽 숲에서 더 깊은 바위굴을 찾는다.', cost: '추위는 막지만 식량은 거의 늘지 않는다.', crew: '일손 20명 전원', risk: '해볼 만하다', rk: 'fair' },
+  { kind: 'small', title: '소규모 사냥과 겨울 준비', desc: '날랜 사냥꾼 6명만 순록 떼 뒤쪽 낙오자를 노리고, 나머지는 장작을 모은다.', cost: '양쪽을 다 챙기지만 큰 수확은 기대하기 어렵다.', crew: '사냥 6명 · 마을 12명', risk: '해볼 만하다', rk: 'fair' },
+  { kind: 'scout', title: '남쪽 늪지 너머 탐색', desc: '정찰대 4명이 더 따뜻한 땅이 있는지 알아본다. 나머지는 채집한다.', cost: '찾으면 이주할 수 있다. 이주는 큰 결정이다.', crew: '정찰 4명 · 채집 16명', risk: '결과를 알 수 없다', rk: 'unknown' }
+];
+var MARK = { safe: '●', fair: '◆', danger: '▲', unknown: '?' };
+var DELAYS = ['d2', 'd3', 'd4', 'd5', 'd6'];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: null, elapsed: 0 };
+    this.start = Date.now();
+  }
+  componentDidMount() {
+    var self = this;
+    this.start = Date.now();
+    this.timer = setInterval(function () {
+      var e = Date.now() - self.start;
+      self.setState({ elapsed: e });
+      if (e > 12000) clearInterval(self.timer);
+    }, 50);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    var self = this;
+    var e = this.state.elapsed;
+    var speed = 32;
+    var t = 700;
+    var news = [];
+    NEWS.forEach(function (txt) {
+      if (e >= t) {
+        var n = Math.max(0, Math.min(txt.length, Math.floor((e - t) / speed)));
+        news.push({ text: txt.slice(0, n), typing: n < txt.length });
+      }
+      t += txt.length * speed + 500;
+    });
+    var picked = this.state.picked;
+    var policies = POLICIES.map(function (p, i) {
+      return {
+        num: String(i + 1),
+        title: p.title, desc: p.desc, cost: p.cost, crew: p.crew, risk: p.risk,
+        riskCls: 'risk ' + p.rk,
+        riskMark: MARK[p.rk],
+        isHunt: p.kind === 'hunt', isRiver: p.kind === 'river', isWinter: p.kind === 'winter', isSmall: p.kind === 'small', isScout: p.kind === 'scout',
+        on: picked === i ? 'true' : 'false',
+        cls: 'policy in ' + DELAYS[i] + (picked === i ? ' on' : ''),
+        pick: function () { self.setState({ picked: picked === i ? null : i }); }
+      };
+    });
+    var advisors = ADVISORS.map(function (a, i) {
+      return { name: a.name, role: a.role, stance: a.stance, color: a.color, quote: a.quote, delay: DELAYS[i] };
+    });
+    return {
+      news: news,
+      advisors: advisors,
+      policies: policies,
+      hasPick: picked !== null,
+      noPick: picked === null,
+      pickTitle: picked !== null ? POLICIES[picked].title : '',
+      goals: [
+        { name: '식량 안정', pct: 5, paths: '겨울을 굶주림 없이 넘기기 · 석 달분 비축 · 첫 수확' },
+        { name: '영구 거처', pct: 0, paths: '바위굴을 거점으로 · 움집 마을 · 강가 고정 야영지' },
+        { name: '부족의 확장', pct: 0, paths: '혼인 동맹 · 교역으로 산하에 · 무력 · 떠돌이 무리 받아들이기' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

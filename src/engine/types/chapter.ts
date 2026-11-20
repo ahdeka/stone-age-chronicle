@@ -1,220 +1,258 @@
-// 장 정의 (DESIGN.md §2.5). 엔진은 특정 장에 의존하지 않고 이 정의만 읽는다.
+// 장 정의 (DESIGN.md §3.6). 엔진은 특정 장에 의존하지 않고 이 데이터만 읽는다.
 
-import type { Id, Label } from './common';
+import type { AgeBand, Amount, Id, Sex, Tier } from './common';
 import type { Condition } from './condition';
-import type { ModifierDef, StatKey } from './effect';
-import type { ActionCardDef, EventDef } from './cards';
+import type { ModifierDef } from './effect';
+import type { EventDef, Narrative, PolicyTemplate, SceneSpec } from './content';
+import type { AnimalState } from './state';
 
-export interface ResourceDef {
+/** 부패를 결정하는 온도 구간 */
+export type TempClass = 'frozen' | 'cold' | 'mild' | 'warm';
+
+export interface MonthDef {
   id: Id;
-  min: number;
-  /** null이면 상한 없음 */
-  max: number | null;
-  icon: string;
+  season: Id;
+  temp: TempClass;
+  /** 천막 기준 하루 장작 소모 kg */
+  firewoodPerDay: number;
+  /** 한 사람이 하루에 모으는 장작 kg */
+  woodPerWorkerDay: number;
+  /** 날씨 가중치 (순마다 하나씩 뽑는다) */
+  weather: Record<Id, number>;
+  mods?: ModifierDef[];
 }
 
-export interface AxisDef {
+export interface AgeBandDef {
+  id: AgeBand;
+  /** 이 나이부터 (아이는 0) */
+  fromAge: number;
+  foodPerMonth: number;
+  labor: number;
+  /** 굶주림·추위에 약한가 */
+  vulnerable: boolean;
+}
+
+export interface FoodKindDef {
   id: Id;
-  /** 음수 쪽 끝(예: 나눔)과 양수 쪽 끝(예: 위계)의 문자열 키는 axis.<id>.neg / .pos 규약 */
-  min: number;
-  max: number;
+  /** 순당 부패 비율 */
+  spoil: Record<TempClass, number>;
+  /** 같은 양을 나를 때의 무게 계수 (말린 고기 0.5) */
+  carryFactor: number;
 }
 
-/** 역할 1명당 계절마다 만들어 내는 것. 엔진은 역할 id를 모르고 이 정의만 읽는다. */
-export interface RoleOutput {
-  resource: Id;
-  /** 1명당 산출 스탯 */
-  stat: StatKey;
-  /** 지역 고갈의 영향을 받는가 */
-  depletes?: boolean;
-  /** 결과의 ± 변동 폭 (0.35 = ±35%) */
-  variance?: number;
-  /** 1인당 자원 보유량에 비례한 보너스 (예: 도구가 많으면 사냥이 잘 된다) */
-  bonusFrom?: { resource: Id; perCapitaCap: number; weight: number };
-}
-
-export interface RoleDef {
+export interface ShelterDef {
   id: Id;
-  icon: string;
-  outputs: RoleOutput[];
+  firewoodMul: number;
+  mods?: ModifierDef[];
+  scene: Id;
 }
 
-/** 계절마다 인구에 비례해 빠지는 것 (식량 소비, 도구 마모) */
-export interface UpkeepDef {
-  resource: Id;
-  perCapitaStat: StatKey;
-}
-
-/** 저장 상한과 부패 */
-export interface StorageDef {
-  resource: Id;
-  capPerCapitaStat: StatKey;
-  spoilStat: StatKey;
-}
-
-export interface SeasonDef {
+export interface YieldDef {
   id: Id;
-  /** 이 계절 동안 켜지는 모디파이어 */
-  modifiers: ModifierDef[];
+  foodKind: Id;
 }
 
-export interface EraDef {
+export interface PlaceDef {
   id: Id;
+  kind: Id;
+  travelDays: number;
+  scene: Id;
+  /** 계절별, 순당 한 사람의 기대 수확 kg */
+  yields: Record<Id, Partial<Record<Id, number>>>;
+  /** 재고 상한. 재고 비율만큼 수확이 준다 (고갈) */
+  stockMax: Partial<Record<Id, number>>;
+  /** 한 달에 상한의 몇 비율이 회복되는가 */
+  recoverPerMonth: number;
 }
 
-export interface LifestyleDef {
+export interface AnimalDef {
   id: Id;
-  modifiers: ModifierDef[];
+  states: Id[];
+  /** 달마다 일어날 수 있는 상태 전이 */
+  schedule: { month: Id; to: Id; chance: number; at?: Id | null }[];
+  meatKg: number;
+  foodKind: Id;
+  /** 한 마리당 부산물 (가죽 등) */
+  goods?: Record<Id, number>;
 }
 
-export interface LifeStageDef {
+export interface WeatherDef {
   id: Id;
-  /** null이면 마지막 단계 */
-  next: Id | null;
-  turnsToNext: number;
-  canHoldOffice: boolean;
-  canBeChief: boolean;
+  mods: ModifierDef[];
+  overlay?: Id;
 }
 
-export interface OfficeDef {
+export interface AilmentDef {
   id: Id;
-  /** 부족을 이끄는 직책. 정확히 하나여야 한다 (검증기가 확인). */
-  isChief?: boolean;
+  /** 회복까지 걸리는 순 수 [최소, 최대] */
+  phases: readonly [number, number];
+  noLabor: boolean;
+  /** 순마다 죽을 확률 (중증도 3일 때 ×2, 굶주리면 ×balance 배율) */
+  deathChance: number;
 }
 
-export interface PersonTraitDef {
+export interface TraitDef {
   id: Id;
-  modifiers: ModifierDef[];
-  opposites?: Id[];
+  mods?: ModifierDef[];
 }
 
-export interface TribeTraitDef {
+export interface KnowledgeDef {
   id: Id;
-  modifiers: ModifierDef[];
-  exclusiveWith?: Id[];
+  need: number;
+  mods: ModifierDef[];
 }
 
-export interface RegionDef {
+export interface ClueDef {
   id: Id;
-  /** 시작 지역에서 몇 번 떨어졌나. 좌표나 거리 계산이 아니다. */
-  depth: number;
-  revealedFrom: Id[];
-  /** 계절별 식량(채집·사냥) 배율 */
-  foodMul: Record<Id, number>;
-  danger: number;
-  specials: string[];
-  settleable: boolean;
-  tags: string[];
+  mods?: ModifierDef[];
+  /** 밝혀 주는 숨은 변수 id */
+  reveals?: Id[];
 }
-
-export type EndingKind = 'victory' | 'defeat' | 'survival';
 
 export interface EndingDef {
   id: Id;
-  kind: EndingKind;
-  /** 높을수록 먼저 판정 */
+  kind: 'defeat' | 'survival' | 'victory';
   priority: number;
   check: Condition[];
-  /** 다음 장 권력의 길 씨앗 (DESIGN.md §7.8) */
-  powerSeeds: { path: Id; weight: number }[];
 }
 
 export interface PresetPerson {
   id: Id;
-  name: Label;
-  sex: 'f' | 'm';
-  stage: Id;
-  stageTurns: number;
-  office: Id | null;
-  traits: Id[];
-  relation: number;
-  parents: [Id | null, Id | null];
+  sex: Sex;
+  age: number;
+  traits?: Id[];
+  skills?: Partial<Record<Id, number>>;
+  parents?: Id[];
+  advisor?: { seat: Id; stance: Id };
+  isChief?: boolean;
 }
 
 export interface StartPreset {
   id: Id;
-  tribeName: Label;
-  population: number;
-  roles: Record<Id, number>;
-  resources: Record<Id, number>;
-  axes: Record<Id, number>;
-  lifestyle: Id;
-  era: Id;
-  region: Id;
-  knowledge: Id[];
+  /** 시작 달의 인덱스 (calendar.months) */
+  startMonthIndex: number;
+  campPlace: Id;
+  shelter: Id;
   people: PresetPerson[];
+  food: { kind: Id; kg: number }[];
+  firewood: number;
+  goods: Record<Id, number>;
+  cohesion: number;
+  discovered: Id[];
+  animals: Record<Id, AnimalState>;
+  knowledge: Id[];
 }
 
 export interface ChapterBalance {
-  turnLimit: number;
-  /** 이 턴부터 "전설의 끝이 가까워진다" 표시 */
-  warnTurn: number;
-  /** getStat의 기본값. 새 스탯 키는 여기에 추가하는 것만으로 생긴다. */
-  stats: Record<StatKey, number>;
-  /** 1 = 높을수록 부족에 좋다, -1 = 낮을수록 좋다. 미리보기 색과 "비용 없는 선택지" 검사에 쓴다 */
-  statPolarity: Record<StatKey, 1 | -1>;
-  /** 장 전체에 항상 걸리는 모디파이어 (예: 결속이 높으면 행동 +1) */
-  globalModifiers: ModifierDef[];
-  upkeep: UpkeepDef[];
-  storage: StorageDef[];
-  /** 결속 역할을 하는 자원 (굶주림 손실, 인구 증가 조건에 쓰인다) */
-  cohesionResource: Id;
-  /** 얻은 양을 누적 카운터에 더하는 자원 (예: lore → lore_total) */
-  totalCounters: Record<Id, Id>;
-  /** flag: 식량이 모자란 턴에 세우고 배부른 턴에 지우는 플래그 (굶주림 이벤트의 트리거) */
-  starvation: { resource: Id; cohesionPerDeficit: number; popLossRate: number; hungerTurnsForLoss: number; flag: Id };
-  events: { maxPerTurn: number; secondEventChance: number; /** 같은 태그가 연속으로 나올 수 있는 최대 턴 수 */ tagStreakMax: number };
-  hand: { sizeStat: StatKey };
-  growth: { cohesionMin: number; rateStat: StatKey };
-  depletion: { perTurn: number; max: number; recoverPerTurn: number };
-  /** 인구가 줄 때 먼저 빠지는 역할 순서 */
-  roleLossOrder: Id[];
-  /** 인구가 늘 때 들어가는 역할 */
-  newcomerRole: Id;
-  actions: { stat: StatKey; min: number; max: number };
-}
-
-export interface ChapterDefinition {
-  id: Id;
-  eras: EraDef[];
-  resources: ResourceDef[];
-  axes: AxisDef[];
-  roles: RoleDef[];
-  seasons: SeasonDef[];
-  lifestyles: LifestyleDef[];
-  lifeStages: LifeStageDef[];
-  offices: OfficeDef[];
-  scale: { labelKey: string };
-  timeDisplay: { mode: 'reign' };
-  balance: ChapterBalance;
-  startPresets: StartPreset[];
-  /** (b) 이전 장 결과로 시작할 때의 매핑 규칙. 1장은 없다. */
-  importFromPrevious?: ImportRule;
-  content: {
-    personTraits: PersonTraitDef[];
-    tribeTraits: TribeTraitDef[];
-    regions: RegionDef[];
-    endings: EndingDef[];
-    events: EventDef[];
-    actions: ActionCardDef[];
+  monthLimit: number;
+  daysPerPhase: number;
+  /** 기본 스탯. 모디파이어가 여기에 얹힌다 */
+  stats: Record<string, number>;
+  ration: {
+    /** 감축 배급 비율. 이만큼도 못 먹으면 굶주림(2단계)이고 남은 식량을 다 먹는다 */
+    reduced: number;
+    /** 정상 배급 한 순마다 hungerDays가 줄어드는 양 */
+    recoverPerPhase: number;
+    /** 이만큼 굶은 날이 쌓이면 쓰러짐 판정 (약한 사람 / 나머지) */
+    collapseDays: { vulnerable: number; others: number };
+    /** 쓰러짐 확률 = collapseChance × (1 + 넘긴 날 / collapseSlopeDays), 최대 collapseMax (순당) */
+    collapseChance: number;
+    collapseSlopeDays: number;
+    collapseMax: number;
+    /** 굶주림 단계별 노동 효율 */
+    efficiency: [number, number, number];
+    /** 굶주림 단계별 순당 결속 변화 */
+    cohesionPerPhase: [number, number, number];
+    /** 굶주림 2단계에서 약한 사람이 순마다 병에 걸릴 확률과 병 id */
+    sicknessChance: number;
+    sickness: Id;
+    /** 굶주림 중 병의 사망 확률 배율 */
+    sickDeathMul: number;
   };
-  /** 시작 덱 (같은 id를 여러 번 넣으면 여러 장) */
-  startingDeck: Id[];
-  /** 그 턴에 연대기 후보가 없을 때 쓰는 문장. 처음 맞는 묶음에서 턴 번호로 하나를 고른다 */
-  chronicleFallbacks: { when: Condition[]; keys: string[] }[];
-  theme: ThemeDef;
-}
-
-/** 이전 장 결과 → 새 장 시작 상태 매핑. 2장에서 구체화한다. */
-export interface ImportRule {
-  presetId: Id;
-  resourceMap: Record<Id, { to: Id; scale: number }>;
-  axisCarry: number;
-  flagMap: Record<Id, Id>;
+  cold: {
+    sickChance: number;
+    sickness: Id;
+    deathChance: number;
+    cohesion: number;
+  };
+  chores: {
+    /** 장작이 이 순 수 소모분보다 적으면 마을 일손을 장작에 더 쓴다 */
+    firewoodTargetPhases: number;
+    firewoodShareLow: number;
+    firewoodShareNormal: number;
+  };
+  carry: {
+    /** 한 사람이 나르는 양은 스탯 'carry.perPerson' (끌개 지식 등이 올린다) */
+    /** 이 일수 이하로 가까우면 여러 번 왕복한다 */
+    multiTripMaxDays: number;
+    maxTrips: number;
+    /** 이보다 적게 남으면 처리 결정을 묻지 않고 버린다 */
+    askLeftoverKg: number;
+    /** 현장 건조: 고기를 말린 고기로 바꾸는 비율 (먹을 수 있는 양 기준) */
+    dryYield: number;
+    dryKind: Id;
+    dryKnowledge: Id;
+    abandonCohesion: number;
+  };
+  cache: {
+    /** 은닉물의 부패 배율, 냄새 증가, 짐승 습격 */
+    spoilMul: number;
+    scentPerMonth: number;
+    raidAnimal: Id;
+    raidChancePerScent: number;
+    raidLoss: Amount;
+    /** 확인하지 않은 지 이 달 수가 지나면 상태를 모른다 */
+    staleAfterMonths: number;
+  };
+  tier: {
+    spread: number;
+    /** v가 이 값 이상이면 그 등급 (disaster는 나머지) */
+    thresholds: Record<Exclude<Tier, 'disaster'>, number>;
+  };
+  hint: { sure: number; fair: number };
+  policy: { slots: number; urgentSlots: number; urgentFoodDays: number; maxPerCategory: number; jitter: number };
+  events: { villageChancePerMonth: number; maxPerMonth: number };
+  cohesion: {
+    max: number;
+    deathCost: number;
+    lowThreshold: number;
+  };
+  /** 기록용 연대기 기본 중요도 */
+  chronicle: { deathImportance: number };
 }
 
 export interface ThemeDef {
   id: Id;
-  tokens: Record<string, string>;
   motif: string;
+  tokens: Record<string, string>;
+}
+
+export interface ChapterDefinition {
+  id: Id;
+  calendar: { months: MonthDef[] };
+  seasons: Id[];
+  ageBands: AgeBandDef[];
+  foodKinds: FoodKindDef[];
+  goods: Id[];
+  shelters: ShelterDef[];
+  yields: YieldDef[];
+  places: PlaceDef[];
+  animals: AnimalDef[];
+  weather: WeatherDef[];
+  ailments: AilmentDef[];
+  traits: TraitDef[];
+  knowledge: KnowledgeDef[];
+  clues: ClueDef[];
+  content: {
+    policies: PolicyTemplate[];
+    events: EventDef[];
+    narratives: Narrative[];
+    endings: EndingDef[];
+  };
+  /** 기본 장면 (보고와 정산) */
+  scenes: { briefing: SceneSpec; settlement: SceneSpec };
+  globalMods: ModifierDef[];
+  balance: ChapterBalance;
+  presets: StartPreset[];
+  theme: ThemeDef;
 }
