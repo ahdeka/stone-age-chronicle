@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { countBand, foodDays, monthDef, population, type ChapterDefinition, type GameState } from '../../engine';
 import { Caret } from '../components/bits';
 import { SceneView } from '../components/SceneView';
+import { dateText, tribeDisplayName } from '../format';
 import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
 import { useT } from '../i18n';
 import { useMotion } from '../motion';
@@ -31,8 +32,11 @@ export function IntroScreen({ def, state, onStart }: Props) {
     children: countBand(def, state, 'child'),
     days: Math.floor(foodDays(def, state)),
     tents: state.shelter.units,
+    /** 이야기 문장(인트로 줄)에서 쓰는 달 이름 */
     month: tr.t(`month.${m.id}`),
     when: tr.t(`month.${m.id}.when`),
+    /** 화면 정보(제목 위 한 줄)에서 쓰는 날짜 */
+    date: dateText(tr, def, state),
   };
   const lines = pres.introLines.map((k) => tr.t(k, params));
   const perChar = 55 * mul;
@@ -87,7 +91,7 @@ export function IntroScreen({ def, state, onStart }: Props) {
       ) : (
         <div className={i.titleWrap}>
           <p className={`${i.meta} ${i.later}`}>{tr.t(pres.meta, params)}</p>
-          <h1 className={`${i.title} ${u.serif}`}>{tr.t(pres.title)}</h1>
+          <h1 className={`${i.title} ${u.serif}`}>{tribeDisplayName(tr, def, state)}</h1>
           <p className={`${i.tagline} ${u.serif} ${i.later}`}>{tr.t(pres.tagline)}</p>
           <div className={`${i.buttons} ${i.later2}`}>
             <button type="button" className={u.btnPrimary} onClick={onStart} autoFocus>

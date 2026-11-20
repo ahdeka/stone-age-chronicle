@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { chapters, commonStrings } from '../../src/data/registry';
 import { tweakDef } from '../../src/test/fixtures';
 import { SCENE_IDS } from '../../src/assets/sceneIds';
-import { validate } from './validate';
+import { notationIssues, validate } from './validate';
 
 const strings = { ...commonStrings.ko, ...chapters['ch1']!.strings.ko };
 const msgs = (def: Parameters<typeof validate>[0], s = strings) => validate(def, s).map((i) => `${i.level}:${i.where}:${i.msg}`);
@@ -10,6 +10,22 @@ const msgs = (def: Parameters<typeof validate>[0], s = strings) => validate(def,
 describe('콘텐츠 검증기', () => {
   it('실제 1장 콘텐츠는 오류가 없다', () => {
     expect(validate(chapters['ch1']!.definition, strings).filter((i) => i.level === 'error')).toEqual([]);
+  });
+
+  it('표기 규칙: 화면 정보의 우리말 수, 변수 뒤 조사, 부족 이름 직접 쓰기, 없는 서식', () => {
+    const names = new Set(['잿빛강 사람들']);
+    const m = (k: string, t: string) => notationIssues(k, t, names).map((i) => i.msg);
+    expect(m('ui.top.people', '{n:count}명')[0]).toContain('우리말 수');
+    expect(m('policy.x.cost', '사냥꾼 {n:num}')[0]).toContain('우리말 수');
+    expect(m('nar.x.1', '순록 {n:count}마리')).toEqual([]);
+    expect(m('nar.x.2', '순록 {n:count} 마리')[0]).toContain('띄우지 않는다');
+    expect(m('nar.x.3', '{name}이 돌아왔다.')[0]).toContain('{name:이}');
+    expect(m('nar.x.4', '{place}에 묻었다.')).toEqual([]);
+    expect(m('nar.x.5', '{name:이} 왔다.')).toEqual([]);
+    expect(m('ending.x', '잿빛강 사람들은 흩어졌다.')[0]).toContain('{tribe}');
+    expect(m('tribe.suggest.grey_river', '잿빛강 사람들')).toEqual([]);
+    expect(m('nar.x.6', '{n:foo}')[0]).toContain('없는 서식');
+    expect(m('preset.p.land.river.value', '{n:num}')[0]).toContain('우리말 수');
   });
 
   it('없는 id 참조와 없는 동물 상태를 잡는다', () => {

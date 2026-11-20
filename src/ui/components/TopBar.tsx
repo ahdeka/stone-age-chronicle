@@ -13,6 +13,7 @@ import {
   type ChapterDefinition,
   type GameState,
 } from '../../engine';
+import { dateText, tribeDisplayName } from '../format';
 import { useT } from '../i18n';
 import { Icon, RollingNumber } from './bits';
 import { SettingsMenu } from './SettingsMenu';
@@ -45,10 +46,8 @@ export function TopBar({ def, state }: { def: ChapterDefinition; state: GameStat
     <header className={`${c.top} ${u.in}`}>
       <div className={c.topInner}>
         <div className={c.brand}>
-          <span className={`${c.tribe} ${u.serif}`}>{tr.t('tribe.name')}</span>
-          <span className={c.when}>
-            {tr.t('ui.top.month', { n: state.month, month: tr.t(`month.${m.id}`), when: tr.t(`month.${m.id}.when`), weather: weatherSummary(tr, state) })}
-          </span>
+          <span className={`${c.tribe} ${u.serif}`}>{tribeDisplayName(tr, def, state)}</span>
+          <span className={c.when}>{tr.t('ui.top.month', { date: dateText(tr, def, state), weather: weatherSummary(tr, state) })}</span>
         </div>
         <div className={c.stats}>
           <Stat icon="people">

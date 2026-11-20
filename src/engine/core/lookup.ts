@@ -31,6 +31,26 @@ export function monthDef(def: ChapterDefinition, state: GameState, month = state
   return m;
 }
 
+export interface CalendarDate {
+  /** 1년차부터. 년차는 calendar.yearStartsAt 달에 바뀐다 */
+  year: number;
+  season: string;
+  /** 화면에 쓰는 달 숫자 (MonthDef.number) */
+  number: number;
+  monthId: string;
+}
+
+/** 화면 날짜 "1년차 · 봄 · 3월"의 재료 (DESIGN.md §3.1). 연대기처럼 지난 달도 month로 물을 수 있다 */
+export function calendarDate(def: ChapterDefinition, state: GameState, month = state.month): CalendarDate {
+  const len = def.calendar.months.length;
+  const ys = Math.max(0, def.calendar.months.findIndex((m) => m.id === def.calendar.yearStartsAt));
+  const startAbs = state.startMonthIndex;
+  const abs = startAbs + Math.max(1, month) - 1;
+  const year = 1 + Math.floor((abs - ys) / len) - Math.floor((startAbs - ys) / len);
+  const m = monthDef(def, state, Math.max(1, month));
+  return { year, season: m.season, number: m.number, monthId: m.id };
+}
+
 export function season(def: ChapterDefinition, state: GameState): string {
   return monthDef(def, state).season;
 }

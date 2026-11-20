@@ -27,7 +27,7 @@ import {
 
 export const ch1: ChapterDefinition = {
   id: 'ch1',
-  calendar: { months: ch1Months },
+  calendar: { months: ch1Months, yearStartsAt: 'thaw' },
   seasons: ['spring', 'summer', 'autumn', 'winter'],
   ageBands: ch1AgeBands,
   foodKinds: ch1FoodKinds,

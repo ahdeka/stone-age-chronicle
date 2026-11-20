@@ -20,7 +20,7 @@ import { decisionModel, DecisionPopup } from '../components/Decision';
 import { Portrait, SceneView } from '../components/SceneView';
 import { TopBar } from '../components/TopBar';
 import { RosterDialog } from '../components/RosterDialog';
-import { lineText } from '../format';
+import { lineText, shortDateText } from '../format';
 import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
 import { useT } from '../i18n';
 import { useMotion } from '../motion';
@@ -82,7 +82,7 @@ export function SituationScreen({ def, state, send }: Props) {
           <GoalsCard def={def} state={state} />
           <TribeCard def={def} state={state} />
           <MemoryCard def={def} state={state} />
-          <ChronicleCard state={state} />
+          <ChronicleCard def={def} state={state} />
         </aside>
       </div>
       {model && <DecisionPopup model={model} open={open} setOpen={setOpen} send={send} />}
@@ -238,7 +238,7 @@ function MemoryCard({ def, state }: { def: ChapterDefinition; state: GameState }
   );
 }
 
-function ChronicleCard({ state }: { state: GameState }) {
+function ChronicleCard({ def, state }: { def: ChapterDefinition; state: GameState }) {
   const tr = useT();
   const entries = state.chronicle.slice(-4).reverse();
   return (
@@ -246,7 +246,7 @@ function ChronicleCard({ state }: { state: GameState }) {
       <h2 className={u.h2accent}>{tr.t('ui.chronicle')}</h2>
       {entries.map((c, i) => (
         <p key={i} className={`${v.chron} ${u.serif}`}>
-          <span className={v.chronMonth}>{tr.t('ui.chronicle.month', { n: c.month, month: tr.t(`month.${c.monthId}`) })}</span> {lineText(tr, c)}
+          <span className={v.chronMonth}>{tr.t('ui.chronicle.month', { date: shortDateText(tr, def, state, c.month) })}</span> {lineText(tr, c)}
         </p>
       ))}
     </section>

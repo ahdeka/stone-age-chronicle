@@ -5,7 +5,7 @@ import { renderToString } from 'react-dom/server';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { chapters, commonStrings } from '../data/registry';
-import { reduce, type GameState } from '../engine';
+import { createGame, reduce, type GameState } from '../engine';
 import { createTranslator } from '../i18n';
 import { ch1, choose, newGame, pick } from '../test/fixtures';
 import { decisionModel, DecisionPopup } from './components/Decision';
@@ -18,13 +18,15 @@ import { SituationScreen } from './screens/SituationScreen';
 import { TitleScreen } from './screens/TitleScreen';
 
 const tables = [commonStrings.ko, chapters['ch1']!.strings.ko];
-const tr = createTranslator(...tables);
+const tr = createTranslator(tables, { tribe: '잿빛강 사람들' });
 const noop = () => {};
 
-function html(node: ReactNode): string {
+function html(node: ReactNode, tribe = '잿빛강 사람들'): string {
   return renderToString(
     <MotionProvider>
-      <I18nProvider tables={tables}>{node}</I18nProvider>
+      <I18nProvider tables={tables} globals={{ tribe }}>
+        {node}
+      </I18nProvider>
     </MotionProvider>,
   );
 }
@@ -52,13 +54,33 @@ describe('화면', () => {
 
   it('시작 화면과 인트로', () => {
     const s = newGame('ui');
-    const t = html(<TitleScreen scene={ch1.scenes.intro} canContinue onContinue={noop} onStart={noop} onLoad={noop} />);
+    const t = html(
+      <TitleScreen scene={ch1.scenes.intro} nameSuggestions={ch1.presets[0]!.presentation.nameSuggestions} canContinue onContinue={noop} onStart={noop} onLoad={noop} />,
+    );
     expect(t).not.toContain('⟨');
+    for (const n of ['잿빛강 사람들', '버들내 사람들', '흰여울 사람들', '새벽불 부족']) expect(t).toContain(n);
+    expect(t).toContain('부족 이름');
     const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />);
-    expect(i).toContain('서른네 명. 성인 열여덟, 노인 넷, 아이 열둘.');
-    expect(i).toContain('남은 식량은 열여드레분.');
+    expect(i).toContain('34명. 성인 18, 노인 4, 아이 12.');
+    expect(i).toContain('남은 식량은 18일치.');
     expect(i).toContain('가죽 천막 다섯 채');
+    expect(i).toContain('당신은 잿빛강 사람들의 족장이다.');
     expect(i).not.toContain('⟨');
+  });
+
+  it('플레이어가 정한 부족 이름이 인트로, 상단 바, 연대기, 결말에 들어간다', () => {
+    const s = createGame(ch1, { seed: 'ui-name', tribeName: '새벽불 부족' });
+    const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />, s.tribeName);
+    expect(i).toContain('당신은 새벽불 부족의 족장이다.');
+    expect(i).not.toContain('잿빛강 사람들');
+    const h = html(<SituationScreen def={ch1} state={s} send={noop} />, s.tribeName);
+    expect(h).toContain('새벽불 부족 34명이');
+    expect(h).toContain('잿빛강 땅');
+    let e = structuredClone(s);
+    e.cohesion = 1;
+    e.counters['low_cohesion_months'] = 2;
+    e = pick(ch1, e, 'hold_and_ration');
+    expect(html(<EndingScreen def={ch1} state={e} onQuit={noop} />, s.tribeName)).toContain('새벽불 부족은 서로를 믿지 못해');
   });
 
   it('월초 상황 화면: 머리글, 땅, 사람들, 시대 목표, 연대기 첫 문장', () => {
@@ -68,17 +90,20 @@ describe('화면', () => {
     expect(h).toContain('잿빛강 땅');
     expect(h).toContain('바위');
     expect(h).toContain('식량 안정');
-    expect(h).toContain('서른네 명이 첫 겨울을 앞두고 있었다');
-    expect(h).toContain('방침 정하기');
+    expect(h).toContain('잿빛강 사람들 34명이 첫 겨울을 앞두고 있었다');
+    expect(h).toContain('1년차 11월');
+    expect(h).toContain('이번 달 할 일 정하기');
     expect(h).not.toContain('⟨');
   });
 
   it('방침 팝업: 핵심 칩, 조언자 대사, 위험 배지, 대가, 투입 인원', () => {
     const h = sheet(newGame('ui'));
-    expect(h).toContain('이번 달의 방침');
-    expect(h).toContain('순록 떼 보름 안에 지나감');
+    expect(h).toContain('이번 달 할 일');
+    expect(h).toContain('순록 떼 15일 안에 지나감');
+    expect(h).toContain('1년차 · 가을 · 11월');
+    expect(h).toContain('18일치');
     expect(h).toContain('순록 떼를 놓치면 겨울을 못 넘깁니다');
-    expect(h).toMatch(/원정 14명 · 마을 \d+명 · 이끄는 사람 바위/);
+    expect(h).toMatch(/나가는 사람 14명 · 남는 사람 \d+명 · 이끄는 사람 바위/);
     expect(h).toContain('그동안 마을이 비고');
     expect(h).not.toContain('⟨');
   });
@@ -109,7 +134,7 @@ describe('화면', () => {
     expect(early).toContain('상순 · 1~10일');
     expect(early).toContain('초원의 여울');
     const settle = html(<PhaseScreen def={ch1} state={end} index={end.work.reports.length - 1} onNext={noop} send={noop} />);
-    expect(settle).toContain('월말 정산');
+    expect(settle).toContain('이달의 결과');
   });
 
   it('결말 화면', () => {

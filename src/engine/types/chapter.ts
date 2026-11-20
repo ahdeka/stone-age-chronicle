@@ -12,6 +12,8 @@ export type TempClass = 'frozen' | 'cold' | 'mild' | 'warm';
 export interface MonthDef {
   id: Id;
   season: Id;
+  /** 화면에 쓰는 달 숫자 (녹는달 = 3). 달 이름은 이야기 문장에서만 쓴다 */
+  number: number;
   temp: TempClass;
   /** 천막 기준 하루 장작 소모 kg */
   firewoodPerDay: number;
@@ -133,11 +135,12 @@ export interface PresetPerson {
 export interface PresetPresentation {
   chapterLabel: string;
   introLines: string[];
-  title: string;
   meta: string;
   tagline: string;
   land: { title: string; subtitle: string; intro: string; facts: { mark: string; label: string; value: string }[] };
   chronicleOpening: string;
+  /** 시작 화면의 추천 부족 이름 (문자열 키). 첫 번째가 기본 이름이다 */
+  nameSuggestions: string[];
 }
 
 export interface StartPreset {
@@ -146,6 +149,8 @@ export interface StartPreset {
   shelterUnits: number;
   /** 시작 달의 인덱스 (calendar.months) */
   startMonthIndex: number;
+  /** true면 시작 화면에 보이지 않는다 (시험 플레이 재현 테스트용 프리셋) */
+  hidden?: boolean;
   campPlace: Id;
   shelter: Id;
   people: PresetPerson[];
@@ -290,7 +295,8 @@ export interface ThemeDef {
 
 export interface ChapterDefinition {
   id: Id;
-  calendar: { months: MonthDef[] };
+  /** yearStartsAt: 년차가 바뀌는 달 id (1장: 녹는달 = 3월) */
+  calendar: { months: MonthDef[]; yearStartsAt: Id };
   seasons: Id[];
   ageBands: AgeBandDef[];
   foodKinds: FoodKindDef[];

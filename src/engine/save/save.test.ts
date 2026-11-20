@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ch1, newGame, pick } from '../../test/fixtures';
 import { firstChoice, playMonths } from '../headless';
+import { createGame } from '../core/createGame';
 import { deserialize, serialize, SAVE_FORMAT } from './save';
 
 describe('저장/불러오기', () => {
@@ -17,7 +18,7 @@ describe('저장/불러오기', () => {
     expect(JSON.stringify(b)).toBe(JSON.stringify(a));
   });
 
-  it('v1(재설계 M1) 저장 파일은 v2로 옮겨진다', () => {
+  it('v1(재설계 M1) 저장 파일은 최신 버전으로 옮겨진다', () => {
     const s = newGame('mig');
     const v1 = structuredClone(s) as unknown as Record<string, unknown>;
     v1['saveVersion'] = 1;
@@ -30,10 +31,29 @@ describe('저장/불러오기', () => {
     const r = deserialize(file);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.saveVersion).toBe(2);
+    expect(r.state.saveVersion).toBe(3);
     expect(r.state.shelter.units).toBe(1);
     expect(r.state.work.advice).toEqual([]);
     expect(r.state.work.reports[0]!.rows).toEqual([]);
+  });
+
+  it('v2 저장 파일은 v3으로 옮겨지고 부족 이름은 빈 문자열(= 기본 이름)이 된다', () => {
+    const v2 = structuredClone(newGame('mig3')) as unknown as Record<string, unknown>;
+    v2['saveVersion'] = 2;
+    delete v2['tribeName'];
+    const file = JSON.stringify({ format: SAVE_FORMAT, generation: 'monthly', saveVersion: 2, chapterId: 'ch1', savedAt: null, state: v2 });
+    const r = deserialize(file);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.saveVersion).toBe(3);
+    expect(r.state.tribeName).toBe('');
+  });
+
+  it('부족 이름이 저장 왕복에서 그대로 남는다', () => {
+    const s = createGame(ch1, { seed: 'name', tribeName: '  흰여울   사람들 ' });
+    expect(s.tribeName).toBe('흰여울 사람들');
+    const r = deserialize(serialize(s));
+    expect(r.ok && r.state.tribeName).toBe('흰여울 사람들');
   });
 
   it('이전 설계(카드 방식)의 저장 파일은 거부한다', () => {

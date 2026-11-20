@@ -10,7 +10,6 @@ import {
   foodDays,
   LEFTOVER_OPTIONS,
   leftoverAvailable,
-  monthDef,
   optionStatuses,
   resolveSceneSpec,
   totalKg,
@@ -22,7 +21,7 @@ import {
   type SceneSpec,
 } from '../../engine';
 import type { Translator } from '../../i18n';
-import { lineText } from '../format';
+import { dateText, lineText } from '../format';
 import { useT } from '../i18n';
 import { weatherSummary } from './TopBar';
 import { ChoiceCard, DecisionSheet, type Chip, type Quote } from './DecisionSheet';
@@ -71,8 +70,8 @@ function keyChips(tr: Translator, def: ChapterDefinition, s: GameState): Chip[] 
 }
 
 function kicker(tr: Translator, def: ChapterDefinition, s: GameState, slot?: string): string {
-  const month = tr.t(`month.${monthDef(def, s).id}`);
-  return slot && slot !== 'briefing' ? tr.t('ui.kicker.slot', { n: s.month, month, slot: tr.t(`ui.step.${slot}`) }) : tr.t('ui.kicker', { n: s.month, month });
+  const date = dateText(tr, def, s);
+  return slot && slot !== 'briefing' ? tr.t('ui.kicker.slot', { date, slot: tr.t(`ui.step.${slot}`) }) : tr.t('ui.kicker', { date });
 }
 
 export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameState): DecisionModel | undefined {

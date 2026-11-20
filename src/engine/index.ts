@@ -1,9 +1,10 @@
 // 엔진 공개 API. UI, 도구, 데이터는 여기서만 가져온다.
 
 export * from './types';
-export { createGame, type NewGameOptions } from './core/createGame';
+export { createGame, cleanTribeName, TRIBE_NAME_MAX, type NewGameOptions } from './core/createGame';
 export { reduce, applyCommand } from './core/reduce';
-export { monthDef, monthIndex, season, findEvent, findPolicy, findPlace, phaseNo } from './core/lookup';
+export { monthDef, monthIndex, season, findEvent, findPolicy, findPlace, phaseNo, calendarDate } from './core/lookup';
+export type { CalendarDate } from './core/lookup';
 export { evaluate, allTrue, failedConditions, foodDays, firewoodDays, workers, matchPerson } from './conditions/evaluate';
 export { getStat, stat, firewoodPerDay, type StatValue } from './stats/stats';
 export { ageYears, band, living, population, countBand, dailyFoodTotal } from './people/people';

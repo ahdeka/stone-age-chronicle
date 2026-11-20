@@ -3,7 +3,7 @@
 import type { ChapterDefinition, GameState } from '../../engine';
 import { ExportButton } from '../components/SaveControls';
 import { SceneView } from '../components/SceneView';
-import { lineText } from '../format';
+import { lineText, shortDateText } from '../format';
 import { useT } from '../i18n';
 import p from './phase.module.css';
 import e from './ending.module.css';
@@ -32,7 +32,7 @@ export function EndingScreen({ def, state, onQuit }: { def: ChapterDefinition; s
           <ol className={e.list}>
             {state.chronicle.map((c, i) => (
               <li key={i} className={u.serif}>
-                <span className={e.month}>{tr.t('ui.chronicle.month', { n: c.month, month: tr.t(`month.${c.monthId}`) })}</span> {lineText(tr, c)}
+                <span className={e.month}>{tr.t('ui.chronicle.month', { date: shortDateText(tr, def, state, c.month) })}</span> {lineText(tr, c)}
               </li>
             ))}
           </ol>

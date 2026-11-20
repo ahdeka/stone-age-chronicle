@@ -212,6 +212,8 @@ export interface GameState {
   presetId: Id;
   seed: string;
   rng: RngState;
+  /** 플레이어가 정한 부족 이름. 빈 문자열이면 프리셋의 기본 이름(nameSuggestions[0])을 쓴다 */
+  tribeName: string;
   /** 1부터 증가 */
   month: number;
   startMonthIndex: number;

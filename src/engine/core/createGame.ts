@@ -11,10 +11,20 @@ import { population } from '../people/people';
 export interface NewGameOptions {
   presetId?: string;
   seed: string;
+  /** 플레이어가 정한 부족 이름. 없거나 비면 프리셋의 기본 이름 */
+  tribeName?: string;
+}
+
+/** 부족 이름의 길이 한계 (글자). 화면 머리글과 상단 바에 들어가야 한다 */
+export const TRIBE_NAME_MAX = 12;
+
+export function cleanTribeName(name: string | undefined): string {
+  return [...(name ?? '').replace(/\s+/g, ' ').trim()].slice(0, TRIBE_NAME_MAX).join('');
 }
 
 export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameState {
-  const preset = opts.presetId ? byId(def.presets, opts.presetId, 'preset') : def.presets[0];
+  // 프리셋을 고르지 않으면 화면에 보이는 첫 프리셋 (숨은 프리셋은 테스트용)
+  const preset = opts.presetId ? byId(def.presets, opts.presetId, 'preset') : (def.presets.find((p) => !p.hidden) ?? def.presets[0]);
   if (!preset) throw new Error(`chapter ${def.id} has no presets`);
   const rng = seedToState(opts.seed);
 
@@ -54,6 +64,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     presetId: preset.id,
     seed: opts.seed,
     rng,
+    tribeName: cleanTribeName(opts.tribeName),
     month: 0,
     startMonthIndex: preset.startMonthIndex,
     step: 'policy',

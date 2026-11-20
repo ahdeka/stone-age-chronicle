@@ -1,36 +1,33 @@
-// 우리말 수 읽기 (화면 시안: "서른네 명", "열여드레분", "순록 세 마리")
-// 문장 템플릿에서 {n:num} {n:count} {n:days}로 쓴다. 99를 넘으면 아라비아 숫자로 둔다.
+// 수 표기 (CLAUDE.md "화면 표기 원칙")
+// 화면 정보는 아라비아 숫자만 쓴다. 이야기 문장에서만 작은 수(10 이하)를 우리말로 읽는다.
+// 문장 템플릿에서 {n:num} {n:count} {n:days}로 쓴다.
+//   {n:count}마리 → "세 마리" / "14마리"  (우리말일 때만 띄어 쓴다. 템플릿에는 띄어쓰기 없이 단위를 붙인다)
+//   {n:num}       → "셋" / "18"
+//   {n:days}      → "18일치" (늘 아라비아 숫자, 식량·장작이 며칠 가는지)
 
-const ONES = ['', '하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉'];
-const ONES_ATTR = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉'];
-const TENS = ['', '열', '스물', '서른', '마흔', '쉰', '예순', '일흔', '여든', '아흔'];
-const DAYS = ['', '하루', '이틀', '사흘', '나흘', '닷새', '엿새', '이레', '여드레', '아흐레'];
+/** 우리말로 읽는 가장 큰 수 */
+export const NATIVE_MAX = 10;
 
-function native(n: number, ones: readonly string[]): string | undefined {
-  if (!Number.isInteger(n) || n < 1 || n > 99) return undefined;
-  const t = Math.floor(n / 10);
-  const o = n % 10;
-  return `${TENS[t]}${ones[o]}`;
+const ONES = ['', '하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+const ONES_ATTR = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+
+function small(n: number): boolean {
+  return Number.isInteger(n) && n >= 1 && n <= NATIVE_MAX;
 }
 
-/** 셈: 하나, 둘, 열여덟, 서른넷 */
+/** 셈: 하나, 둘, 셋 … 열. 넘으면 아라비아 숫자 */
 export function koNum(n: number): string {
-  return native(n, ONES) ?? String(n);
+  return small(n) ? ONES[n]! : String(n);
 }
 
-/** 단위 앞: 한, 두, 세, 네, 스무, 서른네 (명, 마리, 채 앞) */
+/** 단위 앞: "세 " (뒤에 띄어쓰기 포함), 넘으면 "14" (단위를 바로 붙인다) */
 export function koCount(n: number): string {
-  if (n === 20) return '스무';
-  return native(n, ONES_ATTR) ?? String(n);
+  return small(n) ? `${ONES_ATTR[n]!} ` : String(n);
 }
 
-/** 날수: 하루, 이틀, 열흘, 열여드레, 스무날, 스무사흘. 30 이상과 0은 "N일" */
+/** 며칠치: 늘 아라비아 숫자 */
 export function koDays(n: number): string {
-  if (!Number.isInteger(n) || n < 1 || n >= 30) return `${n}일`;
-  if (n === 10) return '열흘';
-  if (n === 20) return '스무날';
-  const t = Math.floor(n / 10);
-  return `${t === 0 ? '' : t === 1 ? '열' : '스무'}${DAYS[n % 10]}`;
+  return `${n}일치`;
 }
 
 export const FORMATTERS: Record<string, (n: number) => string> = {

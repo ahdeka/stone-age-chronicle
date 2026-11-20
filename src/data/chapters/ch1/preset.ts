@@ -70,7 +70,7 @@ export const ch1Preset: StartPreset = {
   presentation: {
     chapterLabel: `${P}.chapter`,
     introLines: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${P}.intro.${n}`),
-    title: 'tribe.name',
+    nameSuggestions: ['tribe.suggest.grey_river', 'tribe.suggest.willow_brook', 'tribe.suggest.white_ford', 'tribe.suggest.dawn_fire'],
     meta: `${P}.meta`,
     tagline: `${P}.tagline`,
     land: {

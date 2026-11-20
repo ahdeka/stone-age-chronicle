@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   dailyFoodTotal,
   findPolicy,
-  monthDef,
   type ChapterDefinition,
   type Command,
   type GameState,
@@ -18,7 +17,7 @@ import type { Translator } from '../../i18n';
 import { Caret, Icon, RollingNumber } from '../components/bits';
 import { decisionModel, DecisionPopup } from '../components/Decision';
 import { SceneView } from '../components/SceneView';
-import { lineText } from '../format';
+import { dateText, lineText } from '../format';
 import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
 import { useT } from '../i18n';
 import { useMotion } from '../motion';
@@ -138,7 +137,6 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
   }, [clock, model, onNext, open]);
 
   if (!report) return null;
-  const m = monthDef(def, state);
   const nowStep = report.slot === 'briefing' ? 'policy' : report.slot;
   const nowIdx = STEPS.indexOf(nowStep as (typeof STEPS)[number]);
   const next = state.work.reports[index + 1];
@@ -158,7 +156,7 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
       <div className={p.wrap}>
         <div className={`${p.head} ${u.in}`}>
           <div className={p.headText}>
-            <span className={`${p.month} ${u.serif}`}>{tr.t('ui.kicker', { n: state.month, month: tr.t(`month.${m.id}`) })}</span>
+            <span className={`${p.month} ${u.serif}`}>{tr.t('ui.kicker', { date: dateText(tr, def, state) })}</span>
             {policy && (
               <span className={`${u.muted} ${u.small}`}>
                 {tr.t('ui.phase.policyLine', { policy: tr.t(`policy.${policy.id}.name`) })}
@@ -182,7 +180,7 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
           <div className={p.shade} aria-hidden="true" />
           <div className={p.sceneLabel}>
             <span className={u.label}>{tr.t(`ui.phase.${report.slot}.days`)}</span>
-            <span className={`${p.place} ${u.serif}`}>{settlement ? tr.t(`month.${m.id}`) : tr.t(`place.${place}`)}</span>
+            <span className={`${p.place} ${u.serif}`}>{settlement ? dateText(tr, def, state) : tr.t(`place.${place}`)}</span>
             {report.tier && <span className={p.tier}>{tr.t(`tier.${report.tier}`)}</span>}
           </div>
         </section>

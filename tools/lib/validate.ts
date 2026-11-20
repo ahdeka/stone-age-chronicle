@@ -3,6 +3,9 @@
 
 import type { ChapterDefinition, Condition, Effect, EventDef, PolicyStep, SceneSpec } from '../../src/engine';
 import { MEASURES, PHASES } from '../../src/engine';
+import { PLACEHOLDER } from '../../src/i18n';
+import { isJosaFormat } from '../../src/i18n/josa';
+import { FORMATTERS } from '../../src/i18n/numerals';
 
 export interface Issue {
   level: 'error' | 'warn';
@@ -408,8 +411,9 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   for (const pr of def.presets) {
     const w = `preset.${pr.id}`;
     const ps = pr.presentation;
-    for (const k of [ps.chapterLabel, ps.title, ps.meta, ps.tagline, ps.land.title, ps.land.subtitle, ps.land.intro, ps.chronicleOpening, ...ps.introLines])
+    for (const k of [ps.chapterLabel, ps.meta, ps.tagline, ps.land.title, ps.land.subtitle, ps.land.intro, ps.chronicleOpening, ...ps.introLines, ...ps.nameSuggestions])
       str(k, w);
+    if (ps.nameSuggestions.length === 0) err(w, '추천 부족 이름이 없다');
     for (const f of ps.land.facts) for (const k of [f.mark, f.label, f.value]) str(k, w);
   }
   for (const m of def.calendar.months) str(`month.${m.id}.when`, `month.${m.id}`);
@@ -462,7 +466,41 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   for (const a of def.ailments) str(`ailment.${a.id}.effect`, `ailment.${a.id}`);
   for (const p of def.content.policies) str(`policy.${p.id}.cost`, `policy.${p.id}`);
 
+  // ── 표기 규칙 (CLAUDE.md "화면 표기 원칙") ──
+  const tribeNames = new Set(def.presets.flatMap((pr) => pr.presentation.nameSuggestions.map((k) => strings[k] ?? '')).filter(Boolean));
+  for (const [key, text] of Object.entries(strings)) issues.push(...notationIssues(key, text, tribeNames));
+
   return issues;
+}
+
+/** 화면 정보용 키: 아라비아 숫자만 쓴다 (우리말 수 서식 금지) */
+export function isScreenKey(key: string): boolean {
+  return (
+    SCREEN_PREFIXES.some((p) => key.startsWith(p)) ||
+    key.endsWith('.cost') ||
+    key.endsWith('.lock') ||
+    /^preset\.[^.]+\.(land\.|meta$)/.test(key)
+  );
+}
+const SCREEN_PREFIXES = ['ui.', 'chip.', 'row.', 'settle.', 'brief.', 'alert.', 'tier.', 'hint.', 'cohesion.', 'goal.', 'goals.'];
+/** 우리말로 읽는 수 서식 */
+const NATIVE_FORMATS = new Set(['count', 'num']);
+const JOSA_CHARS = /^(은|는|이|가|을|를|와|과|으로|로)(?![가-힣])/u;
+
+/** 문자열 하나의 표기 검사: 서식 이름, 조사, 화면용 숫자, 부족 이름 */
+export function notationIssues(key: string, text: string, tribeNames: ReadonlySet<string>): Issue[] {
+  const out: Issue[] = [];
+  const err = (msg: string) => out.push({ level: 'error', where: `ko.${key}`, msg });
+  for (const m of text.matchAll(PLACEHOLDER)) {
+    const fmt = m[2];
+    const after = text.slice((m.index ?? 0) + m[0].length);
+    if (fmt && !FORMATTERS[fmt] && !isJosaFormat(fmt)) err(`없는 서식: ${m[0]}`);
+    if (fmt && NATIVE_FORMATS.has(fmt) && isScreenKey(key)) err(`화면 정보에는 우리말 수를 쓰지 않는다: ${m[0]} (아라비아 숫자로)`);
+    if (fmt === 'count' && after.startsWith(' ')) err(`{n:count} 뒤는 띄우지 않는다 (서식이 띄어쓰기를 넣는다): ${m[0]}`);
+    if (!fmt && JOSA_CHARS.test(after)) err(`변수 바로 뒤의 조사는 서식으로: ${m[0]}${after.slice(0, 2)} → {${m[1]}:${after.match(JOSA_CHARS)![1]}}`);
+  }
+  if (!key.startsWith('tribe.suggest.')) for (const n of tribeNames) if (text.includes(n)) err(`부족 이름을 직접 쓰지 않는다: "${n}" → {tribe}`);
+  return out;
 }
 
 /** 비용·위험이 보이는 효과가 있는가 (기회비용은 opportunity로 표시) */

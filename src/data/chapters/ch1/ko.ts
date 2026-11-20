@@ -1,5 +1,6 @@
 // 1장 문자열. 문체: 담담한 서술형, 구체적인 행동, 수치를 문장 안에 (DESIGN.md §12)
-// 규칙: 받침에 따라 바뀌는 조사를 변수 바로 뒤에 붙이지 않는다.
+// 규칙(CLAUDE.md "화면 표기 원칙"): 화면 정보는 쉬운 말과 아라비아 숫자만, 달 이름과 분위기 있는 표현은 이야기 문장에서만.
+// 조사는 {이름:은} 서식으로, 부족 이름은 {tribe}로만 넣는다.
 
 const names: Record<string, string> = {
   maru: '마루', bawi: '바위', seori: '서리', noeul: '노을', ikki: '이끼',
@@ -11,7 +12,11 @@ const names: Record<string, string> = {
 };
 
 export const ch1Ko: Record<string, string> = {
-  'tribe.name': '잿빛강 사람들',
+  // 시작 화면의 추천 부족 이름 (첫 번째가 기본값)
+  'tribe.suggest.grey_river': '잿빛강 사람들',
+  'tribe.suggest.willow_brook': '버들내 사람들',
+  'tribe.suggest.white_ford': '흰여울 사람들',
+  'tribe.suggest.dawn_fire': '새벽불 부족',
   ...Object.fromEntries(Object.entries(names).map(([id, n]) => [`person.${id}`, n])),
 
   // ── 시간과 날씨 ──
@@ -97,13 +102,13 @@ export const ch1Ko: Record<string, string> = {
   'line.spears_broken': '창 몇 자루가 부러졌다.',
 
   // ── 서술 ──
-  'nar.ambush_good.1': '사냥대는 나흘을 걸어 순록 이동로에 닿았다. 얕은 여울 양쪽 갈대밭에 엎드려 첫 무리를 덮쳤다. 순록 {caught:count} 마리가 쓰러졌다.',
-  'nar.ambush_good.2': '{leader} 우두머리가 바람을 읽고 사냥대를 갈대밭 아래로 옮겼다. 첫 매복에서 순록 {caught:count} 마리를 잡았다.',
+  'nar.ambush_good.1': '사냥대는 나흘을 걸어 순록 이동로에 닿았다. 얕은 여울 양쪽 갈대밭에 엎드려 첫 무리를 덮쳤다. 순록 {caught:count}마리가 쓰러졌다.',
+  'nar.ambush_good.2': '{leader} 우두머리가 바람을 읽고 사냥대를 갈대밭 아래로 옮겼다. 첫 매복에서 순록 {caught:count}마리를 잡았다.',
   'nar.ambush_bad.1': '순록들이 먼저 냄새를 맡고 여울을 비껴갔다. 첫 매복은 빈손에 가까웠다.',
-  'nar.herd_good.1': '본 무리가 여울에 닿자 양쪽에서 창이 날았다. 순록 {caught:count} 마리, 고기 약 {meat}kg이었다.',
-  'nar.herd_good.2': '수백 마리가 물을 건너는 사이 사냥대는 쉬지 않고 창을 던졌다. 저녁까지 순록 {caught:count} 마리를 끌어냈다.',
-  'nar.herd_costly.1': '본 무리를 덮쳐 순록 {caught:count} 마리를 쓰러뜨렸다. 그러나 무리에 떠밀린 사람들이 물속에서 넘어졌다.',
-  'nar.herd_bad.1': '본 무리는 여울 아래쪽으로 방향을 틀었다. 순록 {caught:count} 마리만 건졌다.',
+  'nar.herd_good.1': '본 무리가 여울에 닿자 양쪽에서 창이 날았다. 순록 {caught:count}마리, 고기 약 {meat}kg이었다.',
+  'nar.herd_good.2': '수백 마리가 물을 건너는 사이 사냥대는 쉬지 않고 창을 던졌다. 저녁까지 순록 {caught:count}마리를 끌어냈다.',
+  'nar.herd_costly.1': '본 무리를 덮쳐 순록 {caught:count}마리를 쓰러뜨렸다. 그러나 무리에 떠밀린 사람들이 물속에서 넘어졌다.',
+  'nar.herd_bad.1': '본 무리는 여울 아래쪽으로 방향을 틀었다. 순록 {caught:count}마리만 건졌다.',
   'nar.hunt_called_off.1': '사냥대는 매복을 풀고 마을로 돌아섰다. 등 뒤에서 본 무리가 여울을 건너는 소리가 들렸다.',
   'nar.gather_month.1': '어른들은 강가에서 뿌리를 캐고 얕은 물에 그물을 놓았다. 양은 적었지만 다치는 사람은 없었다.',
   'nar.gather_month.2': '노을이 늪 가장자리에서 먹을 수 있는 뿌리를 골라 주었다. 아이들도 바구니를 들고 따라다녔다.',
@@ -115,11 +120,11 @@ export const ch1Ko: Record<string, string> = {
 
   // ── 결말과 연대기 ──
   'ending.ruin_extinct.title': '꺼진 불',
-  'ending.ruin_extinct.chron': '잿빛강 사람들의 마지막 불이 꺼졌다.',
+  'ending.ruin_extinct.chron': '{tribe}의 마지막 불이 꺼졌다.',
   'ending.ruin_split.title': '흩어진 사람들',
-  'ending.ruin_split.chron': '잿빛강 사람들은 서로를 믿지 못해 뿔뿔이 흩어졌다.',
+  'ending.ruin_split.chron': '{tribe:은} 서로를 믿지 못해 뿔뿔이 흩어졌다.',
   'ending.survive_time.title': '살아남은 사람들',
-  'ending.survive_time.chron': '잿빛강 사람들은 여러 해를 견뎌 냈다.',
+  'ending.survive_time.chron': '{tribe:은} 여러 해를 견뎌 냈다.',
   'chron.death': '{name}, {cause} 끝에 세상을 떠났다.',
   'chron.knowledge': '부족이 새로운 앎을 얻었다: {knowledge}.',
   'chron.policy': '이달의 일: {policy}.',
@@ -128,13 +133,13 @@ export const ch1Ko: Record<string, string> = {
   'preset.grey_river.chapter': '제1장 · 구석기',
   'preset.grey_river.intro.1': '빙하기의 끝자락, 북쪽 땅.',
   'preset.grey_river.intro.2': '잿빛강은 고원에서 흘러내려 넓게 굽이친다.',
-  'preset.grey_river.intro.3': '강 굽이의 바위 그늘 아래, 가죽 천막 {tents:count} 채.',
-  'preset.grey_river.intro.4': '{pop:count} 명. 성인 {adults:num}, 노인 {elders:num}, 아이 {children:num}.',
+  'preset.grey_river.intro.3': '강 굽이의 바위 그늘 아래, 가죽 천막 {tents:count}채.',
+  'preset.grey_river.intro.4': '{pop}명. 성인 {adults}, 노인 {elders}, 아이 {children}.',
   'preset.grey_river.intro.5': '지난여름은 짧았고, 사냥은 신통치 않았다.',
   'preset.grey_river.intro.6': '밤마다 서리가 내린다. 겨울까지 두 달 남짓.',
-  'preset.grey_river.intro.7': '남은 식량은 {days:days}분.',
-  'preset.grey_river.intro.8': '당신은 이 사람들의 족장이다.',
-  'preset.grey_river.meta': '{month} · {when} · {pop:count} 명',
+  'preset.grey_river.intro.7': '남은 식량은 {days:days}.',
+  'preset.grey_river.intro.8': '당신은 {tribe}의 족장이다.',
+  'preset.grey_river.meta': '{date} · {pop}명',
   'preset.grey_river.tagline': '첫 겨울이 다가온다. 무엇을 먼저 지킬 것인가.',
   'preset.grey_river.land.title': '잿빛강 땅',
   'preset.grey_river.land.subtitle': '빙하기 끝자락 · 북쪽 대륙의 동쪽 끝',
@@ -143,10 +148,10 @@ export const ch1Ko: Record<string, string> = {
   'preset.grey_river.land.terrain.label': '지형',
   'preset.grey_river.land.terrain.value': '넓은 강 굽이, 북쪽 소나무 숲, 동쪽 초원, 남쪽 늪지',
   'preset.grey_river.land.climate.mark': '철',
-  'preset.grey_river.land.climate.label': '기후',
-  'preset.grey_river.land.climate.value': '한랭 대륙성 · 짧은 여름, 길고 혹독한 겨울',
+  'preset.grey_river.land.climate.label': '날씨',
+  'preset.grey_river.land.climate.value': '춥다 · 여름은 짧고 겨울은 길고 혹독하다',
   'preset.grey_river.land.rain.mark': '비',
-  'preset.grey_river.land.rain.label': '강수',
+  'preset.grey_river.land.rain.label': '비와 눈',
   'preset.grey_river.land.rain.value': '많지 않다 · 겨울엔 대부분 눈',
   'preset.grey_river.land.river.mark': '강',
   'preset.grey_river.land.river.label': '주요 강',
@@ -155,9 +160,9 @@ export const ch1Ko: Record<string, string> = {
   'preset.grey_river.land.soil.label': '흙',
   'preset.grey_river.land.soil.value': '강가의 고운 흙, 초원의 누런 흙',
   'preset.grey_river.land.danger.mark': '!',
-  'preset.grey_river.land.danger.label': '위험 요소',
-  'preset.grey_river.land.danger.value': '늑대 무리, 혹한과 눈보라, 봄철 해빙 홍수, 겨울 식량 부족',
-  'preset.grey_river.chronicle': '서리 내린 잿빛강 굽이에서, {pop:count} 명이 첫 겨울을 앞두고 있었다.',
+  'preset.grey_river.land.danger.label': '위험',
+  'preset.grey_river.land.danger.value': '늑대 무리, 혹한과 눈보라, 봄에 얼음이 녹으며 나는 홍수, 겨울 식량 부족',
+  'preset.grey_river.chronicle': '서리 내린 잿빛강 굽이에서, {tribe} {pop}명이 첫 겨울을 앞두고 있었다.',
 
   // ── 달의 계절감 ──
   'month.thaw.when': '이른 봄', 'month.sprout.when': '봄', 'month.egg.when': '늦봄',
@@ -196,8 +201,8 @@ export const ch1Ko: Record<string, string> = {
 
   // ── 결정 팝업: 상황 칩 ──
   'chip.hunger': '굶주림',
-  'chip.food_low': '식량 열흘 못 감',
-  'chip.reindeer.migrating': '순록 떼 보름 안에 지나감',
+  'chip.food_low': '식량 10일치 미만',
+  'chip.reindeer.migrating': '순록 떼 15일 안에 지나감',
   'chip.blizzard': '눈보라 기미',
   'chip.firewood_low': '장작 바닥',
   'chip.deer': '사슴이 강가에',
@@ -254,20 +259,20 @@ export const ch1Ko: Record<string, string> = {
   'ailment.fever.effect': '열이 내릴 때까지 누워 있어야 한다.',
 
   // ── 마을 일 서술 ──
-  'nar.village_work.autumn.1': '남은 어른 {villagers:count} 명은 강가에서 뿌리를 캐고 마른 가지를 모았다. 장작 {wood}kg, 먹을거리 {gathered}kg.',
-  'nar.village_work.autumn.2': '마을에서는 {villagers:count} 사람이 마른 가지를 꺾고 강가를 뒤졌다. 장작 {wood}kg과 먹을거리 {gathered}kg이 모였다.',
+  'nar.village_work.autumn.1': '남은 어른 {villagers:count}명은 강가에서 뿌리를 캐고 마른 가지를 모았다. 장작 {wood}kg, 먹을거리 {gathered}kg.',
+  'nar.village_work.autumn.2': '마을에서는 {villagers:count}명이 마른 가지를 꺾고 강가를 뒤졌다. 장작 {wood}kg과 먹을거리 {gathered}kg이 모였다.',
   'nar.village_work.blizzard': '눈보라 속에서는 천막 밖으로 나가기도 어려웠다. 장작 {wood}kg을 겨우 모았다.',
-  'nar.village_work.winter.1': '눈을 헤치고 {villagers:count} 사람이 땔감을 끌어왔다. 장작 {wood}kg. 언 땅에서 건진 먹을거리는 {gathered}kg뿐이었다.',
+  'nar.village_work.winter.1': '눈을 헤치고 {villagers:count}명이 땔감을 끌어왔다. 장작 {wood}kg. 언 땅에서 건진 먹을거리는 {gathered}kg뿐이었다.',
   'nar.village_work.winter.2': '어른들은 무릎까지 빠지는 눈 속에서 마른 가지를 꺾었다. 장작 {wood}kg, 먹을거리 {gathered}kg.',
   'nar.village_work.warm.1': '어른들은 강가와 늪을 돌며 먹을거리 {gathered}kg과 장작 {wood}kg을 모았다.',
-  'nar.village_work.warm.2': '{villagers:count} 사람이 물가에 그물을 놓고 새순을 뜯었다. 먹을거리 {gathered}kg, 장작 {wood}kg.',
+  'nar.village_work.warm.2': '{villagers:count}명이 물가에 그물을 놓고 새순을 뜯었다. 먹을거리 {gathered}kg, 장작 {wood}kg.',
   'line.village.empty': '마을에는 일할 사람이 남지 않았다.',
 
   // ── 장부 행: 잡은 짐승 ──
-  'row.catch.reindeer': '순록 {n:count} 마리',
-  'row.catch.red_deer': '붉은사슴 {n:count} 마리',
-  'row.catch.bear': '곰 {n:count} 마리',
-  'row.catch.wolves': '늑대 {n:count} 마리',
+  'row.catch.reindeer': '순록 {n}마리',
+  'row.catch.red_deer': '붉은사슴 {n}마리',
+  'row.catch.bear': '곰 {n}마리',
+  'row.catch.wolves': '늑대 {n}마리',
 
   // ── 시대 목표 ──
   'goals.era': '시대 목표 · 구석기',

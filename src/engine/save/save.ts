@@ -39,6 +39,8 @@ export const migrations: Record<number, Migration> = {
       history,
     };
   },
+  /** v2 → v3: 부족 이름. 이전 세이브는 빈 문자열(= 프리셋의 기본 이름)로 둔다 */
+  2: (st) => ({ tribeName: '', ...st }),
 };
 
 export function serialize(state: GameState, savedAt: string | null = null): string {

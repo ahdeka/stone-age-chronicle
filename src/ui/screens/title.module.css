@@ -60,6 +60,60 @@
   gap: 12px;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+}
+
+.fieldLabel {
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.nameInput {
+  min-height: 52px;
+  padding: 0 14px;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--border-strong);
+  background: var(--inset);
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+}
+
+.nameInput:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: var(--touch);
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--button-line);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--border-hover);
+}
+
+.chipOn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .seed {
   display: flex;
   flex-direction: column;

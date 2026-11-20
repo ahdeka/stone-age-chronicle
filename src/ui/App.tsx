@@ -1,9 +1,11 @@
 // 앱 흐름: 시작 화면 → (새 게임이면) 인트로 → 게임
 // 설정(속도, 움직임, 글자 크기)과 번역기, 장 테마를 여기서 깐다.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createGame, type GameState } from '../engine';
 import { DEFAULT_CHAPTER, commonStrings, getChapter } from '../data/registry';
+import { createTranslator } from '../i18n';
+import { tribeDisplayName } from './format';
 import { I18nProvider } from './i18n';
 import { MotionProvider } from './motion';
 import { GameView } from './screens/GameView';
@@ -25,6 +27,11 @@ export function App() {
 
   useEffect(() => applyTheme(def.theme), [def]);
 
+  const tables = useMemo(() => [commonStrings.ko, entry.strings.ko], [entry]);
+  // 부족 이름은 모든 문자열의 {tribe}로 들어간다. 추천 이름 키에는 {tribe}가 없어서 기본 번역기로 읽는다.
+  const tribe = tribeDisplayName(createTranslator(tables), def, state ?? saved);
+  const startPreset = def.presets.find((p) => !p.hidden) ?? def.presets[0]!;
+
   const update = (next: GameState) => {
     setState(next);
     autosave(next);
@@ -44,14 +51,15 @@ export function App() {
     body = (
       <TitleScreen
         scene={def.scenes.intro}
+        nameSuggestions={startPreset.presentation.nameSuggestions}
         canContinue={saved !== null && saved.step !== 'ended'}
         onContinue={() => {
           if (!saved) return;
           setState(saved);
           setScreen('game');
         }}
-        onStart={(seed) => {
-          update(createGame(def, { seed }));
+        onStart={(seed, tribeName) => {
+          update(createGame(def, { seed, tribeName, presetId: startPreset.id }));
           setScreen('intro');
         }}
         onLoad={(s) => {
@@ -63,7 +71,9 @@ export function App() {
 
   return (
     <MotionProvider>
-      <I18nProvider tables={[commonStrings.ko, entry.strings.ko]}>{body}</I18nProvider>
+      <I18nProvider tables={tables} globals={{ tribe }}>
+        {body}
+      </I18nProvider>
     </MotionProvider>
   );
 }

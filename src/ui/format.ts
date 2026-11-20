@@ -1,7 +1,27 @@
 // 엔진의 줄(Line)과 수치를 화면 문자열로
 
-import type { Label, Line, LineParamValue } from '../engine';
+import { calendarDate, type ChapterDefinition, type GameState, type Label, type Line, type LineParamValue } from '../engine';
 import type { Translator } from '../i18n';
+
+/** 화면 날짜 "1년차 · 봄 · 3월" (CLAUDE.md "시간") */
+export function dateText(tr: Translator, def: ChapterDefinition, state: GameState, month = state.month): string {
+  const d = calendarDate(def, state, month);
+  return tr.t('ui.date', { year: d.year, season: tr.t(`season.${d.season}`), num: d.number });
+}
+
+/** 연대기 같은 좁은 자리의 날짜 "1년차 3월" */
+export function shortDateText(tr: Translator, def: ChapterDefinition, state: GameState, month = state.month): string {
+  const d = calendarDate(def, state, month);
+  return tr.t('ui.date.short', { year: d.year, num: d.number });
+}
+
+/** 화면에 보일 부족 이름: 플레이어가 정한 이름, 없으면 프리셋의 첫 추천 이름 */
+export function tribeDisplayName(tr: Translator, def: ChapterDefinition, state: GameState | null): string {
+  if (state?.tribeName) return state.tribeName;
+  const preset = def.presets.find((p) => p.id === state?.presetId) ?? def.presets.find((p) => !p.hidden) ?? def.presets[0];
+  const key = preset?.presentation.nameSuggestions[0];
+  return key ? tr.t(key) : '';
+}
 
 function isLabel(v: LineParamValue): v is Label {
   return typeof v === 'object' && v !== null;
