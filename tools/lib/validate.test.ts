@@ -51,6 +51,14 @@ describe('콘텐츠 검증기', () => {
     expect(m.some((x) => x.includes('선택지 라벨'))).toBe(true);
   });
 
+  it('전략 카드의 한 줄 설명(brief)이 없으면 오류, 18자를 넘으면 경고', () => {
+    const s = { ...strings, 'policy.river_gather.brief': '아주 길게 늘어진 한 줄 설명이라서 카드에 다 들어가지 않는다' };
+    delete (s as Record<string, string>)['policy.snare_hunt.brief'];
+    const m = msgs(ch1, s);
+    expect(m.some((x) => x.includes('문자열 없음: policy.snare_hunt.brief'))).toBe(true);
+    expect(m.some((x) => x.startsWith('warn:policy.river_gather') && x.includes('한 줄 설명'))).toBe(true);
+  });
+
   it('공짜 선택지와 가짜 선택지를 잡는다', () => {
     const def = tweakDef((d) => {
       const ev = d.content.events.find((e) => e.id === 'wolves_circle_camp')!;

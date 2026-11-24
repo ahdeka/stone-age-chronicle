@@ -7,6 +7,7 @@ import { SAVE_VERSION } from '../save/version';
 import { freshWork, startMonth } from '../month/month';
 import { addLot } from '../stores/food';
 import { population } from '../people/people';
+import { EMPTY_START } from '../display';
 
 export interface NewGameOptions {
   presetId?: string;
@@ -89,7 +90,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     cooldowns: {},
     usedOnce: [],
     narrativeRecent: {},
-    work: freshWork(['', '', ''], { food: 0, firewood: 0, population: 0 }),
+    work: freshWork(['', '', ''], EMPTY_START),
     history: [],
     chronicle: [],
     seq: 0,

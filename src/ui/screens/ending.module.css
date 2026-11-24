@@ -26,3 +26,105 @@
   gap: 12px;
   align-items: center;
 }
+
+/* 진행 화면 틀에서 옮겨 온 것 (2026-11-24: 진행 화면이 바뀌어 결말 화면이 따로 가진다) */
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding-bottom: 130px;
+}
+
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sceneBox {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  height: 440px;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  animation: sceneIn calc(1.8s * var(--motion-scale)) ease-out both;
+}
+
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(10, 9, 8, 0.9) 0%, rgba(10, 9, 8, 0) 45%);
+}
+
+.sceneLabel {
+  position: absolute;
+  left: 28px;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.place {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+
+.story {
+  flex: 999 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 220px;
+}
+
+.para {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.paraLabel {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.16em;
+  color: var(--accent);
+}
+
+.paraText {
+  margin: 0;
+  font-size: calc(1.1875rem * var(--font-scale));
+  line-height: 1.85;
+  color: var(--prose-strong);
+  max-width: 40em;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@keyframes sceneIn {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

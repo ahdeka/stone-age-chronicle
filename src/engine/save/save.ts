@@ -59,6 +59,30 @@ export const migrations: Record<number, Migration> = {
       work: { ...rest, plan, planIndex: 0, savings: [], haul: chosen ? [] : (work['haul'] ?? []) },
     };
   },
+  /** v4 → v5: 월초 지표를 더 남긴다. 이전 세이브는 모르는 값을 지금 값으로 채운다(그 달의 증감은 0으로 보인다) */
+  4: (st) => {
+    const work = (st['work'] ?? {}) as Record<string, unknown>;
+    const start = (work['start'] ?? {}) as Record<string, unknown>;
+    const people = Object.values((st['people'] ?? {}) as Record<string, { alive?: boolean; ailments?: unknown[] }>).filter((p) => p.alive);
+    const ailing = people.filter((p) => (p.ailments ?? []).length > 0).length;
+    return {
+      ...st,
+      work: {
+        ...work,
+        start: {
+          food: 0,
+          firewood: 0,
+          population: people.length,
+          foodDays: 0,
+          cohesion: typeof st['cohesion'] === 'number' ? st['cohesion'] : 0,
+          workers: 0,
+          sick: ailing,
+          injured: 0,
+          ...start,
+        },
+      },
+    };
+  },
 };
 
 export function serialize(state: GameState, savedAt: string | null = null): string {

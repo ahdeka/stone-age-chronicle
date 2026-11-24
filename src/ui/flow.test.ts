@@ -30,8 +30,8 @@ describe('자동 진행', () => {
 
 describe('스크롤 열쇠', () => {
   it('새 달, 진행 화면 진입, 순 바뀜, 이달의 결과마다 달라진다', () => {
-    const keys = [screenKey('situation', 3), screenKey('phase', 3, 1), screenKey('phase', 3, 2), screenKey('phase', 3, 4), screenKey('situation', 4)];
+    const keys = [screenKey('situation', 3), screenKey('progress', 3, 1), screenKey('progress', 3, 2), screenKey('progress', 3, 4), screenKey('situation', 4)];
     expect(new Set(keys).size).toBe(keys.length);
-    expect(screenKey('phase', 3, 2)).toBe(screenKey('phase', 3, 2));
+    expect(screenKey('progress', 3, 2)).toBe(screenKey('progress', 3, 2));
   });
 });

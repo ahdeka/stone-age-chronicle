@@ -1,0 +1,276 @@
+/* 진행 화면 (화면 시안 Progress). 1366×650, 1920×950에서 세로 스크롤 없음:
+   지표 바 · 가운데(남는 높이) · 아래 버튼 줄. 넘치면 서술 칸 안에서만 스크롤한다(글자 크기를 키운 경우). */
+
+.page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  gap: 20px;
+}
+
+.sceneBox {
+  flex: 0 0 38%;
+  max-width: 640px;
+  min-height: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+}
+
+.scene {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.scene svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.caption {
+  flex: none;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.story {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 지난 순: 한 줄로 흐리게 */
+.recap {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid #2a241d;
+  min-width: 0;
+}
+
+.recapLabel {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.recapText {
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.recapChose {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+}
+
+/* 지금 순: 전문 */
+.now {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nowLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+.tier {
+  letter-spacing: 0;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: var(--risk-fair-bg);
+  color: var(--risk-fair);
+}
+
+/* 문단 이름표: 문단 앞에 붙여 쓰는 작은 꼬리표 */
+.paraLabel,
+.leadLabel {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  vertical-align: 0.15em;
+  background: var(--inset);
+  color: var(--text-muted);
+}
+
+.leadLabel {
+  background: var(--warn-bg);
+  color: var(--warn-soft);
+}
+
+.paraText {
+  margin: 0;
+  font-size: calc(1.1875rem * var(--font-scale));
+  line-height: 1.85;
+  color: var(--prose-strong);
+}
+
+.alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.alert {
+  padding: 5px 12px;
+  border-radius: 10px;
+  background: var(--alert-bg);
+  border: 1px solid var(--alert-border);
+  color: var(--alert-text);
+  font-size: var(--fs-sm);
+}
+
+.alertGood {
+  background: #1a2620;
+  border-color: #3c5a46;
+  color: var(--up);
+}
+
+/* 결정이 필요하다 띠 */
+.decide {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  color: var(--warn-soft);
+  font-size: var(--fs-sm);
+  font-family: var(--font-sans);
+  text-align: left;
+}
+
+.decideDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--warn-text);
+}
+
+/* 아래: 속도 · 일시정지 · 글 바로 보기 · 계속 */
+.foot {
+  flex: none;
+  padding: 10px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.speed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.speedLabel {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.segment {
+  display: flex;
+  border-radius: 20px;
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+
+.segment button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.segment button[aria-pressed='true'] {
+  background: #3a3127;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  min-height: 46px;
+  padding: 0 22px;
+  font-size: var(--fs-md);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .page {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .body {
+    flex-direction: column;
+  }
+  .sceneBox {
+    flex: none;
+    max-width: none;
+  }
+  .scene {
+    flex: none;
+    aspect-ratio: 2 / 1;
+  }
+  .story {
+    overflow: visible;
+  }
+}

@@ -35,9 +35,9 @@ export function canPause(auto: boolean, hasNext: boolean, deciding: boolean): bo
   return auto && hasNext && !deciding;
 }
 
-export type ScreenKind = 'situation' | 'phase' | 'quiet' | 'ending';
+export type ScreenKind = 'situation' | 'progress' | 'result' | 'ending';
 
 /** 화면이 바뀌었는지 가리는 열쇠. 이 값이 바뀌면 스크롤을 맨 위로 올린다 */
 export function screenKey(kind: ScreenKind, month: number, index = 0): string {
-  return kind === 'phase' ? `phase-${month}-${index}` : `${kind}-${month}`;
+  return kind === 'progress' ? `progress-${month}-${index}` : `${kind}-${month}`;
 }

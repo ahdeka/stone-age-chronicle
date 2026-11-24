@@ -47,3 +47,8 @@ export function sourceName(tr: Translator, source: string): string {
 export function resName(tr: Translator, res: string): string {
   return tr.t(`res.${res}`);
 }
+
+/** 이번 달 날씨를 한 줄로: 서로 다른 날씨만, 순서대로 (맑음, 서리) */
+export function weatherSummary(tr: Translator, state: GameState): string {
+  return [...new Set(state.work.weather.filter(Boolean))].map((w) => tr.t(`weather.${w}`)).join(', ');
+}

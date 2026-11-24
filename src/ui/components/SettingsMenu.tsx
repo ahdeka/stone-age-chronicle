@@ -77,10 +77,6 @@ export function SettingsMenu() {
               </div>
             </div>
           )}
-          <label className={c.check}>
-            <input type="checkbox" checked={settings.quietSummary} onChange={(e) => set({ quietSummary: e.target.checked })} />
-            {tr.t('ui.settings.quietSummary')}
-          </label>
         </div>
       )}
     </div>

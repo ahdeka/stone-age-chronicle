@@ -1,4 +1,6 @@
-/* 결정 팝업 (시안 TurnModal의 backdrop, sheet, policy, fact, chip) */
+/* 결정 팝업 (화면 시안 Decide, 2026-11-24 3차 피드백)
+   1366×650과 1920×950에서 세로 스크롤이 없게: 머리 · 가운데 · 아래 세 줄, 가운데는 남는 높이를 쓴다.
+   글자 크기를 키우거나 좁은 화면이면 팝업 안에서 스크롤한다 (잘리지 않게). */
 
 @keyframes backIn {
   from {
@@ -28,13 +30,15 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 24px 16px 0;
+  padding: 8px 8px 0;
   animation: backIn calc(0.35s * var(--motion-scale)) ease-out both;
 }
 
 .sheet {
-  width: min(1180px, 100%);
-  max-height: calc(100% - 24px);
+  width: min(1100px, 100%);
+  max-height: calc(100dvh - 8px);
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   border-radius: 22px 22px 0 0;
   background: var(--sheet);
@@ -45,219 +49,464 @@
   outline: none;
 }
 
-.head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: rgba(25, 22, 19, 0.98);
-  border-bottom: 1px solid var(--border);
-  padding: 18px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.wide {
+  width: min(1400px, 100%);
 }
 
-.headRow {
+/* ── 머리: 제목 · 칩 · 닫기 한 줄 ── */
+.head {
+  flex: none;
+  padding: 12px 24px 10px;
+  border-bottom: 1px solid var(--border);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .titles {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 12px;
+  flex: none;
 }
 
 .title {
   margin: 0;
-  font-size: var(--fs-xl);
+  font-size: calc(1.5rem * var(--font-scale));
   font-weight: 700;
+  line-height: 1.3;
 }
 
-.close {
-  min-height: var(--touch);
-  padding: 0 16px;
-  font-size: var(--fs-md);
+.kicker {
+  font-size: var(--fs-sm);
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
+.chip {
+  padding: 4px 10px;
+  border-radius: 9px;
+  background: var(--inset);
+  border: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.chipWarn {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn-soft);
+}
+
+.chipGood {
+  background: #1a2620;
+  border-color: #3c5a46;
+  color: var(--up);
+}
+
+.close {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: var(--fs-sm);
+}
+
+/* ── 가운데 ── */
 .body {
-  padding: 20px 24px;
+  flex: 1 1 auto;
+  padding: 12px 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px;
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .quotes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .quote {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: flex-start;
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 7px 10px;
+  border-radius: 10px;
   background: var(--inset);
   border: 1px solid #2a241d;
-}
-
-.quoteText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
-.quoteWho {
-  font-size: var(--fs-sm);
-}
-
-.quoteLine {
-  font-size: var(--fs-sm);
-  line-height: 1.6;
+.quoteText {
+  font-size: var(--fs-xs);
+  line-height: 1.5;
   color: var(--quote);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.choices {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 14px;
+.quoteText b {
+  color: var(--text);
 }
 
-.choice {
+/* 일손 막대 */
+.labor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-sm);
+}
+
+.laborTotal {
+  flex: none;
+}
+
+.laborBar {
+  flex: 1;
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.laborFood {
+  background: var(--accent);
+  transition: width calc(0.3s * var(--motion-scale)) ease;
+}
+
+.laborGrowth {
+  background: #8fa87a;
+  transition: width calc(0.3s * var(--motion-scale)) ease;
+}
+
+.laborText {
+  flex: none;
+}
+
+.foodInk {
+  color: var(--accent);
+}
+
+.growthInk {
+  color: #a9c194;
+}
+
+/* 칸: 가로 한 줄 제목 + 카드 줄 */
+.slot {
   display: flex;
   flex-direction: column;
-  text-align: left;
-  padding: 0;
-  border-radius: 14px;
-  border: 1px solid var(--border-soft);
-  background: var(--surface);
-  color: var(--text);
-  font-family: var(--font-sans);
-  overflow: hidden;
-  transition:
-    transform calc(0.2s * var(--motion-scale)) ease,
-    border-color calc(0.2s * var(--motion-scale)) ease,
-    box-shadow calc(0.2s * var(--motion-scale)) ease;
+  gap: 6px;
+  transition: opacity calc(0.2s * var(--motion-scale)) ease;
 }
 
-.choice:hover {
-  transform: translateY(-3px);
+.slotDim {
+  opacity: 0.45;
+}
+
+.slotHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.slotTitle {
+  margin: 0;
+  font-size: calc(1rem * var(--font-scale));
+  font-weight: 700;
+}
+
+.slotSub {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* 카드 */
+.card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #1c1915;
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-width: 0;
+  transition:
+    transform calc(0.2s * var(--motion-scale)) ease,
+    border-color calc(0.2s * var(--motion-scale)) ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
   border-color: var(--border-hover);
 }
 
 .on,
 .on:hover {
-  border-color: var(--accent);
-  box-shadow:
-    0 0 0 2px rgba(224, 161, 90, 0.35),
-    0 12px 28px rgba(0, 0, 0, 0.45);
-  transform: translateY(-3px);
+  background: #211d17;
+  box-shadow: 0 0 0 2px rgba(224, 161, 90, 0.25);
 }
 
-.locked,
-.locked:hover {
-  border-style: dashed;
-  border-color: var(--text-faint);
+.food.on,
+.option.on {
+  border-color: var(--accent);
+}
+
+.growth.on {
+  border-color: #8fa87a;
+  box-shadow: 0 0 0 2px rgba(143, 168, 122, 0.28);
+}
+
+.blocked,
+.blocked:hover {
+  background: #16130f;
+  border: 1px dashed var(--border-soft);
+  opacity: 0.6;
   transform: none;
   cursor: not-allowed;
 }
 
 .thumb {
-  height: 120px;
-  background: #15120f;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--inset);
 }
 
-.choiceBody {
+.thumb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cardBody {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px 18px 18px;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
 }
 
-.choiceTop {
+.cardTop {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
 }
 
 .num {
+  flex: none;
   font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
-.choiceTitle {
-  font-size: var(--fs-lg);
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.desc {
+.cardTitle {
   font-size: var(--fs-md);
-  line-height: 1.6;
-  color: var(--prose);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.cost {
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
-.lock {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
-.crew {
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-}
-
-.foot {
-  position: sticky;
-  bottom: 0;
-  background: rgba(25, 22, 19, 0.98);
-  border-top: 1px solid var(--border);
-  padding: 14px 24px;
+.badgeRow {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+}
+
+.badgeRow > span {
+  padding: 2px 8px;
+}
+
+.brief {
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--prose);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.option .brief {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.meta {
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blockText {
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--warn-text);
+}
+
+/* 큰 일: 얇은 줄 하나 */
+.major {
+  display: flex;
   align-items: center;
   gap: 12px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  background: var(--inset);
+  border: 1px dashed var(--border-strong);
+  color: var(--text);
+  text-align: left;
+  font-family: var(--font-sans);
 }
 
+.major.on {
+  border: 1px solid var(--accent);
+}
+
+.majorTag {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.majorTitle {
+  flex: none;
+  font-size: var(--fs-md);
+}
+
+.majorText {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--prose);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 사건 틀 */
 .event {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+}
+
+.eventTop {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
 }
 
 .eventScene {
-  height: 180px;
+  flex: 0 0 40%;
+  max-width: 440px;
+  aspect-ratio: 2 / 1;
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--bg-deep);
 }
 
+.eventScene svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .eventText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eventProse {
   margin: 0;
-  font-size: calc(1.125rem * var(--font-scale));
-  line-height: 1.8;
-  color: var(--prose);
-  max-width: 46em;
+  font-size: var(--fs-body);
+  line-height: 1.75;
+  color: var(--prose-strong);
+}
+
+.eventQuotes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── 아래: 고른 것 + 대가 / 확정 ── */
+.foot {
+  flex: none;
+  padding: 10px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.foot > span:last-child,
+.foot > button {
+  min-height: 46px;
+  padding: 0 26px;
+  flex: none;
+}
+
+@media (max-width: 900px) {
+  .head {
+    flex-wrap: wrap;
+  }
+  .row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .quotes {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .eventTop {
+    flex-direction: column;
+  }
+  .eventScene {
+    flex: none;
+    max-width: none;
+  }
+  .foot {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 520px) {
+  .row,
+  .quotes {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }

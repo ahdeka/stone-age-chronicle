@@ -36,6 +36,7 @@ import { stat } from '../stats/stats';
 import { addLot, carryWeight, totalKg } from '../stores/food';
 import { expireTemporary, recoverPlaces, rollWeather, updateAnimals, updateCaches } from '../world/world';
 import { upkeep } from './upkeep';
+import { monthStartOf } from '../display';
 import { checkEndings } from './endings';
 
 export function freshWork(weather: [Id, Id, Id], start: MonthWork['start']): MonthWork {
@@ -110,11 +111,7 @@ export function runCtx(def: ChapterDefinition, state: GameState, extraActors: Re
 export function startMonth(def: ChapterDefinition, state: GameState): void {
   const prevBands = new Map(living(state).map((p) => [p.id, band(def, state, p)]));
   state.month += 1;
-  state.work = freshWork(['', '', ''], {
-    food: totalKg(state.stores.food),
-    firewood: state.stores.firewood,
-    population: population(state),
-  });
+  state.work = freshWork(['', '', ''], monthStartOf(def, state));
   state.work.weather = rollWeather(def, state);
   expireTemporary(state);
   updateAnimals(def, state);

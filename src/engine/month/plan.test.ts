@@ -1,7 +1,10 @@
 // 전략 두 칸 (DESIGN.md §6.4): 식량 + 발전, 큰 일, 일손 나누기, 시설과 "덕분에" 줄, 한 순에 사건 하나
 
 import { describe, expect, it } from 'vitest';
-import { STAY, defWith, newGame, run, sumLedger } from '../../test/fixtures';
+import { STAY, ch1, defWith, newGame, run, springGame, sumLedger } from '../../test/fixtures';
+import { applyCommand } from '../core/reduce';
+import { findPolicy } from '../core/lookup';
+import { firstChoice, playMonth } from '../headless';
 import { previewPlan } from '../policy/plan';
 import { totalKg } from '../stores/food';
 import type { ChapterDefinition, Command, EventDef, GameState, PolicyTemplate } from '../types';
@@ -199,5 +202,20 @@ describe('시설과 덕분에 줄', () => {
     expect(saved?.kg).toBeCloseTo(2 * 30, 4);
     expect(s.work.reports.at(-1)!.savings).toEqual(s.work.savings);
     expect(totalKg(s.stores.food)).toBeGreaterThan(0);
+  });
+
+  it('1장 데이터 12달: 칸마다 후보는 4개를 넘지 않는다 (결정 팝업 4열, 발전은 "발전하지 않는다"를 더해 4개)', () => {
+    for (const seed of ['cap-a', 'cap-b', 'cap-c']) {
+      const s = springGame(seed);
+      for (let m = 0; m < 12 && s.step !== 'ended'; m++) {
+        if (s.step === 'settlement') applyCommand(ch1, s, { type: 'nextMonth' });
+        const n = { food: 0, growth: 0, major: 0 };
+        for (const c of s.work.candidates) n[findPolicy(ch1, c.policyId).slot]++;
+        expect(n.food, `${seed} ${s.month}`).toBeLessThanOrEqual(4);
+        expect(n.growth, `${seed} ${s.month}`).toBeLessThanOrEqual(3);
+        expect(n.major, `${seed} ${s.month}`).toBeLessThanOrEqual(1);
+        playMonth(ch1, s, firstChoice);
+      }
+    }
   });
 });

@@ -5,7 +5,6 @@ import { ExportButton } from '../components/SaveControls';
 import { SceneView } from '../components/SceneView';
 import { lineText, shortDateText } from '../format';
 import { useT } from '../i18n';
-import p from './phase.module.css';
 import e from './ending.module.css';
 import u from '../ui.module.css';
 
@@ -14,14 +13,14 @@ export function EndingScreen({ def, state, onQuit }: { def: ChapterDefinition; s
   const ending = state.ending;
   if (!ending) return null;
   return (
-    <div className={p.page}>
-      <div className={p.wrap}>
-        <section className={p.sceneBox}>
-          <SceneView scene={def.scenes.settlement} className={p.scene} />
-          <div className={p.shade} aria-hidden="true" />
-          <div className={p.sceneLabel}>
+    <div className={e.page}>
+      <div className={e.wrap}>
+        <section className={e.sceneBox}>
+          <SceneView scene={def.scenes.settlement} className={e.scene} />
+          <div className={e.shade} aria-hidden="true" />
+          <div className={e.sceneLabel}>
             <span className={u.label}>{tr.t('ui.ended')}</span>
-            <h1 className={`${p.place} ${u.serif}`}>{tr.t(`ending.${ending.id}.title`)}</h1>
+            <h1 className={`${e.place} ${u.serif}`}>{tr.t(`ending.${ending.id}.title`)}</h1>
           </div>
         </section>
         <section className={`${u.card} ${u.in}`}>

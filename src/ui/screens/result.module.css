@@ -1,0 +1,271 @@
+/* 이달의 결과 (화면 시안 Result). 1366×650, 1920×950에서 세로 스크롤 없음 */
+
+.page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: calc(1.625rem * var(--font-scale));
+  font-weight: 700;
+}
+
+.tier {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: var(--fs-xs);
+}
+
+.triumph,
+.success {
+  background: var(--risk-sure-bg);
+  color: var(--risk-sure);
+}
+
+.costly {
+  background: var(--risk-fair-bg);
+  color: var(--risk-fair);
+}
+
+.failure,
+.disaster {
+  background: var(--risk-risky-bg);
+  color: var(--risk-risky);
+}
+
+.recaps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recap {
+  display: flex;
+  gap: 14px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid #2a241d;
+}
+
+.recapLabel {
+  flex: none;
+  width: 36px;
+  font-size: var(--fs-xs);
+  line-height: 1.85;
+  color: var(--accent);
+}
+
+.recapText {
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--prose);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chose {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.boxes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.box {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.good {
+  background: #1a2620;
+  border-color: #3c5a46;
+}
+
+.good .boxTitle {
+  color: var(--up);
+}
+
+.bad {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+}
+
+.bad .boxTitle {
+  color: var(--warn-text);
+}
+
+.boxTitle {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.boxLine {
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+}
+
+.empty {
+  color: var(--text-muted);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.memory {
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--border-strong);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 오른쪽 장부 */
+.ledger {
+  flex: 0 0 400px;
+  align-self: flex-start;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ledgerTitle {
+  margin: 0 0 4px;
+  font-size: calc(1rem * var(--font-scale));
+  font-weight: 700;
+}
+
+.woodTitle {
+  margin-top: 12px;
+}
+
+.group {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.final {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+  font-size: calc(1rem * var(--font-scale));
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+/* 아래: 연대기 한 줄 + 다음 달로 */
+.foot {
+  flex: none;
+  padding: 10px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.chronicle {
+  font-size: var(--fs-md);
+  color: var(--prose);
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chronLabel {
+  color: var(--accent);
+}
+
+.next {
+  flex: none;
+  min-height: 46px;
+  padding: 0 26px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .body {
+    flex-direction: column;
+    overflow: visible;
+  }
+  .ledger {
+    flex: none;
+    align-self: stretch;
+  }
+  .boxes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

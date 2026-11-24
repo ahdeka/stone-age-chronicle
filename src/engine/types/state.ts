@@ -211,12 +211,28 @@ export interface MonthWork {
   vars: Record<string, number>;
   /** 마을 사건 판정을 이번 달에 했는가 */
   villageChecked: boolean;
-  /** 월초 현황 (정산표의 시작 값) */
-  start: { food: number; firewood: number; population: number };
+  /** 월초 현황 (정산표의 시작 값, 진행 화면의 "월초 기준" 지표, 이달의 결과의 증감) */
+  start: MonthStart;
   brief?: Briefing;
   advice: Advice[];
   /** 이번 달에 겪은 가장 깊은 굶주림 단계 (목표 측정용) */
   maxHunger: number;
+}
+
+/** 이번 달이 시작할 때의 지표 (세이브 v5) */
+export interface MonthStart {
+  food: number;
+  firewood: number;
+  population: number;
+  /** 식량 며칠치 (내림) */
+  foodDays: number;
+  cohesion: number;
+  /** 일할 수 있는 사람 (노인은 일부로 센다, 반올림) */
+  workers: number;
+  /** 병이 있는 사람 */
+  sick: number;
+  /** 다친 사람 */
+  injured: number;
 }
 
 export interface MonthReport {

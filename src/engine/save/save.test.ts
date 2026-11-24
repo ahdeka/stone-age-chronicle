@@ -79,6 +79,27 @@ describe('저장/불러오기', () => {
     expect(r.state.history.map((h) => h.policyIds)).toEqual(s.history.map((h) => h.policyIds));
   });
 
+  it('v4 세이브는 월초 지표(며칠치·결속·일손·아픈 사람)를 채워 v5로 옮긴다', () => {
+    const s = newGame();
+    const v4 = structuredClone(s) as unknown as Record<string, unknown>;
+    v4['saveVersion'] = 4;
+    (v4['work'] as Record<string, unknown>)['start'] = { food: 300, firewood: 50, population: 30 };
+    const file = JSON.stringify({ format: SAVE_FORMAT, generation: 'monthly', saveVersion: 4, chapterId: 'ch1', savedAt: null, state: v4 });
+    const r = deserialize(file);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.work.start).toMatchObject({ food: 300, firewood: 50, population: 30, cohesion: s.cohesion });
+    expect(typeof r.state.work.start.foodDays).toBe('number');
+    expect(typeof r.state.work.start.sick).toBe('number');
+  });
+
+  it('새 달의 work.start는 그 달이 열릴 때의 지표다', () => {
+    const s = newGame();
+    expect(s.work.start.population).toBeGreaterThan(0);
+    expect(s.work.start.cohesion).toBe(s.cohesion);
+    expect(s.work.start.workers).toBeGreaterThan(0);
+  });
+
   it('부족 이름이 저장 왕복에서 그대로 남는다', () => {
     const s = createGame(ch1, { seed: 'name', tribeName: '  흰여울   사람들 ' });
     expect(s.tribeName).toBe('흰여울 사람들');

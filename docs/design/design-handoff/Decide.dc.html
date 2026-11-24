@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>이번 달 전략 팝업</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#060504}
+a{color:#e0a15a}a:hover{color:#f0bd7f}
+.ln{fill:none;stroke:#c9813a;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.card{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:12px;border-radius:14px;font-family:'Noto Sans KR',sans-serif;color:#f1e8d8;cursor:pointer;transition:transform .2s ease,border-color .2s ease}
+.card:hover{transform:translateY(-2px)}
+.risk{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:500;white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 1366px; height: 650px; box-sizing: border-box; background: #191613; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+
+  <div style="padding: 14px 24px 12px; border-bottom: 1px solid #2e2821; display: flex; align-items: center; gap: 16px">
+    <div style="display: flex; align-items: baseline; gap: 12px; flex: none">
+      <h2 style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 24px; font-weight: 700">이번 달 전략</h2>
+      <span style="font-size: 14px; color: #e0a15a">1년차 · 봄 · 4월</span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0">
+      <span style="padding: 5px 10px; border-radius: 9px; background: #2a1c16; border: 1px solid #6b3a26; color: #f6c3ad; font-size: 13px">식량 431kg · 15일치</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #14110e; border: 1px solid #2e2821; font-size: 13px">장작 74kg</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #14110e; border: 1px solid #2e2821; font-size: 13px">일손 20</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #14110e; border: 1px solid #2e2821; font-size: 13px">맑음</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #1a2620; border: 1px solid #3c5a46; color: #9fd0a8; font-size: 13px">물고기 떼가 올라옴</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #2a1c16; border: 1px solid #6b3a26; color: #f6c3ad; font-size: 13px">곰이 깨어남</span>
+    </div>
+    <a href="Situation.dc.html" style="flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid #5a4d3c; color: #f1e8d8; font-size: 14px; text-decoration: none">상황 보기 ✕</a>
+  </div>
+
+  <div style="flex: 1; min-height: 0; padding: 12px 20px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{advisors}}" as="a" hint-placeholder-count="4">
+        <div style="display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; background: #14110e; border: 1px solid #2a241d">
+          <span aria-hidden="true" style="flex: none; width: 8px; height: 8px; margin-top: 7px; border-radius: 4px; background: {{a.color}}"></span>
+          <span style="font-size: 13px; line-height: 1.5; color: #e6dccb"><b style="color: #f1e8d8">{{a.name}}</b> <span style="font-family: 'Noto Serif KR', serif">“{{a.quote}}”</span></span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="flex: none; font-size: 14px"><b>일손 20</b></span>
+      <div aria-hidden="true" style="flex: 1; display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #2e2821">
+        <div style="width: {{foodPct}}%; background: #e0a15a"></div>
+        <div style="width: {{devPct}}%; background: #8fa87a"></div>
+      </div>
+      <span style="flex: none; font-size: 14px"><b style="color: #e0a15a">식량 {{foodCrew}}명</b> · <b style="color: #8fa87a">발전 {{devCrew}}명</b></span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: baseline; gap: 10px; padding-bottom: 4px; border-bottom: 1px solid #2e2821">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #e0a15a">식량 전략</h3>
+        <span style="font-size: 13px; color: #b3a690">이번 달 무엇을 먹을까 · 1개</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{foods}}" as="p" hint-placeholder-count="4">
+          <button type="button" class="card" onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">
+            <svg width="36" height="36" viewBox="0 0 48 48" aria-hidden="true" style="flex: none; border-radius: 9px; background: #14110e">
+              <path class="ln" d="{{p.icon}}"></path>
+            </svg>
+            <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+              <span style="display: flex; justify-content: space-between; gap: 6px; align-items: center">
+                <b style="font-family: 'Noto Serif KR', serif; font-size: 15px; white-space: nowrap">{{p.title}}</b>
+                <span class="risk" style="{{p.riskStyle}}">{{p.risk}}</span>
+              </span>
+              <span style="font-size: 13px; line-height: 1.45; color: #ddd2bf">{{p.desc}}</span>
+              <span style="font-size: 12px; color: #b3a690">{{p.meta}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: baseline; gap: 10px; padding-bottom: 4px; border-bottom: 1px solid #2e2821">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #8fa87a">발전 전략</h3>
+        <span style="font-size: 13px; color: #b3a690">어디로 클까 · 1개 · 일손 일부가 빠진다</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{devs}}" as="p" hint-placeholder-count="4">
+          <button type="button" class="card" onClick="{{p.pick}}" aria-pressed="{{p.on}}" disabled="{{p.blocked}}" style="{{p.style}}">
+            <svg width="36" height="36" viewBox="0 0 48 48" aria-hidden="true" style="flex: none; border-radius: 9px; background: #14110e">
+              <path class="ln" d="{{p.icon}}"></path>
+            </svg>
+            <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+              <span style="display: flex; justify-content: space-between; gap: 6px; align-items: center">
+                <b style="font-family: 'Noto Serif KR', serif; font-size: 15px; white-space: nowrap">{{p.title}}</b>
+              </span>
+              <span style="font-size: 13px; line-height: 1.45; color: #ddd2bf">{{p.desc}}</span>
+              <span style="font-size: 12px; color: {{p.metaColor}}">{{p.meta}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 12px; background: #14110e; border: 1px dashed #4a3e30">
+      <span style="flex: none; font-size: 13px; color: #b3a690">큰 일</span>
+      <b style="font-family: 'Noto Serif KR', serif; font-size: 15px">바위굴로 옮기기</b>
+      <span style="flex: 1; font-size: 13px; color: #ddd2bf">모두가 한 달 내내 짐을 옮긴다. 고르면 두 칸 대신 이것 하나.</span>
+      <span class="risk" style="background: #28223a; color: #c9b8ec">? 결과를 알 수 없다</span>
+    </div>
+  </div>
+
+  <div style="padding: 10px 24px; border-top: 1px solid #2e2821; display: flex; justify-content: space-between; align-items: center; gap: 12px">
+    <span style="font-size: 15px">식량 <b style="color: #e0a15a">{{foodTitle}}</b> + 발전 <b style="color: #8fa87a">{{devTitle}}</b></span>
+    <a href="Progress.dc.html" style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 26px; border-radius: 23px; background: #e0a15a; color: #17120c; font-size: 16px; font-weight: 700; text-decoration: none">한 달을 시작한다</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":650}}'>
+var RISK = {
+  safe: ['● 거의 확실하다', 'background:#1d2a33;color:#a9cde3'],
+  fair: ['◆ 해볼 만하다', 'background:#2e2817;color:#e6cd86'],
+  unknown: ['? 결과를 알 수 없다', 'background:#28223a;color:#c9b8ec']
+};
+var FOODS = [
+  { id: 'river', title: '강가 어로와 채집', desc: '뿌리와 물고기를 조금씩 모은다.', where: '가까운 곳', per: 16, rk: 'safe', icon: 'M6 30 C14 24 22 34 30 28 C36 24 40 28 42 27 M18 30 q6 -5 12 0 q-6 5 -12 0 M30 30 l4 -3 v6 z M10 40 L12 14 M14 40 L18 18' },
+  { id: 'fish', title: '물고기 떼 잡기', desc: '여울목에서 그물로 떼를 건진다.', where: '여울목', per: 26, rk: 'safe', icon: 'M8 22 q8 -6 16 0 q-8 6 -16 0 M24 22 l5 -4 v8 z M20 32 q8 -6 16 0 q-8 6 -16 0 M36 32 l5 -4 v8 z' },
+  { id: 'sprout', title: '새순과 뿌리 캐기', desc: '언덕과 늪가를 뒤진다.', where: '늪 가장자리', per: 14, rk: 'safe', icon: 'M24 40 V22 M24 28 C18 26 15 21 15 16 C20 17 24 21 24 28 M24 24 C30 22 33 17 33 12 C28 13 24 17 24 24 M14 40 h20' },
+  { id: 'hunt', title: '초원 작은 사냥', desc: '들토끼와 새를 쫓는다.', where: '동쪽 초원', per: 22, rk: 'fair', icon: 'M8 38 L30 16 M26 14 l6 0 l0 6 M12 26 q6 -4 12 0 M16 26 v6 M22 26 v6' }
+];
+var DEVS = [
+  { id: 'rack', title: '건조대 공사 계속', path: '저장 · 2/2달', desc: '말린 고기는 겨울까지 간다.', crew: 4, icon: 'M8 40 V14 M40 40 V14 M6 16 h36 M14 16 v10 M22 16 v12 M30 16 v10 M36 16 v8' },
+  { id: 'grain', title: '이삭 풀밭 지키기', path: '씨앗의 길', desc: '지켜 두면 가을에 씨를 받는다.', crew: 3, icon: 'M24 42 V12 M24 18 l-5 -4 M24 18 l5 -4 M24 24 l-6 -4 M24 24 l6 -4 M24 30 l-6 -4 M24 30 l6 -4' },
+  { id: 'weir', title: '돌 어살 쌓기', path: '물가의 길', desc: '물고기가 스스로 갇히게 한다.', crew: 4, block: 'fish', reason: '물고기 떼 잡기와 같은 여울', icon: 'M6 34 C14 30 22 36 30 32 C36 29 40 31 42 30 M12 30 l4 -6 l4 6 M20 30 l4 -6 l4 6 M28 30 l4 -6 l4 6' },
+  { id: 'none', title: '발전하지 않는다', path: '', desc: '일손 모두를 식량에 쓴다.', crew: 0, icon: 'M14 24 h20' }
+];
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { food: 'fish', dev: 'rack' }; }
+  renderVals() {
+    var self = this, s = this.state;
+    var food = FOODS.find(function (f) { return f.id === s.food; });
+    var dev = DEVS.find(function (d) { return d.id === s.dev; });
+    if (dev.block === s.food) dev = DEVS[3];
+    var devCrew = dev.crew, foodCrew = 20 - devCrew;
+    var card = function (on, blocked, accent) {
+      if (blocked) return 'background:#16130f;border:1px dashed #3a3229;opacity:.55;cursor:not-allowed';
+      return on ? 'background:#211d17;border:1px solid ' + accent + ';box-shadow:0 0 0 2px rgba(224,161,90,.25)' : 'background:#1c1915;border:1px solid #3a3229';
+    };
+    return {
+      advisors: [
+        { name: '바위', color: '#c9813a', quote: '곰이 마을에 오기 전에 우리가 먼저 갑시다.' },
+        { name: '서리', color: '#a9b8c9', quote: '물고기는 금방 상한다. 말릴 자리부터.' },
+        { name: '노을', color: '#b9a35a', quote: '언덕의 이삭 풀, 씨를 받아 두면 어때요?' },
+        { name: '이끼', color: '#8fa87a', quote: '어살을 쌓으면 물고기가 스스로 들어옵니다.' }
+      ],
+      foodCrew: foodCrew, devCrew: devCrew,
+      foodPct: foodCrew * 5, devPct: devCrew * 5,
+      foodTitle: food.title, devTitle: dev.title,
+      foods: FOODS.map(function (f) {
+        var on = f.id === s.food;
+        return { title: f.title, desc: f.desc, icon: f.icon, risk: RISK[f.rk][0], riskStyle: RISK[f.rk][1],
+          meta: foodCrew + '명 · ' + f.where + ' · 약 +' + (Math.round(f.per * foodCrew / 10) * 10) + 'kg',
+          on: on ? 'true' : 'false', style: card(on, false, '#e0a15a'),
+          pick: function () { self.setState({ food: f.id }); } };
+      }),
+      devs: DEVS.map(function (d) {
+        var blocked = d.block === s.food, on = d.id === dev.id;
+        var cost = Math.round(food.per * d.crew / 10) * 10;
+        var meta = blocked ? '같이 못 고름 · ' + d.reason : (d.crew ? d.path + ' · ' + d.crew + '명 · 식량 약 −' + cost + 'kg' : '식량 손해 없음');
+        return { title: d.title, path: d.path, desc: d.desc, icon: d.icon, meta: meta,
+          metaColor: blocked ? '#f2a283' : '#b3a690', blocked: blocked,
+          on: on ? 'true' : 'false', style: card(on, blocked, '#8fa87a'),
+          pick: function () { if (!blocked) self.setState({ dev: d.id }); } };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>진행 화면 — 중순</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#12100e}
+a{color:#e0a15a}a:hover{color:#f0bd7f}
+.ln{fill:none;stroke:#c9813a;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ln-thin{fill:none;stroke:#c9813a;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes swim{from{transform:translateX(0)}to{transform:translateX(60px)}}
+.caret{display:inline-block;width:2px;height:1em;margin-left:3px;vertical-align:-0.12em;background:#e0a15a;animation:blink 1s steps(1) infinite}
+.swim{animation:swim 6s ease-in-out infinite alternate}
+</style>
+</helmet>
+<div style="width: 1366px; height: 650px; box-sizing: border-box; background: #12100e; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column">
+
+  <header style="padding: 10px 24px; border-bottom: 1px solid #2e2821; display: flex; align-items: center; justify-content: space-between; gap: 16px">
+    <div style="display: flex; flex-direction: column; gap: 1px; flex: none">
+      <span style="font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700; color: #e0a15a">잿빛강 사람들</span>
+      <span style="font-size: 13px; color: #b3a690">1년차 · 봄 · 4월</span>
+    </div>
+    <ol style="margin: 0; padding: 0; list-style: none; display: flex; align-items: center; gap: 6px; font-size: 14px">
+      <li style="padding: 5px 12px; border-radius: 14px; color: #b3a690">전략 ✓</li>
+      <li aria-hidden="true" style="color: #4a3e30">—</li>
+      <li style="padding: 5px 12px; border-radius: 14px; color: #b3a690">상순 ✓</li>
+      <li aria-hidden="true" style="color: #4a3e30">—</li>
+      <li aria-current="step" style="padding: 5px 12px; border-radius: 14px; background: #e0a15a; color: #17120c; font-weight: 700">중순</li>
+      <li aria-hidden="true" style="color: #4a3e30">—</li>
+      <li style="padding: 5px 12px; border-radius: 14px; color: #8f8370">하순</li>
+      <li aria-hidden="true" style="color: #4a3e30">—</li>
+      <li style="padding: 5px 12px; border-radius: 14px; color: #8f8370">이달의 결과</li>
+    </ol>
+    <div style="display: flex; align-items: center; gap: 6px; flex: none">
+      <span style="font-size: 12px; color: #8f8370">월초 기준</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #1c1915; border: 1px solid #2e2821; font-size: 13px">34명</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #1c1915; border: 1px solid #2e2821; font-size: 13px">식량 431kg</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #1c1915; border: 1px solid #2e2821; font-size: 13px">장작 74kg</span>
+      <span style="padding: 5px 10px; border-radius: 9px; background: #1c1915; border: 1px solid #2e2821; font-size: 13px">결속 58</span>
+    </div>
+  </header>
+
+  <div style="flex: 1; min-height: 0; padding: 16px 24px; display: flex; gap: 20px">
+    <section style="flex: 0 0 520px; border-radius: 16px; overflow: hidden; border: 1px solid #2e2821; background: #0c0b0a; display: flex; flex-direction: column">
+      <svg viewBox="0 0 520 380" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; flex: 1; min-height: 0">
+        <rect x="0" y="0" width="520" height="380" fill="#26231e"></rect>
+        <path d="M0 150 L80 100 L160 140 L250 80 L340 130 L430 95 L520 125 L520 380 L0 380 Z" fill="#1f1a16"></path>
+        <path d="M0 230 C120 210 240 250 360 225 C440 210 490 220 520 215 L520 300 C420 310 330 285 220 305 C120 322 60 300 0 312 Z" fill="#2b3a40"></path>
+        <g class="swim">
+          <path class="ln-thin" d="M150 262 q12 -7 24 0 q-12 7 -24 0 M174 262 l7 -5 v10 z"></path>
+          <path class="ln-thin" d="M200 250 q12 -7 24 0 q-12 7 -24 0 M224 250 l7 -5 v10 z"></path>
+          <path class="ln-thin" d="M240 270 q12 -7 24 0 q-12 7 -24 0 M264 270 l7 -5 v10 z"></path>
+        </g>
+        <path class="ln" d="M300 300 l8 -14 l8 14 M316 300 l8 -14 l8 14 M332 300 l8 -14 l8 14 M348 300 l8 -14 l8 14"></path>
+        <path class="ln" d="M80 330 l0 -40 M80 300 l18 -18 M110 330 l0 -40 M110 300 l18 -18"></path>
+        <path d="M0 380 L0 340 C160 330 340 350 520 336 L520 380 Z" fill="#100e0c"></path>
+      </svg>
+      <div style="padding: 12px 16px; border-top: 1px solid #2e2821; font-size: 13px; color: #b3a690">물고기 떼 잡기 + 건조대 공사 계속 · 여울목 16명 · 공사 4명</div>
+    </section>
+
+    <section style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; gap: 10px; align-items: baseline; padding: 10px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2a241d">
+        <span style="flex: none; font-size: 13px; color: #b3a690">상순</span>
+        <span style="font-family: 'Noto Serif KR', serif; font-size: 15px; line-height: 1.6; color: #b3a690">여울목에 돌을 놓고 그물을 쳤다. 첫 열흘에 물고기가 그물을 가득 채웠다.</span>
+      </div>
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 13px; letter-spacing: 0.2em; color: #e0a15a">중순 · 11~20일</span>
+        <p style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 19px; line-height: 1.85; color: #ebe1d0">물고기는 잡는 대로 쌓였지만 볕이 따가워 하루만 지나도 냄새가 났다. 이끼는 공사 중인 건조대 한쪽에 먼저 가로대를 걸어, 갓 잡은 물고기를 줄줄이 꿰어 널었다.</p>
+        <p style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 19px; line-height: 1.85; color: #ebe1d0">서리는 기침을 하면서도 아이들에게 연기를 고르게 피우는 법을 일렀다.</p>
+        <p style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 19px; line-height: 1.85; color: #ebe1d0">그날 저녁, 숲 쪽에서 아이 둘이 숨을 헐떡이며 뛰어왔다. 건조대 너머 덤불이 크게 흔들렸다고 했다.<span class="caret"></span></p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: #2a1c16; border: 1px solid #6b3a26">
+        <span aria-hidden="true" style="flex: none; width: 8px; height: 8px; border-radius: 4px; background: #f2a283"></span>
+        <span style="font-size: 14px; color: #f6c3ad">결정이 필요하다 · 글이 끝나면 결정 창이 열린다</span>
+      </div>
+    </section>
+  </div>
+
+  <div style="padding: 10px 24px; border-top: 1px solid #2e2821; display: flex; align-items: center; justify-content: space-between; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="font-size: 14px; color: #b3a690">속도</span>
+      <div role="group" aria-label="진행 속도" style="display: flex; border-radius: 20px; border: 1px solid #3a3229; overflow: hidden">
+        <button type="button" style="min-height: 40px; padding: 0 16px; border: none; background: transparent; color: #b3a690; font-family: 'Noto Sans KR', sans-serif; font-size: 14px">느림</button>
+        <button type="button" aria-pressed="true" style="min-height: 40px; padding: 0 16px; border: none; background: #3a3127; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; font-weight: 700">보통</button>
+        <button type="button" style="min-height: 40px; padding: 0 16px; border: none; background: transparent; color: #b3a690; font-family: 'Noto Sans KR', sans-serif; font-size: 14px">빠르게</button>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px">
+      <button type="button" style="min-height: 46px; padding: 0 20px; border-radius: 23px; border: 1px solid #5a4d3c; background: transparent; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif; font-size: 15px">일시정지</button>
+      <button type="button" style="min-height: 46px; padding: 0 22px; border-radius: 23px; border: 1px solid #5a4d3c; background: transparent; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif; font-size: 15px">글 바로 보기</button>
+      <a href="Result.dc.html" style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 24px; border-radius: 23px; background: #e0a15a; color: #17120c; font-size: 15px; font-weight: 700; text-decoration: none">계속</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":650}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

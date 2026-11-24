@@ -17,6 +17,8 @@ export interface Issue {
 export const MIN_VARIANTS = 1;
 export const MAX_LABEL = 15;
 export const MAX_SPEECH = 40;
+/** 결정 팝업 카드의 한 줄 설명 최대 글자 수 (넘으면 경고, 카드 한 줄 약 18자) */
+export const MAX_BRIEF = 18;
 export const SENTENCES = { min: 1, max: 3 };
 export const EVENT_TEXT_SENTENCES = { min: 2, max: 4 };
 
@@ -250,6 +252,10 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     const w = `policy.${p.id}`;
     str(`policy.${p.id}.name`, w);
     str(`policy.${p.id}.summary`, w);
+    // 결정 팝업 카드의 한 줄 설명 (2026-11-24 3차 피드백)
+    str(`policy.${p.id}.brief`, w);
+    const brief = strings[`policy.${p.id}.brief`];
+    if (brief && [...brief].length > MAX_BRIEF) warn(w, `한 줄 설명 ${[...brief].length}자 (최대 ${MAX_BRIEF}): ${brief}`);
     conds(p.appearsWhen, w);
     for (const r of p.relevance ?? []) conds(r.when, w);
     if (p.place) need('place', p.place, w);
@@ -472,7 +478,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     for (const k of [ps.chapterLabel, ps.meta, ps.tagline, ps.land.title, ps.land.subtitle, ps.land.intro, ps.chronicleOpening, ...ps.introLines, ...ps.nameSuggestions])
       str(k, w);
     if (ps.nameSuggestions.length === 0) err(w, '추천 부족 이름이 없다');
-    for (const f of ps.land.facts) for (const k of [f.mark, f.label, f.value]) str(k, w);
+    for (const f of ps.land.facts) for (const k of [f.label, f.value]) str(k, w);
   }
   for (const m of def.calendar.months) str(`month.${m.id}.when`, `month.${m.id}`);
   for (const sname of def.seasons) str(`brief.headline.${sname}`, 'briefing');
@@ -536,6 +542,7 @@ export function isScreenKey(key: string): boolean {
   return (
     SCREEN_PREFIXES.some((p) => key.startsWith(p)) ||
     key.endsWith('.cost') ||
+    key.endsWith('.brief') ||
     key.endsWith('.lock') ||
     /^preset\.[^.]+\.(land\.|meta$)/.test(key)
   );

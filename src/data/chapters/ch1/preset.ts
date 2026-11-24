@@ -1,7 +1,7 @@
 // 시작 프리셋: 봄 시작(기본)과 숨은 늦가을 시작(시험 플레이 재현용, docs/playtest-log.md "시작 브리핑")
 // 34명: 성인 18(남 9, 여 9), 노인 4, 아이 12. 모두 이름, 나이, 부모·자식 관계를 가진다.
 
-import type { PresetPerson, StartPreset } from '../../../engine';
+import type { LandFact, PresetPerson, StartPreset } from '../../../engine';
 import { CH1_AUTUMN_MONTH_INDEX, CH1_START_MONTH_INDEX } from './calendar';
 
 type Row = [id: string, sex: 'f' | 'm', age: number, extra?: Partial<PresetPerson>];
@@ -66,10 +66,11 @@ export const ch1People: PresetPerson[] = rows.map(([id, sex, age, extra]) => ({
 const P = 'preset.grey_river';
 const A = 'preset.grey_river_autumn';
 
-const landFacts = ['terrain', 'climate', 'rain', 'river', 'soil', 'danger'].map((f) => ({
-  mark: `${P}.land.${f}.mark`,
+const landFacts: LandFact[] = (['terrain', 'climate', 'rain', 'river', 'soil', 'danger'] as const).map((f) => ({
+  icon: f,
   label: `${P}.land.${f}.label`,
   value: `${P}.land.${f}.value`,
+  ...(f === 'danger' ? { tone: 'warn' as const } : {}),
 }));
 const land = { title: `${P}.land.title`, subtitle: `${P}.land.subtitle`, intro: `${P}.land.intro`, facts: landFacts };
 const nameSuggestions = ['tribe.suggest.grey_river', 'tribe.suggest.willow_brook', 'tribe.suggest.white_ford', 'tribe.suggest.dawn_fire'];

@@ -1,0 +1,177 @@
+/* 상단 지표 바 (화면 시안 Situation / Progress / Result의 header) */
+
+.bar {
+  border-bottom: 1px solid var(--border);
+  background: rgba(18, 16, 14, 0.96);
+}
+
+.full {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  flex-wrap: wrap;
+}
+
+.full .inner {
+  padding: 12px 24px;
+  max-width: 1440px;
+}
+
+.compact .inner {
+  padding: 8px 24px;
+  flex-wrap: nowrap;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: none;
+}
+
+.tribe {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--accent);
+  font-size: calc(1.1875rem * var(--font-scale));
+}
+
+.compact .tribe {
+  font-size: var(--fs-body);
+}
+
+.when {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.compact .when {
+  font-size: var(--fs-xs);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.compact .stats {
+  flex-wrap: nowrap;
+  gap: 6px;
+  flex: none;
+}
+
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.compact .stat {
+  padding: 5px 10px;
+  border-radius: 9px;
+  font-size: var(--fs-xs);
+  gap: 5px;
+}
+
+.compact .stat b {
+  font-weight: 500;
+}
+
+.warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.warnText {
+  color: var(--warn-text);
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.basis {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* 진행 단계 */
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  min-width: 0;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.dash {
+  color: var(--border-strong);
+}
+
+.step {
+  padding: 5px 10px;
+  border-radius: 14px;
+  color: var(--text-muted);
+}
+
+.done {
+  color: var(--text-muted);
+}
+
+.now {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+@media (max-width: 1250px) {
+  .compact .inner {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .compact .stats {
+    flex-wrap: wrap;
+  }
+  .steps {
+    flex-wrap: wrap;
+  }
+}

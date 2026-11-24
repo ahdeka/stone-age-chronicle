@@ -84,6 +84,17 @@ export interface WeatherDef {
   overlay?: Id;
 }
 
+/** 땅 정보 한 칸의 선 아이콘 (화면이 id를 SVG로 그린다, 2026-11-24 3차 피드백) */
+export type LandIcon = 'terrain' | 'climate' | 'rain' | 'river' | 'soil' | 'danger';
+
+/** 땅 정보 한 칸: 아이콘, 이름, 값. warn이면 경고색 칸 */
+export interface LandFact {
+  icon: LandIcon;
+  label: string;
+  value: string;
+  tone?: 'warn';
+}
+
 export interface AilmentDef {
   id: Id;
   /** 다침인가 병인가 (알림 카드의 모양) */
@@ -149,7 +160,7 @@ export interface PresetPresentation {
   introLines: string[];
   meta: string;
   tagline: string;
-  land: { title: string; subtitle: string; intro: string; facts: { mark: string; label: string; value: string }[] };
+  land: { title: string; subtitle: string; intro: string; facts: LandFact[] };
   chronicleOpening: string;
   /** 시작 화면의 추천 부족 이름 (문자열 키). 첫 번째가 기본 이름이다 */
   nameSuggestions: string[];

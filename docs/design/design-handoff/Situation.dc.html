@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>월초 상황 화면</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#12100e}
+a{color:#e0a15a}a:hover{color:#f0bd7f}
+.ico{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ln{fill:none;stroke:#c9813a;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ln-thin{fill:none;stroke:#c9813a;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+@keyframes callPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,161,90,0.55)}60%{box-shadow:0 0 0 14px rgba(224,161,90,0)}}
+.call{animation:callPulse 2s ease-out infinite}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #12100e; color: #f1e8d8; font-family: 'Noto Sans KR', sans-serif; padding-bottom: 120px">
+
+  <header style="position: sticky; top: 0; z-index: 5; background: rgba(18,16,14,0.96); border-bottom: 1px solid #2e2821">
+    <div style="max-width: 1440px; margin: 0 auto; padding: 12px 24px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: 'Noto Serif KR', serif; font-size: 19px; font-weight: 700; color: #e0a15a">잿빛강 사람들</span>
+        <span style="font-size: 14px; color: #b3a690">1년차 · 봄 · 4월 · 맑음</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821; font-size: 15px"><b>34명</b><span style="color: #b3a690">성인 18 · 노인 4 · 아이 12</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #2a1c16; border: 1px solid #6b3a26; font-size: 15px"><b>식량 431kg</b><span style="color: #f2a283">15일치</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821; font-size: 15px"><b>장작 74kg</b></span>
+        <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821; font-size: 15px"><b>일손 20</b><span style="color: #b3a690">아픈 사람 1</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: #1c1915; border: 1px solid #2e2821; font-size: 15px"><b>결속 58</b><span style="color: #b3a690">보통</span></span>
+      </div>
+    </div>
+  </header>
+
+  <div style="max-width: 1440px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+    <main style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+      <section style="border-radius: 18px; overflow: hidden; border: 1px solid #2e2821; background: #1c1915">
+        <svg viewBox="0 0 1000 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; width: 100%; height: 240px">
+          <rect x="0" y="0" width="1000" height="240" fill="#2a2620"></rect>
+          <circle cx="800" cy="70" r="34" fill="#e7c98a" opacity="0.35"></circle>
+          <path d="M0 140 L110 90 L210 125 L320 70 L430 120 L560 80 L690 130 L820 85 L1000 120 L1000 240 L0 240 Z" fill="#221d18"></path>
+          <path d="M0 180 C200 160 380 190 560 170 C740 150 860 175 1000 165 L1000 200 C840 210 700 190 540 205 C360 222 180 200 0 215 Z" fill="#2b3a40"></path>
+          <path class="ln-thin" d="M520 186 q10 -6 20 0 q-10 6 -20 0 M540 186 l6 -4 l0 8 z M600 180 q10 -6 20 0 q-10 6 -20 0 M620 180 l6 -4 l0 8 z"></path>
+          <path d="M140 172 L170 120 L200 172 Z M210 176 L244 116 L278 176 Z" fill="#2c2219"></path>
+          <path class="ln" d="M140 172 L170 120 L200 172 M210 176 L244 116 L278 176"></path>
+          <path d="M0 240 L0 215 C300 205 600 225 1000 210 L1000 240 Z" fill="#14110e"></path>
+        </svg>
+        <div style="padding: 22px 28px 24px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 13px; letter-spacing: 0.2em; color: #e0a15a">이번 달 상황</span>
+          <h1 style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 30px; font-weight: 700; line-height: 1.3">물고기 떼가 올라오고, 곰이 깨어났다</h1>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-family: 'Noto Serif KR', serif; font-size: 18px; line-height: 1.75; color: #ddd2bf">
+            <p style="margin: 0">녹은 강을 거슬러 은빛 물고기 떼가 올라오기 시작했다. 여울목이 가장 붐빌 때는 열흘 남짓이다.</p>
+            <p style="margin: 0">북쪽 숲 가장자리에서 겨울잠에서 깬 곰의 발자국이 나왔다. 배고픈 곰은 마을 냄새를 따라온다.</p>
+            <p style="margin: 0">노을이 강가 언덕에서 이삭이 맺히는 풀밭을 찾았다고 한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section style="padding: 22px 24px; border-radius: 18px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700">사람들</h2>
+          <span style="font-size: 14px; color: #b3a690">일손 20 · 아픈 사람 1 · 다친 사람 0 · 거처: 낡은 천막 5채</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{advisors}}" as="a" hint-placeholder-count="4">
+            <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #14110e; border: 1px solid #2a241d">
+              <svg width="44" height="44" viewBox="0 0 56 56" aria-hidden="true" style="flex: none">
+                <circle cx="28" cy="28" r="27" fill="#1c1915" stroke="{{a.color}}"></circle>
+                <circle cx="28" cy="22" r="9" fill="{{a.color}}" opacity="0.85"></circle>
+                <path d="M12 48 C14 36 21 32 28 32 C35 32 42 36 44 48 Z" fill="{{a.color}}" opacity="0.85"></path>
+              </svg>
+              <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                <span style="font-size: 16px"><b>{{a.name}}</b> <span style="font-size: 13px; color: #b3a690">{{a.role}}</span></span>
+                <span style="font-size: 13px; color: #b3a690">{{a.state}}</span>
+                <span style="font-family: 'Noto Serif KR', serif; font-size: 14px; line-height: 1.55; color: #e6dccb">“{{a.quote}}”</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div aria-hidden="true" style="display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: #2e2821">
+            <div style="width: 53%; background: #e0a15a"></div>
+            <div style="width: 12%; background: #a9b8c9"></div>
+            <div style="width: 35%; background: #8fa87a"></div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; color: #b3a690">
+            <span><b style="color: #e0a15a">성인 18</b> 그중 일손 17</span>
+            <span><b style="color: #a9b8c9">노인 4</b> 가벼운 일 3</span>
+            <span><b style="color: #8fa87a">아이 12</b></span>
+            <span style="color: #f2a283">아픈 사람 1 · 기침</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <section style="padding: 20px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #e0a15a">시대 목표 · 구석기</h2>
+        <sc-for list="{{goals}}" as="g" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 15px"><b>{{g.name}}</b><span style="color: #b3a690">{{g.pct}}%</span></div>
+            <div aria-hidden="true" style="height: 6px; border-radius: 3px; background: #2e2821; overflow: hidden"><div style="height: 6px; width: {{g.pct}}%; background: #e0a15a"></div></div>
+          </div>
+        </sc-for>
+      </section>
+      <section style="padding: 20px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #e0a15a">아직 남은 일</h2>
+        <span style="font-size: 15px; line-height: 1.6">건조대 공사 · 2달 중 1달 끝남</span>
+        <span style="font-size: 15px; line-height: 1.6">서리의 기침 · 2주째</span>
+      </section>
+      <section style="padding: 20px; border-radius: 16px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #e0a15a">연대기</h2>
+        <p style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 15px; line-height: 1.75; color: #ddd2bf"><span style="color: #e0a15a">1년차 3월.</span> 긴 겨울을 넘긴 서른네 명이 녹는 강가로 나왔다.</p>
+      </section>
+    </aside>
+
+    <section style="flex: 1 1 100%; padding: 22px 24px; border-radius: 18px; background: #1c1915; border: 1px solid #2e2821; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px">
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700">잿빛강 땅</h2>
+        <span style="font-size: 14px; color: #b3a690">빙하기 끝자락 · 북쪽 대륙의 동쪽 끝</span>
+      </div>
+      <p style="margin: 0; font-family: 'Noto Serif KR', serif; font-size: 17px; line-height: 1.8; color: #ddd2bf">잿빛강은 북쪽 고원에서 흘러내려 넓게 굽이친다. 부족은 강 굽이의 바위 그늘 아래 천막을 쳤다. 북쪽에는 소나무 숲, 동쪽에는 바람 거센 초원, 남쪽에는 안개 낀 늪지가 펼쳐져 있다.</p>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+        <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #14110e; border: 1px solid #2a241d">
+          <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; color: #e0a15a"><path class="ico" d="M2 19 L8.5 9 L12 14 L15 10 L22 19 Z"></path><path class="ico" d="M7 11.3 L8.5 9 L10 11.3"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 13px; color: #b3a690">지형</span><span style="font-size: 15px; line-height: 1.55">넓은 강 굽이, 북쪽 소나무 숲, 동쪽 초원, 남쪽 늪지</span></div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #14110e; border: 1px solid #2a241d">
+          <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; color: #e0a15a"><circle class="ico" cx="9" cy="9" r="3.5"></circle><path class="ico" d="M9 2.5v1.5M9 14v1.5M2.5 9H4M3.9 3.9l1 1M13.1 4.9l1-1"></path><path class="ico" d="M17 13v8M13.5 15l7 4M20.5 15l-7 4"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 13px; color: #b3a690">날씨</span><span style="font-size: 15px; line-height: 1.55">춥다 · 여름은 짧고 겨울은 길고 혹독하다</span></div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #14110e; border: 1px solid #2a241d">
+          <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; color: #e0a15a"><path class="ico" d="M6.5 14.5a4 4 0 0 1 .6-8 5 5 0 0 1 9.6 1.4 3.3 3.3 0 0 1-.2 6.6Z"></path><path class="ico" d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 13px; color: #b3a690">비와 눈</span><span style="font-size: 15px; line-height: 1.55">많지 않다 · 겨울엔 대부분 눈</span></div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #14110e; border: 1px solid #2a241d">
+          <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; color: #e0a15a"><path class="ico" d="M2 8c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"></path><path class="ico" d="M2 13c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"></path><path class="ico" d="M2 18c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 13px; color: #b3a690">주요 강</span><span style="font-size: 15px; line-height: 1.55">잿빛강 · 3월에 녹고 11월부터 가장자리가 언다</span></div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #14110e; border: 1px solid #2a241d">
+          <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; color: #e0a15a"><path class="ico" d="M3 8h18M3 13h18M3 18h18"></path><path class="ico" d="M6 10.5h.01M11 10.5h.01M16 15.5h.01M8 15.5h.01M18 10.5h.01"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 13px; color: #b3a690">흙</span><span style="font-size: 15px; line-height: 1.55">강가의 고운 흙, 초원의 누런 흙</span></div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #2a1c16; border: 1px solid #6b3a26">
+          <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; color: #f2a283"><path class="ico" d="M12 3.5 L21.5 20 H2.5 Z"></path><path class="ico" d="M12 10v4.5M12 17.2v.01"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 13px; color: #f2a283">위험</span><span style="font-size: 15px; line-height: 1.55">늑대 무리, 혹한과 눈보라, 봄 홍수, 겨울 식량 부족</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div style="position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 6; width: min(760px, calc(100% - 32px)); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 12px 12px 22px; border-radius: 20px; background: rgba(28,25,21,0.97); border: 1px solid #4a3e30; box-shadow: 0 14px 40px rgba(0,0,0,0.55)">
+    <span style="font-size: 16px">이번 달 전략이 남았다 <span style="color: #b3a690">· 식량 1개 + 발전 1개</span></span>
+    <a href="Decide.dc.html" class="call" style="display: inline-flex; align-items: center; min-height: 50px; padding: 0 26px; border-radius: 25px; background: #e0a15a; color: #17120c; font-size: 17px; font-weight: 700; text-decoration: none">전략 정하기</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      advisors: [
+        { name: '바위', role: '사냥 우두머리', state: '건강', color: '#c9813a', quote: '곰이 마을에 오기 전에 우리가 먼저 가야 합니다.' },
+        { name: '서리', role: '이야기꾼', state: '노인 · 기침', color: '#a9b8c9', quote: '물고기는 금방 상한다. 말릴 자리부터 만들어라.' },
+        { name: '노을', role: '약초꾼', state: '건강', color: '#b9a35a', quote: '언덕의 이삭 풀, 씨를 받아 두면 어떨까요?' },
+        { name: '이끼', role: '장인', state: '건강', color: '#8fa87a', quote: '돌을 쌓아 어살을 막으면 물고기가 스스로 들어옵니다.' }
+      ],
+      goals: [
+        { name: '식량 안정', pct: 8 },
+        { name: '영구 거처', pct: 0 },
+        { name: '부족의 확장', pct: 0 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

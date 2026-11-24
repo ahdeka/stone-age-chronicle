@@ -13,10 +13,11 @@ import { I18nProvider } from './i18n';
 import { MotionProvider } from './motion';
 import { EndingScreen } from './screens/EndingScreen';
 import { IntroScreen } from './screens/IntroScreen';
-import { orderRows, PhaseScreen } from './screens/PhaseScreen';
+import { ProgressScreen } from './screens/ProgressScreen';
+import { ResultScreen } from './screens/ResultScreen';
 import { SituationScreen } from './screens/SituationScreen';
 import { TitleScreen } from './screens/TitleScreen';
-import { QuietScreen } from './screens/QuietScreen';
+import { eventLead, orderRows } from './story';
 
 const tables = [commonStrings.ko, chapters['ch1']!.strings.ko];
 const tr = createTranslator(tables, { tribe: '잿빛강 사람들' });
@@ -95,6 +96,10 @@ describe('화면', () => {
     expect(h).toContain('잿빛강 사람들 34명이 첫 겨울을 앞두고 있었다');
     expect(h).toContain('1년차 11월');
     expect(h).toContain('전략 정하기');
+    // 사람들: 주요 인물 4명과 비율·일손. 부족원 개인 명단은 화면에 없다 (3차 피드백)
+    expect(h).toContain('그중 일손');
+    expect(h).toContain('다친 사람');
+    expect(h).not.toContain('부족원 명단');
     expect(h).not.toContain('⟨');
   });
 
@@ -107,6 +112,12 @@ describe('화면', () => {
     expect(h).toContain('순록 떼를 놓치면 겨울을 못 넘깁니다');
     expect(h).toMatch(/나가는 사람 14명 · 남는 사람 \d+명 · 이끄는 사람 바위/);
     expect(h).toContain('그동안 마을이 비고');
+    // 두 칸: 구역 제목, 일손 막대, 발전하지 않는다, 한 줄 설명
+    expect(h).toContain('식량 전략');
+    expect(h).toContain('발전 전략');
+    expect(h).toContain('발전하지 않는다');
+    expect(h).toMatch(/식량 \d+명/);
+    expect(h).toContain(tr.t('policy.reindeer_big_hunt.brief'));
     expect(h).not.toContain('⟨');
   });
 
@@ -127,20 +138,40 @@ describe('화면', () => {
     for (const s of states) {
       if (s.step === 'decision') expect(sheet(s)).not.toContain('⟨');
     }
+    const last = end.work.reports.length - 1;
     end.work.reports.forEach((_, i) => {
-      if (i === 0) return;
-      const h = html(<PhaseScreen def={ch1} state={end} index={i} onNext={noop} send={noop} />);
+      if (i === 0 || i === last) return;
+      const h = html(<ProgressScreen def={ch1} state={end} index={i} onNext={noop} send={noop} />);
       expect(h, `report ${i}`).not.toContain('⟨');
+      // 진행 중에는 장부가 없고 지표는 월초 기준이다
+      expect(h, `report ${i}`).not.toContain('식량 장부');
+      expect(h, `report ${i}`).toContain('월초 기준');
     });
-    const early = html(<PhaseScreen def={ch1} state={end} index={1} onNext={noop} send={noop} />);
+    const early = html(<ProgressScreen def={ch1} state={end} index={1} onNext={noop} send={noop} />);
     expect(early).toContain('상순 · 1~10일');
-    expect(early).toContain('초원의 여울');
-    const settle = html(<PhaseScreen def={ch1} state={end} index={end.work.reports.length - 1} onNext={noop} send={noop} />);
-    expect(settle).toContain('이달의 결과');
-    // 자동 진행(기본): 다음 순이 있는 화면에만 일시정지가 있고, 이달의 결과에는 없다
-    expect(html(<PhaseScreen def={ch1} state={end} index={1} onNext={noop} send={noop} setPaused={noop} />)).toContain('일시정지');
-    expect(html(<PhaseScreen def={ch1} state={end} index={end.work.reports.length - 1} onNext={noop} send={noop} setPaused={noop} />)).not.toContain('일시정지');
-    expect(html(<PhaseScreen def={ch1} state={end} index={1} onNext={noop} send={noop} paused setPaused={noop} />)).toContain('다시 진행');
+    expect(early).toContain('순록 떼 대사냥');
+    expect(early).toContain('글 바로 보기');
+    const result = html(<ResultScreen def={ch1} state={end} onNext={noop} />);
+    expect(result).toContain('이달의 결과');
+    expect(result).toContain('식량 장부');
+    expect(result).toContain('최종');
+    expect(result).toContain('다음 달로');
+    expect(result).not.toContain('⟨');
+    // 자동 진행(기본): 다음 순이 있는 화면에만 일시정지가 있다
+    expect(html(<ProgressScreen def={ch1} state={end} index={1} onNext={noop} send={noop} setPaused={noop} />)).toContain('일시정지');
+    expect(html(<ProgressScreen def={ch1} state={end} index={1} onNext={noop} send={noop} paused setPaused={noop} />)).toContain('다시 진행');
+  });
+
+  it('중순 사건: 진행 화면에 사건 직전 문장이 먼저 나오고, 이달의 결과에 고른 것이 남는다', () => {
+    const states = huntMonth();
+    const waiting = states.find((s) => s.step === 'decision' && s.work.decision?.kind === 'event');
+    expect(waiting).toBeDefined();
+    const w = waiting!;
+    const h = html(<ProgressScreen def={ch1} state={w} index={w.work.reports.length - 1} onNext={noop} send={noop} />);
+    const d = w.work.decision!;
+    expect(d.kind === 'event' && h.includes(eventLead(tr, d.eventId))).toBe(true);
+    const end = states[states.length - 1]!;
+    expect(html(<ResultScreen def={ch1} state={end} onNext={noop} />)).toContain('고른 것:');
   });
 
   it('봄 시작: 인트로, 1년차 · 봄 · 3월, 첫 달 소식, 전략 팝업', () => {
@@ -160,22 +191,17 @@ describe('화면', () => {
     expect(p).not.toContain('⟨');
   });
 
-  it('평온한 달 요약 화면: 순마다 한 줄, 이달의 결과, 펼쳐 보기', () => {
-    let found = false;
-    for (let k = 0; k < 20 && !found; k++) {
-      const s0 = springGame(`ui-quiet-${k}`);
-      const s = finishMonth(ch1, pick(ch1, s0, s0.work.candidates.find((c) => c.policyId === 'river_gather' || c.policyId === 'fish_run_weirs')!.policyId));
-      if (!s.history.at(-1)?.quiet) continue;
-      found = true;
-      const q = html(<QuietScreen def={ch1} state={s} onNext={noop} onExpand={noop} />);
-      expect(q).toContain('평온한 달');
-      expect(q).toContain('상순 · 1~10일');
-      expect(q).toContain('하순 · 21~30일');
-      expect(q).toContain('펼쳐 보기');
-      expect(q).toContain('최종');
-      expect(q).not.toContain('⟨');
-    }
-    expect(found).toBe(true);
+  it('이달의 결과: 순마다 한 줄 회고와 장부 (평온한 달 요약을 대신한다)', () => {
+    const s0 = springGame('ui-result');
+    const s = finishMonth(ch1, pick(ch1, s0, s0.work.candidates.find((c) => c.policyId === 'river_gather' || c.policyId === 'fish_run_weirs')!.policyId));
+    const q = html(<ResultScreen def={ch1} state={s} onNext={noop} />);
+    expect(q).toContain('상순');
+    expect(q).toContain('하순');
+    expect(q).toContain('시작');
+    expect(q).toContain('최종');
+    expect(q).toContain('장작 장부');
+    expect(q).toContain('덕분에');
+    expect(q).not.toContain('⟨');
   });
 
   it('장부 순서: 얻은 것(큰 것부터) → 쓴 것(큰 것부터), 0.5kg 미만은 뺀다', () => {
