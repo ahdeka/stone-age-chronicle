@@ -13,7 +13,7 @@ import { I18nProvider } from './i18n';
 import { MotionProvider } from './motion';
 import { EndingScreen } from './screens/EndingScreen';
 import { IntroScreen } from './screens/IntroScreen';
-import { PhaseScreen } from './screens/PhaseScreen';
+import { orderRows, PhaseScreen } from './screens/PhaseScreen';
 import { SituationScreen } from './screens/SituationScreen';
 import { TitleScreen } from './screens/TitleScreen';
 
@@ -54,12 +54,11 @@ describe('화면', () => {
 
   it('시작 화면과 인트로', () => {
     const s = newGame('ui');
-    const t = html(
-      <TitleScreen scene={ch1.scenes.intro} nameSuggestions={ch1.presets[0]!.presentation.nameSuggestions} canContinue onContinue={noop} onStart={noop} onLoad={noop} />,
-    );
+    const t = html(<TitleScreen scene={ch1.scenes.intro} canContinue onContinue={noop} onStart={noop} onLoad={noop} />);
     expect(t).not.toContain('⟨');
-    for (const n of ['잿빛강 사람들', '버들내 사람들', '흰여울 사람들', '새벽불 부족']) expect(t).toContain(n);
-    expect(t).toContain('부족 이름');
+    // 부족 이름 입력은 보류했다 (기본 이름으로 시작)
+    expect(t).not.toContain('부족 이름');
+    expect(s.tribeName).toBe('');
     const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />);
     expect(i).toContain('34명. 성인 18, 노인 4, 아이 12.');
     expect(i).toContain('남은 식량은 18일치.');
@@ -68,7 +67,7 @@ describe('화면', () => {
     expect(i).not.toContain('⟨');
   });
 
-  it('플레이어가 정한 부족 이름이 인트로, 상단 바, 연대기, 결말에 들어간다', () => {
+  it('내부 기반: 다른 부족 이름도 인트로, 연대기, 결말에 조사와 함께 들어간다', () => {
     const s = createGame(ch1, { seed: 'ui-name', tribeName: '새벽불 부족' });
     const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />, s.tribeName);
     expect(i).toContain('당신은 새벽불 부족의 족장이다.');
@@ -92,13 +91,13 @@ describe('화면', () => {
     expect(h).toContain('식량 안정');
     expect(h).toContain('잿빛강 사람들 34명이 첫 겨울을 앞두고 있었다');
     expect(h).toContain('1년차 11월');
-    expect(h).toContain('이번 달 할 일 정하기');
+    expect(h).toContain('전략 정하기');
     expect(h).not.toContain('⟨');
   });
 
   it('방침 팝업: 핵심 칩, 조언자 대사, 위험 배지, 대가, 투입 인원', () => {
     const h = sheet(newGame('ui'));
-    expect(h).toContain('이번 달 할 일');
+    expect(h).toContain('이번 달 전략');
     expect(h).toContain('순록 떼 15일 안에 지나감');
     expect(h).toContain('1년차 · 가을 · 11월');
     expect(h).toContain('18일치');
@@ -135,6 +134,17 @@ describe('화면', () => {
     expect(early).toContain('초원의 여울');
     const settle = html(<PhaseScreen def={ch1} state={end} index={end.work.reports.length - 1} onNext={noop} send={noop} />);
     expect(settle).toContain('이달의 결과');
+  });
+
+  it('장부 순서: 얻은 것(큰 것부터) → 쓴 것(큰 것부터), 0.5kg 미만은 뺀다', () => {
+    const rows = [
+      { res: 'food', source: 'upkeep.food', delta: -285 },
+      { res: 'food', source: 'village.gather', delta: 28 },
+      { res: 'food', source: 'spoil', delta: -3 },
+      { res: 'food', source: 'catch.reindeer', delta: 150 },
+      { res: 'food', source: 'spoil', delta: 0.2 },
+    ];
+    expect(orderRows(rows).map((r) => r.delta)).toEqual([150, 28, -285, -3]);
   });
 
   it('결말 화면', () => {

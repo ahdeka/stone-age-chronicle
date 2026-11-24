@@ -51,15 +51,14 @@ export function App() {
     body = (
       <TitleScreen
         scene={def.scenes.intro}
-        nameSuggestions={startPreset.presentation.nameSuggestions}
         canContinue={saved !== null && saved.step !== 'ended'}
         onContinue={() => {
           if (!saved) return;
           setState(saved);
           setScreen('game');
         }}
-        onStart={(seed, tribeName) => {
-          update(createGame(def, { seed, tribeName, presetId: startPreset.id }));
+        onStart={(seed) => {
+          update(createGame(def, { seed, presetId: startPreset.id }));
           setScreen('intro');
         }}
         onLoad={(s) => {

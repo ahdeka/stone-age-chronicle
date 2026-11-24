@@ -2,7 +2,7 @@
 // 장면 → 서술 문단 타이핑(30ms/글자) → 부상·사망 알림 → 정산 행이 하나씩 들어오며 큰 숫자가 굴러간다.
 // "빨리 보기"는 끝 상태로 건너뛴다. 중순 사건이 있으면 문단이 끝난 뒤 같은 결정 팝업이 뜬다.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   dailyFoodTotal,
   findPolicy,
@@ -14,7 +14,7 @@ import {
   type PhaseReport,
 } from '../../engine';
 import type { Translator } from '../../i18n';
-import { Caret, Icon, RollingNumber } from '../components/bits';
+import { Caret, Icon } from '../components/bits';
 import { decisionModel, DecisionPopup } from '../components/Decision';
 import { SceneView } from '../components/SceneView';
 import { dateText, lineText } from '../format';
@@ -79,6 +79,85 @@ export function rowLabel(tr: Translator, row: LedgerLine, settlement: boolean, c
   return tr.has(key) ? tr.t(key) : tr.t('row.other');
 }
 
+/** 장부 행 순서: 얻은 것(큰 것부터) → 쓴 것(큰 것부터). 0.5kg 미만은 뺀다 */
+export function orderRows(rows: readonly LedgerLine[]): LedgerLine[] {
+  const keep = rows.filter((r) => Math.abs(r.delta) >= 0.5);
+  const gains = keep.filter((r) => r.delta > 0).sort((a, b) => b.delta - a.delta);
+  const spends = keep.filter((r) => r.delta < 0).sort((a, b) => a.delta - b.delta);
+  return [...gains, ...spends];
+}
+
+interface Timing {
+  elapsed: number;
+  done: boolean;
+  gap: number;
+  roll: number;
+}
+
+/** 굴러가는 최종값: 시작값 + 지금까지 들어온 행. 다 끝나면 엔진이 계산한 최종값으로 확정한다 */
+function rolled(from: number, to: number | undefined, rows: readonly LedgerLine[], start: number, t: Timing): number {
+  if (t.done && to !== undefined) return to;
+  let v = from;
+  rows.forEach((r, i) => {
+    const at = start + i * t.gap;
+    if (t.elapsed >= at) v += r.delta * Math.min(1, (t.elapsed - at) / t.roll);
+  });
+  return v;
+}
+
+const kgText = (n: number) => `${Math.round(n).toLocaleString('ko-KR')}kg`;
+
+/** 식량·장작 장부 한 칸: 시작 → 얻은 것 → 쓴 것 → 구분선 → 최종 */
+function LedgerBlock(props: {
+  title: string;
+  from: number;
+  value: number;
+  rows: LedgerLine[];
+  start: number;
+  timing: Timing;
+  label: (r: LedgerLine) => string;
+  big?: boolean;
+  aside?: ReactNode;
+}) {
+  const tr = useT();
+  const { title, from, value, rows, start, timing, label, big, aside } = props;
+  const shown = rows.filter((_, i) => timing.elapsed >= start + i * timing.gap);
+  const gains = shown.filter((r) => r.delta > 0);
+  const spends = shown.filter((r) => r.delta < 0);
+  const group = (key: string, list: LedgerLine[]) =>
+    list.length > 0 && (
+      <>
+        <span className={p.groupLabel}>{tr.t(key)}</span>
+        {list.map((r) => (
+          <div key={`${r.source}-${r.delta > 0}`} className={`${p.row} ${u.pop}`}>
+            <span>{label(r)}</span>
+            <b className={r.delta > 0 ? p.up : p.down}>
+              {r.delta > 0 ? '+' : '−'}
+              {kgText(Math.abs(r.delta))}
+            </b>
+          </div>
+        ))}
+      </>
+    );
+  return (
+    <>
+      <h2 className={p.ledgerTitle}>{title}</h2>
+      <div className={p.startRow}>
+        <span>{tr.t('ui.ledger.start')}</span>
+        <span>{kgText(from)}</span>
+      </div>
+      {group('ui.ledger.gain', gains)}
+      {group('ui.ledger.spend', spends)}
+      <div className={`${p.finalRow} ${big ? p.big : p.small}`}>
+        <span className={p.finalLabel}>{tr.t('ui.ledger.final')}</span>
+        <span className={big ? p.bigNum : p.smallNum}>{Math.round(value).toLocaleString('ko-KR')}</span>
+        <span className={p.unit}>kg</span>
+        {aside}
+      </div>
+    </>
+  );
+}
+
 export function PhaseScreen({ def, state, index, onNext, send }: Props) {
   const tr = useT();
   const { mul, settings } = useMotion();
@@ -94,22 +173,19 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
   const perChar = 30 * mul;
   const sched = typeSchedule(texts, { startAt: 1200 * mul, perChar, gap: 600 * mul });
 
-  const foodRows = (report?.rows ?? []).filter((r) => r.res === 'food' && Math.abs(r.delta) >= 0.5);
+  // 장부: 시작 → 얻은 것 → 쓴 것 → 최종 (식량 다음 장작). 행은 이 순서로 하나씩 들어온다
+  const foodRows = orderRows((report?.rows ?? []).filter((r) => r.res === 'food'));
+  const woodRows = orderRows((report?.rows ?? []).filter((r) => r.res === 'firewood'));
   const haulRows = (report?.rows ?? []).filter((r) => r.res === 'haul');
   const rowGap = 900 * mul;
   const rowsStart = sched.end;
-  const end = rowsStart + foodRows.length * rowGap + 300 * mul;
+  const woodStart = rowsStart + foodRows.length * rowGap;
+  const end = woodStart + woodRows.length * rowGap + 300 * mul;
   const clock = useClock(end, `${state.month}-${index}`);
   const typed = typedLines(texts, sched, clock.elapsed, perChar);
+  const timing = { elapsed: clock.elapsed, done: clock.done, gap: rowGap, roll: 700 * mul };
 
-  // 굴러가는 식량: 시작값 + 지금까지 들어온 행
-  let food = report?.from.food ?? 0;
-  const shownRows = foodRows.filter((_, i) => clock.elapsed >= rowsStart + i * rowGap);
-  shownRows.forEach((r, i) => {
-    const k = Math.min(1, (clock.elapsed - (rowsStart + i * rowGap)) / (700 * mul));
-    food += r.delta * k;
-  });
-  if (clock.done && report?.to) food = report.to.food;
+  const food = rolled(report?.from.food ?? 0, report?.to?.food, foodRows, rowsStart, timing);
   const daily = dailyFoodTotal(def, state);
   const days = daily > 0 ? Math.max(0, Math.floor(food / daily)) : 0;
   const narrativeDone = clock.elapsed >= sched.end;
@@ -205,21 +281,17 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
 
           <aside className={p.aside}>
             <section className={p.ledger}>
-              <h2 className={p.ledgerTitle}>{tr.t('ui.ledger.food')}</h2>
-              <div className={p.big}>
-                <span className={p.bigNum}>{Math.round(food).toLocaleString('ko-KR')}</span>
-                <span className={p.unit}>kg</span>
-                <span className={`${p.days} ${days < def.balance.ui.foodWarnDays ? p.warn : ''}`}>{tr.t('ui.top.foodDays', { days })}</span>
-              </div>
-              {shownRows.map((r) => (
-                <div key={`${r.source}-${r.delta > 0}`} className={`${p.row} ${u.pop}`}>
-                  <span>{rowLabel(tr, r, settlement, crewPolicy)}</span>
-                  <b className={r.delta > 0 ? p.up : p.down}>
-                    {r.delta > 0 ? '+' : '−'}
-                    {Math.abs(Math.round(r.delta)).toLocaleString('ko-KR')}kg
-                  </b>
-                </div>
-              ))}
+              <LedgerBlock
+                title={tr.t('ui.ledger.food')}
+                from={report.from.food}
+                value={food}
+                rows={foodRows}
+                start={rowsStart}
+                timing={timing}
+                label={(r) => rowLabel(tr, r, settlement, crewPolicy)}
+                big
+                aside={<span className={`${p.days} ${days < def.balance.ui.foodWarnDays ? p.warn : ''}`}>{tr.t('ui.top.foodDays', { days })}</span>}
+              />
               {narrativeDone && haulRows.length > 0 && (
                 <div className={p.haul}>
                   <span className={u.muted}>{tr.t('ui.haulNote')}</span>
@@ -231,15 +303,20 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
                   ))}
                 </div>
               )}
-              {clock.done && report.to && (
-                <div className={p.firewood}>
-                  <span>{tr.t('ui.ledger.firewood')}</span>
-                  <span>
-                    <RollingNumber value={report.from.firewood} /> → <b>{Math.round(report.to.firewood).toLocaleString('ko-KR')}kg</b>
-                  </span>
-                </div>
-              )}
             </section>
+            {clock.elapsed >= woodStart && (
+              <section className={`${p.ledger} ${u.in}`}>
+                <LedgerBlock
+                  title={tr.t('ui.ledger.firewood')}
+                  from={report.from.firewood}
+                  value={rolled(report.from.firewood, report.to?.firewood, woodRows, woodStart, timing)}
+                  rows={woodRows}
+                  start={woodStart}
+                  timing={timing}
+                  label={(r) => rowLabel(tr, r, settlement, crewPolicy)}
+                />
+              </section>
+            )}
 
             {narrativeDone &&
               report.alerts.map((a, i) => {
