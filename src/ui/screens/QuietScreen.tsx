@@ -3,11 +3,11 @@
 // "펼쳐 보기"를 누르면 평소처럼 단계별로 본다. 설정에서 끌 수 있다.
 
 import { useEffect } from 'react';
-import { findPolicy, type ChapterDefinition, type GameState } from '../../engine';
+import type { ChapterDefinition, GameState } from '../../engine';
 import { SceneView } from '../components/SceneView';
 import { dateText } from '../format';
 import { useT } from '../i18n';
-import { LedgerBlock, orderRows, paragraphs, rowLabel, type Timing } from './PhaseScreen';
+import { crewSourceTest, LedgerBlock, orderRows, paragraphs, planPolicies, rowLabel, type Timing } from './PhaseScreen';
 import p from './phase.module.css';
 import u from '../ui.module.css';
 
@@ -25,8 +25,9 @@ export function QuietScreen({ def, state, onNext, onExpand }: Props) {
   const reports = state.work.reports;
   const phases = reports.filter((r) => r.slot === 'early' || r.slot === 'mid' || r.slot === 'late');
   const settle = reports.find((r) => r.slot === 'settlement');
-  const policy = state.work.chosen ? findPolicy(def, state.work.chosen.policyId) : undefined;
-  const crewPolicy = !!policy?.crew;
+  const plan = planPolicies(def, state);
+  const policy = plan[0];
+  const crewPolicy = crewSourceTest(def, state);
   const scene = phases[0]?.scene ?? def.scenes.briefing;
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function QuietScreen({ def, state, onNext, onExpand }: Props) {
         <div className={`${p.head} ${u.in}`}>
           <div className={p.headText}>
             <span className={`${p.month} ${u.serif}`}>{tr.t('ui.kicker', { date: dateText(tr, def, state) })}</span>
-            {policy && <span className={`${u.muted} ${u.small}`}>{tr.t('ui.phase.policyLine', { policy: tr.t(`policy.${policy.id}.name`) })}</span>}
+            {policy && <span className={`${u.muted} ${u.small}`}>{tr.t('ui.phase.policyLine', { policy: plan.map((x) => tr.t(`policy.${x.id}.name`)).join(tr.t('ui.phase.planJoin')) })}</span>}
           </div>
           <span className={u.label}>{tr.t('ui.quiet.title')}</span>
         </div>

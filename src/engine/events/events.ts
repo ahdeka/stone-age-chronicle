@@ -5,6 +5,7 @@ import { hintFor } from '../outcome/tier';
 import { allTrue, matchPerson } from '../conditions/evaluate';
 import { findEvent } from '../core/lookup';
 import { living } from '../people/people';
+import { currentEntry } from '../policy/current';
 import { nextInt, weightedIndex } from '../rng/rng';
 
 export function eventOnCooldown(state: GameState, ev: EventDef): boolean {
@@ -62,7 +63,7 @@ export interface OptionStatus {
 }
 
 export function optionStatuses(def: ChapterDefinition, state: GameState, ev: EventDef, actors: Record<string, Id>): OptionStatus[] {
-  const chosen = state.work.chosen;
+  const chosen = currentEntry(state)?.bound;
   const crew = (chosen?.crew ?? []).map((id) => state.people[id]).filter((p): p is Person => !!p && p.alive);
   const leaderId = actors['leader'] ?? chosen?.leaderId;
   const leader = leaderId ? state.people[leaderId] : undefined;

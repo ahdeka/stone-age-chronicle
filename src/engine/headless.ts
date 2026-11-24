@@ -1,13 +1,15 @@
 // 헤드리스 진행: UI 없이 전략 함수로 끝까지 진행한다 (시뮬레이터, 디버그 "달 건너뛰기", 재현 테스트)
 
-import type { ChapterDefinition, Decision, GameState, Id } from './types';
+import type { BoundPolicy, ChapterDefinition, Decision, GameState, Id, PolicySlot } from './types';
 import { applyCommand } from './core/reduce';
-import { findEvent } from './core/lookup';
+import { findEvent, findPolicy } from './core/lookup';
+import { previewPlan } from './policy/plan';
 import { optionStatuses } from './events/events';
 import { LEFTOVER_OPTIONS, leftoverAvailable } from './month/month';
 
 export interface Strategy {
-  pickPolicy(def: ChapterDefinition, s: GameState): Id;
+  /** 이번 달 전략: 식량 uid + 발전 uid(없어도 됨), 또는 큰 일 uid 하나 */
+  pickPlan(def: ChapterDefinition, s: GameState): Id[];
   /** 고를 수 있는 선택지 id 목록 중 하나 */
   pickOption(def: ChapterDefinition, s: GameState, d: Decision, options: Id[]): Id;
 }
@@ -33,7 +35,7 @@ export function playMonth(def: ChapterDefinition, s: GameState, strat: Strategy)
       const opts = availableOptions(def, s, d);
       must(applyCommand(def, s, { type: 'chooseOption', uid: d.uid, optionId: strat.pickOption(def, s, d, opts) }));
     } else {
-      must(applyCommand(def, s, { type: 'choosePolicy', uid: strat.pickPolicy(def, s) }));
+      must(applyCommand(def, s, { type: 'choosePlan', uids: strat.pickPlan(def, s) }));
     }
   }
   throw new Error('headless: month did not finish');
@@ -47,8 +49,24 @@ export function playMonths(def: ChapterDefinition, s: GameState, strat: Strategy
   }
 }
 
-/** 첫 번째 후보와 첫 번째 선택지만 고르는 전략 */
+/** 칸별 후보 (칸 안에서는 점수 순) */
+export function candidatesBySlot(def: ChapterDefinition, s: GameState): Record<PolicySlot, BoundPolicy[]> {
+  const out: Record<PolicySlot, BoundPolicy[]> = { food: [], growth: [], major: [] };
+  for (const c of s.work.candidates) out[findPolicy(def, c.policyId).slot].push(c);
+  return out;
+}
+
+/** 식량 하나에 발전을 붙여 본다: 같이 고를 수 없으면 식량만 */
+export function planWith(def: ChapterDefinition, s: GameState, food: Id, growth?: Id): Id[] {
+  if (growth && !previewPlan(def, s, [food, growth]).error) return [food, growth];
+  return [food];
+}
+
+/** 첫 번째 식량 후보 + 첫 번째 발전 후보(같이 고를 수 있으면), 첫 번째 선택지만 고르는 전략 */
 export const firstChoice: Strategy = {
-  pickPolicy: (_def, s) => s.work.candidates[0]!.uid,
+  pickPlan: (def, s) => {
+    const by = candidatesBySlot(def, s);
+    return planWith(def, s, by.food[0]!.uid, by.growth[0]?.uid);
+  },
   pickOption: (_def, _s, _d, opts) => opts[0]!,
 };

@@ -1,5 +1,5 @@
 // 스탯 = 기본값(balance) → add 합 → mul 곱 (DESIGN.md §4.4)
-// 출처: 장 전역, 달, 지금 순의 날씨, 거처, 지식, 단서, 이번 달 방침, 임시 모디파이어.
+// 출처: 장 전역, 달, 지금 순의 날씨, 거처, 지식, 시설, 단서, 이번 달 전략(두 칸 모두), 임시 모디파이어.
 // 출처가 기록되므로 UI에서 "왜 이 값인가"를 보여 줄 수 있다.
 
 import type { ChapterDefinition, GameState, ModifierDef, StatKey } from '../types';
@@ -34,14 +34,17 @@ function collect(def: ChapterDefinition, state: GameState): SourcedMod[] {
   if (w) push(`weather.${w}`, findWeather(def, w).mods);
   push(`shelter.${state.shelter.kind}`, findShelter(def, state.shelter.kind).mods);
   for (const k of state.knowledge.has) push(`knowledge.${k}`, byId(def.knowledge, k, 'knowledge').mods);
+  for (const [id, level] of Object.entries(state.facilities)) if (level > 0) push(`facility.${id}`, byId(def.facilities, id, 'facility').mods);
   for (const c of state.clues) push(`clue.${c.id}`, byId(def.clues, c.id, 'clue').mods);
-  const chosen = state.work.chosen;
-  if (chosen) push(`policy.${chosen.policyId}`, findPolicy(def, chosen.policyId).monthMods);
+  for (const e of state.work.plan) push(`policy.${e.bound.policyId}`, findPolicy(def, e.bound.policyId).monthMods);
   for (const t of state.modifiers) out.push({ source: t.source, mod: t.mod });
   return out;
 }
 
-export function getStat(def: ChapterDefinition, state: GameState, key: StatKey): StatValue {
+/** 빼고 계산할 출처 (발전 덕분에 얼마나 늘었는지 잴 때) */
+export type SourceFilter = (source: string) => boolean;
+
+export function getStat(def: ChapterDefinition, state: GameState, key: StatKey, exclude?: SourceFilter): StatValue {
   const base = def.balance.stats[key];
   if (base === undefined) throw new Error(`unknown stat: ${key}`);
   const parts: StatPart[] = [{ source: 'base', op: 'base', value: base }];
@@ -49,6 +52,7 @@ export function getStat(def: ChapterDefinition, state: GameState, key: StatKey):
   let mul = 1;
   for (const { source, mod } of collect(def, state)) {
     if (mod.stat !== key) continue;
+    if (exclude?.(source)) continue;
     if (mod.when && !allTrue(def, state, mod.when)) continue;
     if (mod.op === 'add') add += mod.value;
     else mul *= mod.value;
@@ -57,11 +61,12 @@ export function getStat(def: ChapterDefinition, state: GameState, key: StatKey):
   return { value: (base + add) * mul, parts };
 }
 
-export function stat(def: ChapterDefinition, state: GameState, key: StatKey): number {
-  return getStat(def, state, key).value;
+export function stat(def: ChapterDefinition, state: GameState, key: StatKey, exclude?: SourceFilter): number {
+  return getStat(def, state, key, exclude).value;
 }
 
 /** 하루 장작 소모 kg: 달 기준 × 거처 × 스탯(날씨, 옷 등) */
-export function firewoodPerDay(def: ChapterDefinition, state: GameState): number {
-  return monthDef(def, state).firewoodPerDay * findShelter(def, state.shelter.kind).firewoodMul * stat(def, state, 'firewood.burnMul');
+export function firewoodPerDay(def: ChapterDefinition, state: GameState, exclude?: SourceFilter): number {
+  const shelter = exclude?.(`shelter.${state.shelter.kind}`) ? 1 : findShelter(def, state.shelter.kind).firewoodMul;
+  return monthDef(def, state).firewoodPerDay * shelter * stat(def, state, 'firewood.burnMul', exclude);
 }

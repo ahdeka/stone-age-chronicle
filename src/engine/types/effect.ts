@@ -44,6 +44,8 @@ export type Effect =
   | { type: 'flag'; id: Id; set: boolean }
   | { type: 'counter'; id: Id; delta: number }
   | { type: 'knowledge'; id: Id; progress?: number; grant?: boolean }
+  /** 시설: level은 단계 증감, progress는 짓고 있는 공사의 달 수 증감 (실패로 공사가 늦어지면 −1) */
+  | { type: 'facility'; id: Id; level?: number; progress?: number }
   | { type: 'clue'; id: Id; months?: number; remove?: boolean }
   /** 은닉물: recover = 남은 것을 짐으로 꺼낸다 / check = 상태만 확인한다 */
   | { type: 'cache'; at: Id; action: 'recover' | 'check' }

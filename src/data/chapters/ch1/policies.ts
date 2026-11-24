@@ -63,6 +63,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 봄 물고기 떼 (P1의 시작): 그물이 있어야 한다. 많이 잡지만 날것은 상한다
     id: 'fish_run_weirs',
+    slot: 'food',
     category: 'fish',
     appearsWhen: [{ type: 'animal', id: 'fish', state: ['running'] }, { type: 'goods', id: 'net', min: 1 }],
     relevance: [{ when: [{ type: 'foodDays', max: 10 }], add: 25 }],
@@ -83,6 +84,7 @@ export const ch1Policies: PolicyTemplate[] = [
   },
   {
     id: 'river_gather',
+    slot: 'food',
     category: 'gather',
     appearsWhen: [warm],
     // 먹을 것이 모자라면 가장 먼저 떠오르는 안전한 길
@@ -105,6 +107,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 봄의 순록: 북쪽으로 올라가는 무리의 낙오자를 노린다 (가죽을 모은다 → 가죽옷, 교역)
     id: 'spring_reindeer_hunt',
+    slot: 'food',
     category: 'hunt',
     appearsWhen: [{ type: 'animal', id: 'reindeer', state: ['migrating'] }, { type: 'season', in: ['spring'] }],
     priority: 45,
@@ -137,6 +140,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 늪지 너머 (시안의 방침, P6의 시작): 갈대호수 사람들을 찾는다
     id: 'marsh_scouting',
+    slot: 'growth',
     category: 'explore',
     appearsWhen: [warm, { type: 'flag', id: 'reed_lake_met', present: false }],
     relevance: [{ when: [{ type: 'season', in: ['spring', 'summer'] }], add: 10 }],
@@ -174,6 +178,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 그물 짜기 (이끼): 그물이 늘면 물고기 떼를 더 잡는다
     id: 'net_making',
+    slot: 'growth',
     category: 'craft',
     appearsWhen: [artisanReady, { type: 'goods', id: 'net', max: 2 }, warm],
     priority: 28,
@@ -188,6 +193,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 말리기 (P1): 날것을 말린 고기·물고기로. 말리는 법이 자라고, 겨울 식량이 된다
     id: 'drying_racks',
+    slot: 'food',
     category: 'store',
     appearsWhen: [warm, { type: 'food', kinds: ['fish', 'raw_meat'], min: 60 }],
     relevance: [
@@ -209,6 +215,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 바위굴 찾기 (C3, P3): 여름에 찾으면 곰이 비운 굴, 겨울에 찾으면 곰이 잠든 굴
     id: 'find_rock_cave',
+    slot: 'growth',
     category: 'explore',
     appearsWhen: [{ type: 'shelter', in: ['tent'] }, { type: 'place', id: 'north_cave', discovered: false }, { type: 'month', min: 3 }],
     relevance: [
@@ -246,6 +253,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 찾아 둔 굴로 옮긴다 (P3): 겨울 전에 옮기면 서리달에 곰이 돌아온다
     id: 'move_to_cave',
+    slot: 'major',
     category: 'shelter',
     appearsWhen: [
       { type: 'place', id: 'north_cave', fact: 'claw_marks' },
@@ -278,6 +286,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 굴 다지기 (P4): 가시 울타리와 저장 구덩이 → 저장 구덩이 지식, 영구 거처 목표
     id: 'cave_fortify',
+    slot: 'growth',
     category: 'shelter',
     appearsWhen: [{ type: 'shelter', in: ['rock_cave'] }, { type: 'knowledge', id: 'storage_pit', has: false }],
     priority: 30,
@@ -290,6 +299,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 장작 비축 (P2): 덧집을 지어 장작을 더 쌓아 둔다
     id: 'firewood_stockpile',
+    slot: 'growth',
     category: 'firewood',
     appearsWhen: [{ type: 'season', in: ['spring', 'summer'] }, { type: 'month', min: 2 }],
     relevance: [{ when: [{ type: 'season', in: ['summer'] }], add: 10 }],
@@ -298,11 +308,12 @@ export const ch1Policies: PolicyTemplate[] = [
     firewoodShare: 0.6,
     monthMods: [{ stat: 'yield.wood', op: 'mul', value: 1.2 }],
     scene: { bg: '{camp}', subjects: ['sub.firewood'], overlay: '{weather}' },
-    steps: { early: [{ kind: 'narrate', narrative: 'stockpile_month', effects: [{ type: 'flag', id: 'wood_shed', set: true }] }] },
+    steps: { early: [{ kind: 'narrate', narrative: 'stockpile_month', effects: [{ type: 'facility', id: 'wood_shed', level: 1 }] }] },
   },
   {
     // 가죽 손질과 겨울옷 (P5)
     id: 'tan_hides',
+    slot: 'growth',
     category: 'craft',
     appearsWhen: [{ type: 'goods', id: 'hide', min: 6 }, { type: 'knowledge', id: 'fur_clothes', has: false }],
     relevance: [{ when: [{ type: 'season', in: ['autumn'] }], add: 15 }],
@@ -316,6 +327,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 갈대호수 찾아가기 (P6): 만난 뒤에는 직접 찾아가 바꾼다
     id: 'reed_lake_visit',
+    slot: 'growth',
     category: 'trade',
     appearsWhen: [{ type: 'flag', id: 'reed_lake_met' }, warm, { type: 'goods', id: 'hide', min: 3 }],
     priority: 33,
@@ -332,6 +344,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 숲의 사슴: 여름·가을에 북쪽 숲 (가까워 여러 번 나른다)
     id: 'forest_hunt',
+    slot: 'food',
     category: 'hunt',
     appearsWhen: [{ type: 'season', in: ['summer', 'autumn'] }, { type: 'animal', id: 'red_deer', state: ['scattered'] }],
     priority: 36,
@@ -367,6 +380,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 열매와 견과 (오래 가는 겨울 식량)
     id: 'nut_gather',
+    slot: 'food',
     category: 'gather',
     appearsWhen: [{ type: 'monthOfYear', in: ['fruit', 'reindeer'] }],
     priority: 34,
@@ -382,6 +396,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 순록 떼 대사냥 (C1). 기록 1달
     id: 'reindeer_big_hunt',
+    slot: 'major',
     category: 'hunt',
     appearsWhen: [{ type: 'animal', id: 'reindeer', state: ['migrating'] }, { type: 'season', in: ['autumn'] }],
     relevance: [{ when: [{ type: 'foodDays', max: 25 }], add: 20 }],
@@ -436,6 +451,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 소규모 사냥 + 겨울 준비 (시안의 방침): 사냥꾼 6명이 낙오자를 노리고 나머지는 장작
     id: 'small_hunt_prep',
+    slot: 'food',
     category: 'hunt',
     appearsWhen: [{ type: 'animal', id: 'reindeer', state: ['migrating'] }, { type: 'season', in: ['autumn'] }],
     priority: 40,
@@ -468,6 +484,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 끌개 엮기 (P7): 장인이 끌개를 엮는다 → 운반 한계가 오른다
     id: 'make_sled',
+    slot: 'growth',
     category: 'craft',
     appearsWhen: [artisanReady, { type: 'knowledge', id: 'sled', has: false }, { type: 'season', in: ['summer', 'autumn', 'winter'] }],
     relevance: [{ when: [{ type: 'flag', id: 'ikki_idea_sled' }], add: 20 }],
@@ -498,6 +515,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 얼음 낚시 도구 (P8): 뼈 작살과 얼음 깨는 돌망치 → 겨울 식량원
     id: 'ice_tools',
+    slot: 'growth',
     category: 'craft',
     appearsWhen: [artisanReady, { type: 'knowledge', id: 'ice_fishing', has: false }, { type: 'season', in: ['autumn', 'winter'] }],
     relevance: [
@@ -530,6 +548,7 @@ export const ch1Policies: PolicyTemplate[] = [
   },
   {
     id: 'winter_prep',
+    slot: 'growth',
     category: 'firewood',
     appearsWhen: [{ type: 'season', in: ['autumn', 'winter'] }],
     relevance: [{ when: [{ type: 'firewoodDays', max: 10 }], add: 40 }],
@@ -546,6 +565,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 묻어 둔 고기 회수 (C1, S9): 묻은 곳마다 후보가 하나씩
     id: 'recover_cache',
+    slot: 'food',
     category: 'food',
     appearsWhen: [{ type: 'cache' }],
     relevance: [{ when: [{ type: 'foodDays', max: 10 }], add: 30 }],
@@ -582,6 +602,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 얼음 구멍 낚시와 장작: 얼음 낚시를 모르면 조금, 알면 겨울 식량원 (P8)
     id: 'ice_hole_fishing',
+    slot: 'food',
     category: 'gather',
     appearsWhen: [{ type: 'season', in: ['winter'] }],
     relevance: [{ when: [{ type: 'knowledge', id: 'ice_fishing' }], add: 20 }],
@@ -595,6 +616,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 올가미 (기록 3~4달): 같은 자리를 쓰면 토끼가 준다 (강가의 'snare' 재고)
     id: 'snare_hunt',
+    slot: 'food',
     category: 'trap',
     appearsWhen: [{ type: 'season', in: ['autumn', 'winter'] }, { type: 'person', match: { skill: { id: 'craft', min: 1 }, ailing: false } }],
     relevance: [{ when: [{ type: 'season', in: ['winter'] }], add: 15 }],
@@ -611,6 +633,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 눈 위의 사슴 사냥 (C6): 서리의 옛이야기가 사슴이 어디로 내려오는지 알려 준다
     id: 'deer_hunt_snow',
+    slot: 'food',
     category: 'hunt',
     appearsWhen: [{ type: 'season', in: ['winter'] }],
     relevance: [
@@ -679,6 +702,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 아픈 사람 간호 (C5): 노을이 돌본다. 버드나무 껍질이 있으면 확실하다
     id: 'nurse_sick',
+    slot: 'growth',
     category: 'care',
     appearsWhen: [healerReady, { type: 'person', match: { ailing: true } }],
     relevance: [{ when: [{ type: 'person', match: { seat: 'elder', ailing: true } }], add: 20 }],
@@ -717,6 +741,7 @@ export const ch1Policies: PolicyTemplate[] = [
   },
   {
     id: 'hold_and_ration',
+    slot: 'food',
     category: 'hold',
     appearsWhen: [],
     priority: 10,

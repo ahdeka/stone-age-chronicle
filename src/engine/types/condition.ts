@@ -47,6 +47,8 @@ export type Condition =
   | { type: 'flag'; id: Id; present?: boolean; sinceMonths?: NumRange }
   | ({ type: 'counter'; id: Id } & NumRange)
   | { type: 'knowledge'; id: Id; has?: boolean }
+  /** 시설 단계 (없으면 1 이상인가) */
+  | ({ type: 'facility'; id: Id } & NumRange)
   | { type: 'clue'; id: Id; has?: boolean }
   /** 은닉물. known: 상태를 최근에 확인했는가 */
   | { type: 'cache'; at?: Id; known?: boolean; has?: boolean }

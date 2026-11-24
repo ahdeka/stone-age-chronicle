@@ -3,7 +3,7 @@
 
 import type { ChapterDefinition, Command, DebugOp, GameState, ReduceResult } from '../types';
 import { addCohesion, killPerson, setFlag } from '../effects/apply';
-import { choosePolicy, chooseOption, forceEvent, nextMonth, runCtx } from '../month/month';
+import { choosePlan, chooseOption, forceEvent, nextMonth, runCtx } from '../month/month';
 
 function applyDebug(def: ChapterDefinition, s: GameState, d: DebugOp): string | undefined {
   switch (d.op) {
@@ -39,8 +39,8 @@ export function applyCommand(def: ChapterDefinition, s: GameState, cmd: Command)
   if (s.chapterId !== def.id) return 'error.chapterMismatch';
   if (s.step === 'ended') return 'error.gameEnded';
   switch (cmd.type) {
-    case 'choosePolicy':
-      return choosePolicy(def, s, cmd.uid);
+    case 'choosePlan':
+      return choosePlan(def, s, cmd.uids);
     case 'chooseOption':
       return chooseOption(def, s, cmd.uid, cmd.optionId);
     case 'nextMonth':

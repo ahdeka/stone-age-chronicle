@@ -1,7 +1,7 @@
 // 테스트 공용 도구
 
 import { ch1 as realCh1 } from '../data/chapters/ch1/chapter';
-import { applyCommand, availableOptions, createGame, type ChapterDefinition, type Command, type GameState, type PolicyTemplate } from '../engine';
+import { applyCommand, availableOptions, createGame, findPolicy, type ChapterDefinition, type Command, type GameState, type PolicyTemplate } from '../engine';
 
 export const ch1 = realCh1;
 
@@ -32,11 +32,23 @@ export function run(def: ChapterDefinition, s: GameState, cmd: Command): GameSta
   return next;
 }
 
-/** 후보 중 이 방침을 고른다 */
-export function pick(def: ChapterDefinition, s: GameState, policyId: string): GameState {
+function candidate(s: GameState, policyId: string) {
   const c = s.work.candidates.find((x) => x.policyId === policyId);
   if (!c) throw new Error(`policy not in candidates: ${policyId} (have ${s.work.candidates.map((x) => x.policyId).join(', ')})`);
-  return run(def, s, { type: 'choosePolicy', uid: c.uid });
+  return c;
+}
+
+/** 후보 중 이 전략을 고른다. 발전 전략만 주면 식량 칸은 버티기 방침으로 채운다. growthId로 발전을 붙인다 */
+export function pick(def: ChapterDefinition, s: GameState, policyId: string, growthId?: string): GameState {
+  const c = candidate(s, policyId);
+  const uids = [c.uid];
+  if (findPolicy(def, c.policyId).slot === 'growth') {
+    const fb = s.work.candidates.find((x) => findPolicy(def, x.policyId).fallback);
+    if (!fb) throw new Error('no fallback policy among candidates');
+    uids.unshift(fb.uid);
+  }
+  if (growthId) uids.push(candidate(s, growthId).uid);
+  return run(def, s, { type: 'choosePlan', uids });
 }
 
 /** 결정 대기 중이면 이 선택지를 고른다 */
@@ -49,6 +61,7 @@ export function choose(def: ChapterDefinition, s: GameState, optionId: string): 
 /** 마을에 머무는 단순한 방침 (원정대 없음, 판정 없음) */
 export const STAY: PolicyTemplate = {
   id: 'test_stay',
+  slot: 'food',
   category: 'test',
   appearsWhen: [],
   priority: 1000,

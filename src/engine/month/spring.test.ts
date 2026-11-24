@@ -52,7 +52,7 @@ describe('말리기와 장작 한계', () => {
   it('장작은 쌓아 둘 수 있는 만큼만 (천막 700kg, 덧집 +600, 바위굴 +900)', () => {
     const s = springGame();
     expect(stat(ch1, s, 'firewood.cap')).toBe(700);
-    s.flags['wood_shed'] = 1;
+    s.facilities['wood_shed'] = 1;
     expect(stat(ch1, s, 'firewood.cap')).toBe(1300);
     s.shelter.kind = 'rock_cave';
     expect(stat(ch1, s, 'firewood.cap')).toBe(2200);
@@ -73,18 +73,19 @@ describe('묻은 고기 회수와 짐꾼 (S9, S10)', () => {
     expect(rec.length).toBeGreaterThan(0);
     for (const c of rec) expect(['reindeer_ford', 'north_forest']).toContain(c.place);
     // 고르면 그 곳이 이번 달의 곳이 된다
-    const chosen = run(ch1, s, { type: 'choosePolicy', uid: rec[0]!.uid });
-    expect(chosen.work.place).toBe(rec[0]!.place);
+    const chosen = run(ch1, s, { type: 'choosePlan', uids: [rec[0]!.uid] });
+    expect(chosen.work.plan[0]!.place).toBe(rec[0]!.place);
   });
 
   it('짐꾼은 4일 이내의 곳에서만, 나를 수 있는 만큼 나르고 마을 일이 준다', () => {
     const s = newGame('porters');
-    s.work.place = 'reindeer_ford';
+    const hunt = s.work.candidates.find((c) => c.policyId === 'reindeer_big_hunt')!;
+    s.work.plan = [{ slot: 'major', bound: { ...hunt, crew: [] }, place: 'reindeer_ford', haul: [] }];
     expect(leftoverAvailable(ch1, s, 'porters')).toBe(true);
-    s.work.place = 'reed_lake';
+    s.work.plan[0]!.place = 'reed_lake';
     expect(leftoverAvailable(ch1, s, 'porters')).toBe(false);
-    s.work.place = 'reindeer_ford';
-    s.work.haul = [{ kind: 'raw_meat', kg: 300 }];
+    s.work.plan[0]!.place = 'reindeer_ford';
+    s.work.plan[0]!.haul = [{ kind: 'raw_meat', kg: 300 }];
     s.step = 'decision';
     s.work.phasesDone = 2;
     s.work.reports.push({ slot: 'late', scene: { bg: 'bg.steppe' }, lines: [], deltas: {}, rows: [], alerts: [], from: { food: 0, firewood: 0 } });

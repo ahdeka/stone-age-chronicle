@@ -3,6 +3,7 @@ import { ch1, newGame, pick } from '../../test/fixtures';
 import { firstChoice, playMonths } from '../headless';
 import { createGame } from '../core/createGame';
 import { deserialize, serialize, SAVE_FORMAT } from './save';
+import { SAVE_VERSION } from './version';
 
 describe('저장/불러오기', () => {
   it('결정 대기 중에 저장해도 그대로 돌아오고, 이어서 진행한 결과가 같다', () => {
@@ -31,13 +32,13 @@ describe('저장/불러오기', () => {
     const r = deserialize(file);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.saveVersion).toBe(3);
+    expect(r.state.saveVersion).toBe(SAVE_VERSION);
     expect(r.state.shelter.units).toBe(1);
     expect(r.state.work.advice).toEqual([]);
     expect(r.state.work.reports[0]!.rows).toEqual([]);
   });
 
-  it('v2 저장 파일은 v3으로 옮겨지고 부족 이름은 빈 문자열(= 기본 이름)이 된다', () => {
+  it('v2 저장 파일은 최신으로 옮겨지고 부족 이름은 빈 문자열(= 기본 이름)이 된다', () => {
     const v2 = structuredClone(newGame('mig3')) as unknown as Record<string, unknown>;
     v2['saveVersion'] = 2;
     delete v2['tribeName'];
@@ -45,8 +46,37 @@ describe('저장/불러오기', () => {
     const r = deserialize(file);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.saveVersion).toBe(3);
+    expect(r.state.saveVersion).toBe(SAVE_VERSION);
     expect(r.state.tribeName).toBe('');
+  });
+
+  it('v3 저장 파일: 고른 방침은 주 전략으로, 장작 덧집 깃발은 시설로 옮겨진다', () => {
+    const s = pick(ch1, newGame('mig4'), 'reindeer_big_hunt');
+    const v3 = structuredClone(s) as unknown as Record<string, unknown>;
+    v3['saveVersion'] = 3;
+    delete v3['facilities'];
+    delete v3['projects'];
+    (v3['flags'] as Record<string, number>)['wood_shed'] = 1;
+    const w = v3['work'] as Record<string, unknown>;
+    const entry = s.work.plan[0]!;
+    w['chosen'] = entry.bound;
+    w['place'] = entry.place;
+    w['haul'] = [{ kind: 'raw_meat', kg: 40 }];
+    delete w['plan'];
+    delete w['planIndex'];
+    delete w['savings'];
+    v3['history'] = s.history.map(({ policyIds, ...h }) => ({ ...h, policyId: policyIds[0] }));
+    const file = JSON.stringify({ format: SAVE_FORMAT, generation: 'monthly', saveVersion: 3, chapterId: 'ch1', savedAt: null, state: v3 });
+    const r = deserialize(file);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.saveVersion).toBe(SAVE_VERSION);
+    expect(r.state.facilities).toEqual({ wood_shed: 1 });
+    expect(r.state.projects).toEqual({});
+    expect(r.state.work.plan).toEqual([{ slot: 'food', bound: entry.bound, place: entry.place, haul: [{ kind: 'raw_meat', kg: 40 }] }]);
+    expect(r.state.work.haul).toEqual([]);
+    expect(r.state.work.savings).toEqual([]);
+    expect(r.state.history.map((h) => h.policyIds)).toEqual(s.history.map((h) => h.policyIds));
   });
 
   it('부족 이름이 저장 왕복에서 그대로 남는다', () => {

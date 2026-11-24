@@ -1,22 +1,28 @@
 // 순마다의 마을 살림 (DESIGN.md §4.2 4~8번): 마을 일, 먹기, 장작, 부패, 건강
 
-import type { ChapterDefinition, GameState, Line, Person } from '../types';
-import { addCohesion, alert, applyNarrative, injurePerson, killPerson, ledger, type RunCtx } from '../effects/apply';
-import { findAilment, findPlace, findPolicy, monthDef, phaseNo } from '../core/lookup';
+import type { ChapterDefinition, FoodLot, GameState, Id, Line, Person } from '../types';
+import { addCohesion, alert, applyEffects, applyNarrative, injurePerson, killPerson, ledger, type RunCtx } from '../effects/apply';
+import { byId, findAilment, findPlace, findPolicy, monthDef, phaseNo } from '../core/lookup';
+import { planCrew } from '../policy/current';
 import { ageYears, bandDef, dailyFood, isVulnerable, laborUnits, living } from '../people/people';
 import { chance } from '../rng/rng';
-import { firewoodPerDay, stat } from '../stats/stats';
+import { firewoodPerDay, getStat, stat, type SourceFilter } from '../stats/stats';
 import { addLot, eat, spoil, totalKg } from '../stores/food';
 
-const byId = (a: Person, b: Person) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+const byPersonId = (a: Person, b: Person) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 function days(def: ChapterDefinition): number {
   return def.balance.daysPerPhase;
 }
 
-/** 마을에서 일하는 사람 (원정대 제외, 일할 수 있는 사람) */
+/** "덕분에" 줄로 보이는 발전의 출처: 지은 것과 아는 것 (거처는 장작 아낀 양에만) */
+export const BONUS_PREFIXES = ['facility.', 'knowledge.'] as const;
+const SAVING_PREFIXES = [...BONUS_PREFIXES, 'shelter.'] as const;
+const isBonusSource = (src: string) => BONUS_PREFIXES.some((p) => src.startsWith(p));
+
+/** 마을에서 일하는 사람 (두 칸 전략의 무리 제외, 일할 수 있는 사람) */
 export function villageWorkers(def: ChapterDefinition, state: GameState): Person[] {
-  const away = new Set(state.work.chosen?.crew ?? []);
+  const away = planCrew(state);
   return living(state).filter((p) => !away.has(p.id) && laborUnits(def, state, p) > 0);
 }
 
@@ -30,40 +36,107 @@ function push(state: GameState, line: Line): void {
   state.work.reports[state.work.reports.length - 1]!.lines.push(line);
 }
 
-export function chores(ctx: RunCtx): void {
-  const { def, state } = ctx;
+/** 마을 일손 중 장작에 쓰는 비율: 전략이 정한 값 중 가장 큰 것, 없으면 장작 사정에 따라 자동 */
+export function firewoodShare(def: ChapterDefinition, state: GameState): number {
+  let share: number | undefined;
+  for (const e of state.work.plan) {
+    const v = findPolicy(def, e.bound.policyId).firewoodShare;
+    if (v !== undefined) share = Math.max(share ?? 0, v);
+  }
+  if (share !== undefined) return share;
+  const target = firewoodPerDay(def, state) * days(def) * def.balance.chores.firewoodTargetPhases;
+  return state.stores.firewood < target ? def.balance.chores.firewoodShareLow : def.balance.chores.firewoodShareNormal;
+}
+
+export interface YieldHarvest {
+  yid: Id;
+  kind: Id;
+  kg: number;
+  /** 발전 출처마다 늘려 준 몫 (합은 kg를 넘지 않는다) */
+  bonus: Record<string, number>;
+}
+
+/** 이번 순 마을 일의 기대 수확 (상태를 바꾸지 않는다). 재고 비율(고갈)을 반영한다 */
+export function villageHarvest(def: ChapterDefinition, state: GameState): { wood: number; food: YieldHarvest[] } {
   const d = days(def);
   const units = villageUnits(def, state);
   const m = monthDef(def, state);
-  const target = firewoodPerDay(def, state) * d * def.balance.chores.firewoodTargetPhases;
-  const chosen = state.work.chosen ? findPolicy(def, state.work.chosen.policyId) : undefined;
-  const share =
-    chosen?.firewoodShare ?? (state.stores.firewood < target ? def.balance.chores.firewoodShareLow : def.balance.chores.firewoodShareNormal);
-
-  // 장작은 쌓아 둘 수 있는 만큼만 (천막은 비에 젖는다. 굴과 장작 덧집이 한계를 올린다)
+  const share = firewoodShare(def, state);
   const room = Math.max(0, stat(def, state, 'firewood.cap') - state.stores.firewood);
   const wood = Math.min(room, units * share * m.woodPerWorkerDay * d * stat(def, state, 'yield.wood'));
-  state.stores.firewood += wood;
-  ledger(state, 'firewood', wood, 'village.wood');
 
   const camp = findPlace(def, state.campPlace);
   const cs = state.places[camp.id];
-  const yields = camp.yields[m.season] ?? {};
-  let food = 0;
-  for (const [yid, per] of Object.entries(yields)) {
+  const food: YieldHarvest[] = [];
+  for (const [yid, per] of Object.entries(camp.yields[m.season] ?? {})) {
     if (per === undefined) continue;
     const yd = def.yields.find((y) => y.id === yid);
     if (!yd) throw new Error(`unknown yield: ${yid}`);
     const max = camp.stockMax[yid];
     const factor = max !== undefined && max > 0 && cs ? Math.max(0, (cs.stock[yid] ?? max) / max) : 1;
-    const got = units * (1 - share) * per * factor * stat(def, state, `yield.${yid}`);
-    if (cs && max !== undefined) cs.stock[yid] = Math.max(0, (cs.stock[yid] ?? max) - got);
-    addLot(state.stores.food, yd.foodKind, got);
-    food += got;
+    const key = `yield.${yid}`;
+    const full = getStat(def, state, key);
+    const raw = units * (1 - share) * per * factor;
+    const kg = Math.max(0, raw * full.value);
+    food.push({ yid, kind: yd.foodKind, kg, bonus: bonusShares(def, state, key, full.parts.map((p) => p.source), raw, kg) });
   }
-  ledger(state, 'food', food, 'village.gather');
+  return { wood, food };
+}
+
+/** 발전 출처마다 늘려 준 몫. 따로 뺀 값의 합이 모두 뺀 값과 같도록 나눈다 */
+function bonusShares(def: ChapterDefinition, state: GameState, key: string, sources: string[], raw: number, kg: number): Record<string, number> {
+  const ids = [...new Set(sources.filter(isBonusSource))];
+  if (ids.length === 0 || kg <= 0) return {};
+  const without = (f: SourceFilter) => Math.max(0, raw * stat(def, state, key, f));
+  const total = kg - without(isBonusSource);
+  if (total <= 0) return {};
+  const each = ids.map((id) => ({ id, v: Math.max(0, kg - without((src) => src === id)) }));
+  const sum = each.reduce((a, x) => a + x.v, 0);
+  const out: Record<string, number> = {};
+  for (const x of each) if (x.v > 0) out[x.id] = sum > 0 ? (total * x.v) / sum : 0;
+  return out;
+}
+
+/** 발전 덕분에 아낀 양을 이번 달 기록에 더한다 */
+export function addSaving(state: GameState, res: Id, source: string, kg: number): void {
+  if (kg < 1e-6) return;
+  const row = state.work.savings.find((x) => x.res === res && x.source === source);
+  if (row) row.kg += kg;
+  else state.work.savings.push({ res, source, kg });
+}
+
+/** 지은 것이 순마다 저절로 하는 일 (건조대가 날것을 말린다 등) */
+export function facilityWork(ctx: RunCtx): void {
+  const { def, state } = ctx;
+  for (const [id, level] of Object.entries(state.facilities)) {
+    if (level <= 0) continue;
+    const f = byId(def.facilities, id, 'facility');
+    if (f.perPhase) applyEffects({ ...ctx, crew: [], source: `facility.${id}`, group: 'village' }, f.perPhase);
+  }
+}
+
+export function chores(ctx: RunCtx): void {
+  const { def, state } = ctx;
+  const h = villageHarvest(def, state);
+  state.stores.firewood += h.wood;
+  ledger(state, 'firewood', h.wood, 'village.wood');
+
+  const camp = findPlace(def, state.campPlace);
+  const cs = state.places[camp.id];
+  let food = 0;
+  const bonus: Record<string, number> = {};
+  for (const y of h.food) {
+    if (cs && camp.stockMax[y.yid] !== undefined) cs.stock[y.yid] = Math.max(0, (cs.stock[y.yid] ?? camp.stockMax[y.yid]!) - y.kg);
+    addLot(state.stores.food, y.kind, y.kg);
+    food += y.kg;
+    for (const [src, kg] of Object.entries(y.bonus)) bonus[src] = (bonus[src] ?? 0) + kg;
+  }
+  // 정산표: 마을 수확에서 발전이 늘려 준 몫을 "덕분에" 줄로 따로 (합은 그대로)
+  const extra = Object.values(bonus).reduce((a, x) => a + x, 0);
+  ledger(state, 'food', food - extra, 'village.gather');
+  for (const [src, kg] of Object.entries(bonus)) ledger(state, 'food', kg, `bonus.${src}`);
   // 마을 서술: 몇 명이 무엇을 얼마나 했는가 (변형은 계절, 날씨, 장작 사정을 따른다)
-  state.work.vars['wood'] = Math.round(wood);
+  state.work.vars['wood'] = Math.round(h.wood);
   state.work.vars['gathered'] = Math.round(food);
   state.work.vars['villagers'] = villageWorkers(def, state).length;
   if (state.work.vars['villagers'] === 0) push(state, { key: 'line.village.empty', group: 'village' });
@@ -74,7 +147,7 @@ export function consume(ctx: RunCtx): void {
   const { def, state } = ctx;
   const d = days(def);
   const r = def.balance.ration;
-  const people = living(state).sort(byId);
+  const people = living(state).sort(byPersonId);
   const need = people.reduce((a, p) => a + dailyFood(def, state, p), 0) * d;
   if (need <= 0) return;
   const cap = Math.min(1, stat(def, state, 'ration.cap'));
@@ -103,6 +176,9 @@ export function consume(ctx: RunCtx): void {
 export function burnFirewood(ctx: RunCtx): void {
   const { def, state } = ctx;
   const burn = firewoodPerDay(def, state) * days(def);
+  for (const src of savingSources(def, state)) {
+    addSaving(state, 'firewood', src, firewoodPerDay(def, state, (x) => x === src) * days(def) - burn);
+  }
   if (state.stores.firewood >= burn) {
     state.stores.firewood -= burn;
     ledger(state, 'firewood', -burn, 'upkeep.firewood');
@@ -115,20 +191,43 @@ export function burnFirewood(ctx: RunCtx): void {
   push(state, { key: 'line.cold', group: 'village' });
   state.work.notable = true;
   addCohesion(state, def, c.cohesion * short);
-  for (const p of living(state).sort(byId)) {
+  for (const p of living(state).sort(byPersonId)) {
     if (!isVulnerable(def, state, p)) continue;
     if (chance(state.rng, short * c.deathChance)) killPerson(ctx, p, 'cold');
     else if (p.ailments.length === 0 && chance(state.rng, short * c.sickChance)) injurePerson(ctx, p, c.sickness, 2);
   }
 }
 
+/** 장작·부패를 줄여 주는 발전 출처 (지금 걸려 있는 것) */
+function savingSources(def: ChapterDefinition, state: GameState): string[] {
+  const parts = [...getStat(def, state, 'firewood.burnMul').parts, ...getStat(def, state, 'spoil.mul').parts].map((p) => p.source);
+  const out = new Set(parts.filter((src) => SAVING_PREFIXES.some((p) => src.startsWith(p)) && !src.startsWith('shelter.')));
+  const shelter = `shelter.${state.shelter.kind}`;
+  if (findShelterMul(def, state) < 1) out.add(shelter);
+  return [...out];
+}
+
+function findShelterMul(def: ChapterDefinition, state: GameState): number {
+  return byId(def.shelters, state.shelter.kind, 'shelter').firewoodMul;
+}
+
+const cloneLots = (lots: readonly FoodLot[]): FoodLot[] => lots.map((l) => ({ ...l }));
+
 export function spoilFood(ctx: RunCtx): void {
   const { def, state } = ctx;
   const temp = monthDef(def, state).temp;
   const mul = stat(def, state, 'spoil.mul');
+  // 발전 덕분에 덜 상한 양 (그 출처를 뺐다면 더 상했을 양)
+  for (const p of getStat(def, state, 'spoil.mul').parts) {
+    if (!isBonusSource(p.source)) continue;
+    const worse = spoil(def, cloneLots(state.stores.food), temp, stat(def, state, 'spoil.mul', (x) => x === p.source));
+    const now = spoil(def, cloneLots(state.stores.food), temp, mul);
+    addSaving(state, 'food', p.source, worse - now);
+  }
   const lost = spoil(def, state.stores.food, temp, mul);
   ledger(state, 'food', -lost, 'spoil');
   spoil(def, state.work.haul, temp, mul);
+  for (const e of state.work.plan) spoil(def, e.haul, temp, mul);
   for (const c of state.caches) spoil(def, c.lots, temp, mul * def.balance.cache.spoilMul);
 }
 
@@ -136,7 +235,7 @@ export function health(ctx: RunCtx): void {
   const { def, state } = ctx;
   const r = def.balance.ration;
   const now = phaseNo(state);
-  for (const p of living(state).sort(byId)) {
+  for (const p of living(state).sort(byPersonId)) {
     // 회복
     const healed = p.ailments.filter((a) => a.healsAt <= now);
     if (healed.length > 0) {
@@ -174,6 +273,7 @@ export function health(ctx: RunCtx): void {
 }
 
 export function upkeep(ctx: RunCtx): void {
+  facilityWork(ctx);
   chores(ctx);
   consume(ctx);
   burnFirewood(ctx);

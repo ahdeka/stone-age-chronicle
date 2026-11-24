@@ -78,6 +78,8 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     places,
     animals: structuredClone(preset.animals),
     knowledge: { has: [...preset.knowledge], progress: {} },
+    facilities: {},
+    projects: {},
     clues: [],
     caches: [],
     scheduled: [],

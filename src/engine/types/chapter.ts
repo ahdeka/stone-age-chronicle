@@ -2,7 +2,7 @@
 
 import type { AgeBand, Amount, Hint, Id, Sex, Tier } from './common';
 import type { Condition } from './condition';
-import type { ModifierDef } from './effect';
+import type { Effect, ModifierDef } from './effect';
 import type { EventDef, Narrative, PolicyTemplate, SceneSpec } from './content';
 import type { AnimalState } from './state';
 
@@ -104,6 +104,16 @@ export interface KnowledgeDef {
   id: Id;
   need: number;
   mods: ModifierDef[];
+}
+
+/** 시설: 지은 것 (지식은 아는 것). 단계가 있고, 단계가 1 이상이면 모디파이어가 걸린다.
+ *  단계별 차이는 모디파이어의 when에 { type: 'facility', id, min }을 둔다 */
+export interface FacilityDef {
+  id: Id;
+  max: number;
+  mods: ModifierDef[];
+  /** 순마다 저절로 하는 일 (예: 건조대가 날것을 말린다). 마을 살림 전에 적용 */
+  perPhase?: Effect[];
 }
 
 export interface ClueDef {
@@ -277,15 +287,30 @@ export interface ChapterBalance {
     thresholds: Record<Exclude<Tier, 'disaster'>, number>;
   };
   hint: { sure: number; fair: number };
-  policy: { slots: number; urgentSlots: number; urgentFoodDays: number; maxPerCategory: number; jitter: number; maxCacheTargets: number };
-  events: { villageChancePerMonth: number; maxPerMonth: number };
+  policy: {
+    /** 식량 칸 후보 수 (버티기 포함). 식량이 urgentFoodDays일치 아래면 urgentFoodSlots */
+    foodSlots: number;
+    urgentFoodSlots: number;
+    /** 발전 칸 후보 수 ("발전하지 않는다"는 따로). 급할 때도 urgentGrowthSlots개는 보인다 */
+    growthSlots: number;
+    urgentGrowthSlots: number;
+    urgentFoodDays: number;
+    /** 한 칸 안에서 같은 분야 최대 개수 */
+    maxPerCategory: number;
+    jitter: number;
+    maxCacheTargets: number;
+    /** 짓다 만 공사의 점수 가산 (이어 가기 쉽게) */
+    projectBonus: number;
+  };
+  /** maxPerPhase: 한 순에 열리는 중간 사건 수 (두 칸이 모두 사건 창을 가져도) */
+  events: { villageChancePerMonth: number; maxPerMonth: number; maxPerPhase: number };
   cohesion: {
     max: number;
     deathCost: number;
     lowThreshold: number;
   };
   /** 기록용 연대기 기본 중요도 */
-  chronicle: { deathImportance: number };
+  chronicle: { deathImportance: number; builtImportance: number };
   /** 화면 기준값 */
   ui: {
     foodWarnDays: number;
@@ -318,6 +343,7 @@ export interface ChapterDefinition {
   ailments: AilmentDef[];
   traits: TraitDef[];
   knowledge: KnowledgeDef[];
+  facilities: FacilityDef[];
   clues: ClueDef[];
   content: {
     policies: PolicyTemplate[];

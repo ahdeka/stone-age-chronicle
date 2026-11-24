@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { STAY, ch1, choose, defWith, newGame, pick, run, sumLedger, tweakDef } from '../../test/fixtures';
 import { applyCommand, reduce } from '../core/reduce';
-import { firstChoice, playMonths } from '../headless';
+import { candidatesBySlot, firstChoice, playMonths } from '../headless';
 import { ageYears, band, dailyFoodTotal, living, population } from '../people/people';
 import { totalKg } from '../stores/food';
 import { workers } from '../conditions/evaluate';
-import { phaseNo } from '../core/lookup';
+import { findPolicy, phaseNo } from '../core/lookup';
 import type { ChapterDefinition, EventDef, GameState, PolicyTemplate } from '../types';
 
 /** 날씨를 맑음으로 고정하고 마을 사건을 끈 정의 */
@@ -40,6 +40,7 @@ const T_EVENT: EventDef = {
 
 const HAUL = (place: string, kg: number): PolicyTemplate => ({
   id: 'test_haul',
+  slot: 'food',
   category: 'test',
   appearsWhen: [],
   priority: 1000,
@@ -64,10 +65,15 @@ describe('게임 생성과 월초 보고', () => {
     for (const pp of preset.people) expect(ageYears(s, s.people[pp.id]!)).toBe(pp.age);
   });
 
-  it('방침 후보는 3~5개이고 버티기 방침이 늘 들어간다', () => {
+  it('후보는 칸별로: 식량 3~4개(버티기 포함), 발전 3개 이하, 큰 일 1개 이하 — 큰 일 → 식량 → 발전 순', () => {
     const s = newGame();
-    expect(s.work.candidates.length).toBeGreaterThanOrEqual(3);
-    expect(s.work.candidates.length).toBeLessThanOrEqual(5);
+    const by = candidatesBySlot(ch1, s);
+    expect(by.food.length).toBeGreaterThanOrEqual(3);
+    expect(by.food.length).toBeLessThanOrEqual(4);
+    expect(by.growth.length).toBeLessThanOrEqual(3);
+    expect(by.major.length).toBeLessThanOrEqual(1);
+    expect(s.work.candidates.map((c) => findPolicy(ch1, c.policyId).slot)).toEqual([...by.major, ...by.food, ...by.growth].map((c) => findPolicy(ch1, c.policyId).slot));
+    expect(by.food.some((c) => c.policyId === 'hold_and_ration')).toBe(true);
     expect(s.work.candidates.some((c) => c.policyId === 'hold_and_ration')).toBe(true);
   });
 
@@ -299,7 +305,7 @@ describe('세계의 기억', () => {
     const def = calm(undefined, [practice]);
     const s = plenty(newGame('kn', def));
     const need = def.knowledge.find((k) => k.id === 'ice_fishing')!.need;
-    playMonths(def, s, { pickPolicy: (_d, st) => st.work.candidates.find((c) => c.policyId === 'test_practice')!.uid, pickOption: (_d, _s, _x, o) => o[0]! }, need);
+    playMonths(def, s, { pickPlan: (_d, st) => [st.work.candidates.find((c) => c.policyId === 'test_practice')!.uid], pickOption: (_d, _s, _x, o) => o[0]! }, need);
     expect(s.knowledge.has).toContain('ice_fishing');
   });
 });
@@ -349,7 +355,7 @@ describe('결정론과 순수성', () => {
   it('reduce는 입력 상태를 바꾸지 않는다', () => {
     const s = newGame();
     const snapshot = JSON.stringify(s);
-    const r = reduce(ch1, s, { type: 'choosePolicy', uid: s.work.candidates[0]!.uid });
+    const r = reduce(ch1, s, { type: 'choosePlan', uids: [s.work.candidates[0]!.uid] });
     expect(r.error).toBeUndefined();
     expect(r.state).not.toBe(s);
     expect(JSON.stringify(s)).toBe(snapshot);
@@ -359,7 +365,7 @@ describe('결정론과 순수성', () => {
     const s = newGame();
     expect(reduce(ch1, s, { type: 'nextMonth' }).error).toBe('error.wrongStep');
     expect(reduce(ch1, s, { type: 'chooseOption', uid: 'x', optionId: 'y' }).error).toBe('error.wrongStep');
-    expect(reduce(ch1, s, { type: 'choosePolicy', uid: 'nope' }).error).toBe('error.unknownPolicy');
+    expect(reduce(ch1, s, { type: 'choosePlan', uids: ['nope'] }).error).toBe('error.unknownPolicy');
   });
 
   it('기본 정의로 1장을 끝까지 헤드리스로 진행할 수 있다', () => {

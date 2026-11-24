@@ -5,6 +5,7 @@ import { findPolicy, monthDef } from '../core/lookup';
 import { ageYears, bandDef, countBand, dailyFoodTotal, laborUnits, living, population } from '../people/people';
 import { totalKg } from '../stores/food';
 import { firewoodPerDay } from '../stats/stats';
+import { currentEntry, currentPlace } from '../policy/current';
 
 export function inRange(value: number, r: NumRange): boolean {
   if (r.min !== undefined && value < r.min) return false;
@@ -69,7 +70,7 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
       return c.count ? inRange(n, c.count) : n > 0;
     }
     case 'actor': {
-      const id = actors[c.slot] ?? (c.slot === 'leader' ? state.work.chosen?.leaderId : undefined);
+      const id = actors[c.slot] ?? (c.slot === 'leader' ? currentEntry(state)?.bound.leaderId : undefined);
       const p = id ? state.people[id] : undefined;
       if (!p) return false;
       return c.match ? matchPerson(def, state, p, c.match) : p.alive;
@@ -89,7 +90,7 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
       const a = state.animals[c.id];
       if (!a) return false;
       if (c.state && !c.state.includes(a.state)) return false;
-      if (c.at !== undefined && a.at !== (c.at === '$place' ? (state.work.place ?? state.campPlace) : c.at)) return false;
+      if (c.at !== undefined && a.at !== (c.at === '$place' ? (currentPlace(state) ?? state.campPlace) : c.at)) return false;
       if (c.known !== undefined && a.known !== c.known) return false;
       return true;
     }
@@ -122,19 +123,19 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
     case 'cache': {
       const stale = def.balance.cache.staleAfterMonths;
       // '$place': 이번 달 방침이 가는 곳 (후보를 만들 때는 그 후보의 곳)
-      const at = c.at === '$place' ? (state.work.place ?? state.campPlace) : c.at;
+      const at = c.at === '$place' ? (currentPlace(state) ?? state.campPlace) : c.at;
       const found = state.caches.filter(
         (x) => (at === undefined || x.place === at) && (c.known === undefined || state.month - x.checkedMonth < stale === c.known),
       );
       return found.length > 0 === (c.has ?? true);
     }
-    case 'policy': {
-      const chosen = state.work.chosen;
-      if (!chosen) return false;
-      if (c.id !== undefined && chosen.policyId !== c.id) return false;
-      if (c.category !== undefined && findPolicy(def, chosen.policyId).category !== c.category) return false;
-      return true;
-    }
+    case 'policy':
+      // 이번 달 전략 중 하나라도 맞으면 (두 칸 모두 본다)
+      return state.work.plan.some(
+        (e) => (c.id === undefined || e.bound.policyId === c.id) && (c.category === undefined || findPolicy(def, e.bound.policyId).category === c.category),
+      );
+    case 'facility':
+      return inRange(state.facilities[c.id] ?? 0, c.min === undefined && c.max === undefined ? { min: 1 } : c);
     case 'all':
       return c.of.every((x) => evaluate(def, state, x, actors));
     case 'any':

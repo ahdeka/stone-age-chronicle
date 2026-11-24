@@ -3,7 +3,7 @@
 import type { Hint, Id, Label, RngState, Sex, Tier } from './common';
 import type { Condition } from './condition';
 import type { ModifierDef } from './effect';
-import type { EventSlot, SceneSpec } from './content';
+import type { EventSlot, PolicySlot, SceneSpec } from './content';
 
 export interface Ailment {
   kind: Id;
@@ -91,10 +91,20 @@ export interface BoundPolicy {
   place?: Id;
 }
 
+/** 이번 달 전략 하나 (식량 칸, 발전 칸, 큰 일). 원정지와 짐은 전략마다 따로 들고 다닌다 */
+export interface PlanEntry {
+  slot: PolicySlot;
+  bound: BoundPolicy;
+  /** 원정지 (원정이 아니면 없음) */
+  place?: Id;
+  /** 원정지의 짐 (운반 전) */
+  haul: FoodLot[];
+}
+
 export type LineParamValue = string | number | Label;
 
 /** 서술 줄이 속한 무리. 화면은 같은 무리의 연속된 줄을 한 문단으로 묶는다 */
-export type LineGroup = 'crew' | 'village' | 'event' | 'people' | 'info';
+export type LineGroup = 'crew' | 'growth' | 'village' | 'event' | 'people' | 'info';
 
 export interface Line {
   key: string;
@@ -109,6 +119,13 @@ export interface LedgerLine {
   delta: number;
   /** 행 이름의 변수 (예: 잡은 마릿수, 먹은 사람 수). 같은 행을 합칠 때 숫자는 더한다 */
   params?: Record<string, number>;
+}
+
+/** 발전 덕분에 아낀 양 (장부의 증감이 아니다: "바위굴이라 장작 300kg을 아꼈다"). source는 'facility.x', 'knowledge.x', 'shelter.x' */
+export interface SavingLine {
+  res: Id;
+  source: string;
+  kg: number;
 }
 
 /** 사람에게 일어난 일 (진행 화면의 알림 카드) */
@@ -132,6 +149,8 @@ export interface PhaseReport {
   /** 이 단계의 장부 행 (출처별로 합친 것). res 'haul'은 원정지의 짐 */
   rows: LedgerLine[];
   alerts: Alert[];
+  /** 정산 단계만: 발전 덕분에 아낀 양 */
+  savings?: SavingLine[];
   /** 단계 시작과 끝의 마을 식량·장작 (굴러가는 숫자용) */
   from: { food: number; firewood: number };
   to?: { food: number; firewood: number };
@@ -157,15 +176,23 @@ export type Decision =
   | { uid: Id; kind: 'leftover'; kg: number };
 
 export interface MonthWork {
+  /** 칸별 후보 (큰 일 → 식량 → 발전 순). 칸은 방침 정의의 slot으로 안다 */
   candidates: BoundPolicy[];
-  chosen?: BoundPolicy;
+  /** 고른 전략: [식량, 발전?] 또는 [큰 일]. plan[0]이 주 전략 (장면, 연대기) */
+  plan: PlanEntry[];
+  /** 지금 단계를 실행하는 전략 (plan 인덱스). 마을 살림 중에는 없음 */
+  active?: number;
+  /** 진행 중인 순에서 다음에 실행할 전략 (plan 인덱스) */
+  planIndex: number;
+  /** 마지막으로 중간 사건이 열린 순 (phasesDone 값). 한 순에 사건 하나 */
+  lastEventPhase?: number;
   /** 이번 달 순별 날씨 */
   weather: [Id, Id, Id];
   /** 끝난 순 수 (0~3) */
   phasesDone: number;
-  /** 진행 중인 순에서 다음에 실행할 방침 단계 번호 */
+  /** 진행 중인 전략에서 다음에 실행할 단계 번호 */
   stepIndex: number;
-  /** 원정지의 짐 (운반 전) */
+  /** 전략에 속하지 않은 짐 (월초 사건 등). 하순 끝에 마을로 들인다 */
   haul: FoodLot[];
   decision?: Decision;
   reports: PhaseReport[];
@@ -176,8 +203,10 @@ export interface MonthWork {
   /** 평온한 달 판정을 깨는 일이 있었는가 (§19) */
   notable: boolean;
   chronicle?: { key: string; importance: number; params?: Record<string, LineParamValue> };
-  /** 원정 장소 (보고 장면용) */
-  place?: Id;
+  /** 후보를 만들 때 잠깐 놓는 '$place' (그 후보가 가는 곳) */
+  probePlace?: Id;
+  /** 발전 덕분에 아낀 양 (이달의 결과에 보인다) */
+  savings: SavingLine[];
   /** 직전 활동의 결과 맥락 ($caught, $meat 등) */
   vars: Record<string, number>;
   /** 마을 사건 판정을 이번 달에 했는가 */
@@ -193,7 +222,8 @@ export interface MonthWork {
 export interface MonthReport {
   month: number;
   monthId: Id;
-  policyId?: Id;
+  /** 고른 전략 id (plan 순서) */
+  policyIds: Id[];
   reports: PhaseReport[];
   ledger: LedgerLine[];
   quiet: boolean;
@@ -232,6 +262,10 @@ export interface GameState {
   places: Record<Id, PlaceState>;
   animals: Record<Id, AnimalState>;
   knowledge: { has: Id[]; progress: Record<Id, number> };
+  /** 시설 단계 (지은 것) */
+  facilities: Record<Id, number>;
+  /** 짓고 있는 공사: 시설 id → 지난 달 수 */
+  projects: Record<Id, number>;
   clues: { id: Id; until?: number }[];
   caches: Cache[];
   scheduled: Scheduled[];

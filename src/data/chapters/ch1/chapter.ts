@@ -15,6 +15,7 @@ import {
   ch1Ailments,
   ch1Animals,
   ch1Clues,
+  ch1Facilities,
   ch1FoodKinds,
   ch1GlobalMods,
   ch1Goods,
@@ -41,6 +42,7 @@ export const ch1: ChapterDefinition = {
   ailments: ch1Ailments,
   traits: ch1Traits,
   knowledge: ch1Knowledge,
+  facilities: ch1Facilities,
   clues: ch1Clues,
   content: {
     policies: ch1Policies,

@@ -1,9 +1,11 @@
 // 결정 팝업의 내용 만들기 + 하단 결정 바 (화면 시안 TurnModal)
 // 엔진 상태(방침 후보, 사건, 남은 고기)를 시트에 넣을 글과 카드로 바꾼다.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   crewSplit,
+  currentEntry,
+  currentPlace,
   findEvent,
   findPolicy,
   firewoodDays,
@@ -11,6 +13,7 @@ import {
   LEFTOVER_OPTIONS,
   leftoverAvailable,
   optionStatuses,
+  previewPlan,
   resolveSceneSpec,
   totalKg,
   workers,
@@ -18,6 +21,7 @@ import {
   type Command,
   type GameState,
   type Hint,
+  type PolicySlot,
   type SceneSpec,
 } from '../../engine';
 import type { Translator } from '../../i18n';
@@ -40,7 +44,12 @@ export interface Choice {
   scene?: SceneSpec;
   disabled?: boolean;
   lockText?: string;
+  /** 전략 칸 (전략 고르기에서만). 칸마다 하나씩 고른다 */
+  group?: PolicySlot;
 }
+
+/** "발전하지 않는다" 카드의 id (엔진 후보가 아니다) */
+export const NO_GROWTH = '__no_growth__';
 
 export interface DecisionModel {
   kind: 'policy' | 'event' | 'leftover';
@@ -53,9 +62,21 @@ export interface DecisionModel {
   intro?: { text: string; scene?: SceneSpec };
   choices: Choice[];
   command: (id: string) => Command;
+  /** 전략 고르기: 고른 카드들로 명령을 만들고, 고를 수 없는 조합이면 이유를 돌려준다 */
+  plan?: { command: (ids: string[]) => Command; check: (ids: string[]) => string | undefined };
 }
 
 const opt = (tr: Translator, key: string) => (tr.has(key) ? tr.t(key) : undefined);
+
+/** 발전 카드의 대가: 가장 앞의 식량 후보와 함께 고르면 마을 식량이 얼마나 주는가 */
+function growthCost(tr: Translator, def: ChapterDefinition, s: GameState, uid: string): string {
+  const food = s.work.candidates.find((c) => findPolicy(def, c.policyId).slot === 'food');
+  if (!food) return '';
+  const pv = previewPlan(def, s, [food.uid, uid]);
+  if (pv.error) return '';
+  const kg = Math.round(pv.growthFoodCostKg);
+  return kg > 0 ? tr.t('ui.plan.cost', { kg }) : '';
+}
 
 function keyChips(tr: Translator, def: ChapterDefinition, s: GameState): Chip[] {
   const days = Math.floor(foodDays(def, s));
@@ -95,7 +116,7 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
       title: tr.t('ui.sheet.policies'),
       chips: keyChips(tr, def, s),
       quotes,
-      choices: s.work.candidates.map((cand) => {
+      choices: [...s.work.candidates.map((cand) => {
         const p = findPolicy(def, cand.policyId);
         const leader = cand.leaderId ? s.people[cand.leaderId] : undefined;
         const split = crewSplit(def, s, cand);
@@ -113,12 +134,20 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
             ...((cand.place ?? p.place) ? { place: tr.t(`place.${cand.place ?? p.place}`) } : {}),
           }),
           cost: opt(tr, `policy.${p.id}.cost`),
-          crew: crewText,
+          crew: p.slot === 'growth' ? [crewText, growthCost(tr, def, s, cand.uid)].filter(Boolean).join(' · ') : crewText,
           hint: cand.hint,
           scene: resolveSceneSpec(def, s, p.scene, cand.place ?? p.place ?? s.campPlace, s.work.weather[0] ?? ''),
+          group: p.slot,
         };
-      }),
-      command: (uid) => ({ type: 'choosePolicy', uid }),
+      }), { id: NO_GROWTH, title: tr.t('ui.plan.noGrowth'), desc: tr.t('ui.plan.noGrowth.desc'), group: 'growth' as const }],
+      command: (uid) => ({ type: 'choosePlan', uids: [uid] }),
+      plan: {
+        command: (ids) => ({ type: 'choosePlan', uids: ids.filter((x) => x !== NO_GROWTH) }),
+        check: (ids) => {
+          const err = previewPlan(def, s, ids.filter((x) => x !== NO_GROWTH)).error;
+          return err ? tr.t(tr.has(`ui.plan.${err}`) ? `ui.plan.${err}` : 'ui.plan.error') : undefined;
+        },
+      },
     };
   }
   if (s.step !== 'decision' || !d) return undefined;
@@ -147,7 +176,7 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
   }
 
   const ev = findEvent(def, d.eventId);
-  const leaderId = s.work.chosen?.leaderId;
+  const leaderId = currentEntry(s)?.bound.leaderId;
   const quotes: Quote[] = [];
   for (const sp of ev.speakers ?? []) {
     const who = sp.who;
@@ -167,7 +196,7 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
     title: tr.t(`event.${ev.id}.title`),
     chips: keyChips(tr, def, s),
     quotes,
-    intro: { text: tr.t(`event.${ev.id}.text`), scene: resolveSceneSpec(def, s, ev.scene, s.work.place ?? s.campPlace, s.work.weather[1] ?? '') },
+    intro: { text: tr.t(`event.${ev.id}.text`), scene: resolveSceneSpec(def, s, ev.scene, currentPlace(s) ?? s.campPlace, s.work.weather[1] ?? '') },
     choices: optionStatuses(def, s, ev, d.actors).map(({ option, available, hint }) => ({
       id: option.id,
       title: tr.t(`event.${ev.id}.opt.${option.id}`),
@@ -180,6 +209,16 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
   };
 }
 
+/** 칸 제목 (전략 고르기에서 칸이 바뀌는 첫 카드 앞에) */
+function ChoiceGroup({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <>
+      {title && <div className={`${u.muted} ${u.small}`} style={{ margin: '12px 0 4px' }}>{title}</div>}
+      {children}
+    </>
+  );
+}
+
 interface PopupProps {
   model: DecisionModel;
   open: boolean;
@@ -190,15 +229,31 @@ interface PopupProps {
 /** 시트 + 하단 결정 바. 고른 것은 시트를 닫아도 남는다. 확정해야 다음으로 간다 */
 export function DecisionPopup({ model, open, setOpen, send }: PopupProps) {
   const tr = useT();
-  const [picked, setPicked] = useState<string | null>(null);
-  useEffect(() => setPicked(null), [model.key]);
+  // 고른 카드들. 전략 고르기는 칸마다 하나 (식량 + 발전, 또는 큰 일), 그 밖은 하나
+  const [picked, setPicked] = useState<string[]>([]);
+  useEffect(() => setPicked([]), [model.key]);
 
-  const pickedChoice = model.choices.find((c) => c.id === picked);
+  const toggle = useCallback(
+    (ch: Choice) =>
+      setPicked((prev) => {
+        if (prev.includes(ch.id)) return prev.filter((x) => x !== ch.id);
+        if (!model.plan || !ch.group) return [ch.id];
+        const groupOf = (id: string) => model.choices.find((c) => c.id === id)?.group;
+        const keep = prev.filter((id) => ch.group !== 'major' && groupOf(id) !== 'major' && groupOf(id) !== ch.group);
+        return [...keep, ch.id];
+      }),
+    [model],
+  );
+  const pickedChoices = picked.map((id) => model.choices.find((c) => c.id === id)).filter((c): c is Choice => !!c && !c.disabled);
+  const ready = model.plan ? pickedChoices.some((c) => c.group === 'food' || c.group === 'major') : pickedChoices.length === 1;
+  const planError = model.plan && ready ? model.plan.check(pickedChoices.map((c) => c.id)) : undefined;
+  const pickedChoice = ready ? pickedChoices[0] : undefined;
+  const pickedTitle = pickedChoices.map((c) => c.title).join(tr.t('ui.phase.planJoin'));
   const confirm = useCallback(() => {
-    if (!pickedChoice || pickedChoice.disabled) return;
+    if (!ready || planError || !pickedChoices[0]) return;
     setOpen(model.kind === 'policy' ? false : open);
-    send(model.command(pickedChoice.id));
-  }, [pickedChoice, model, send, setOpen, open]);
+    send(model.plan ? model.plan.command(pickedChoices.map((c) => c.id)) : model.command(pickedChoices[0].id));
+  }, [ready, planError, pickedChoices, model, send, setOpen, open]);
 
   // 키보드: 1~5 고르기, Enter 확정
   useEffect(() => {
@@ -208,7 +263,7 @@ export function DecisionPopup({ model, open, setOpen, send }: PopupProps) {
       const n = Number(e.key);
       if (n >= 1 && n <= 5) {
         const c = model.choices[n - 1];
-        if (c && !c.disabled) setPicked((p) => (p === c.id ? null : c.id));
+        if (c && !c.disabled) toggle(c);
       } else if (e.key === 'Enter' && pickedChoice && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
         confirm();
@@ -216,7 +271,7 @@ export function DecisionPopup({ model, open, setOpen, send }: PopupProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, model, pickedChoice, confirm]);
+  }, [open, model, pickedChoice, confirm, toggle]);
 
   const isPolicy = model.kind === 'policy';
   const startLabel = isPolicy ? tr.t('ui.sheet.startWith') : tr.t('ui.bar.confirm');
@@ -228,7 +283,7 @@ export function DecisionPopup({ model, open, setOpen, send }: PopupProps) {
         {pickedChoice ? (
           <>
             <span className={c.barText}>
-              {pickedLabel}: <b style={{ color: 'var(--accent)' }}>{pickedChoice.title}</b>
+              {pickedLabel}: <b style={{ color: 'var(--accent)' }}>{pickedTitle}</b>
             </span>
             <div className={c.barButtons}>
               <button type="button" className={u.btnGhost} onClick={() => setOpen(true)}>
@@ -275,11 +330,18 @@ export function DecisionPopup({ model, open, setOpen, send }: PopupProps) {
           pickedChoice ? (
             <>
               <span className={c.barText}>
-                {pickedLabel}: <b style={{ color: 'var(--accent)' }}>{pickedChoice.title}</b>
+                {pickedLabel}: <b style={{ color: 'var(--accent)' }}>{pickedTitle}</b>
+                {planError && <span className={u.muted}> · {planError}</span>}
               </span>
-              <button type="button" className={u.btnPrimary} onClick={confirm}>
-                {startLabel}
-              </button>
+              {planError ? (
+                <span className={u.btnDisabled} aria-disabled="true">
+                  {startLabel}
+                </span>
+              ) : (
+                <button type="button" className={u.btnPrimary} onClick={confirm}>
+                  {startLabel}
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -294,8 +356,8 @@ export function DecisionPopup({ model, open, setOpen, send }: PopupProps) {
         }
       >
         {model.choices.map((ch, i) => (
+          <ChoiceGroup key={ch.id} title={ch.group && ch.group !== model.choices[i - 1]?.group ? tr.t(`ui.plan.group.${ch.group}`) : undefined}>
           <ChoiceCard
-            key={ch.id}
             num={i + 1}
             title={ch.title}
             desc={ch.desc}
@@ -303,11 +365,12 @@ export function DecisionPopup({ model, open, setOpen, send }: PopupProps) {
             crew={ch.crew}
             hint={ch.hint}
             scene={ch.scene}
-            selected={picked === ch.id}
+            selected={picked.includes(ch.id)}
             disabled={ch.disabled}
             lockText={ch.lockText}
-            onPick={() => setPicked((p) => (p === ch.id ? null : ch.id))}
+            onPick={() => toggle(ch)}
           />
+          </ChoiceGroup>
         ))}
       </DecisionSheet>
     </>

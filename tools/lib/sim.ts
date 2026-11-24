@@ -4,6 +4,9 @@
 import {
   applyCommand,
   availableOptions,
+  candidatesBySlot,
+  firstChoice,
+  planWith,
   createGame,
   findEvent,
   optionStatuses,
@@ -19,16 +22,19 @@ import {
 export type StrategyName = 'random' | 'first' | 'sure';
 
 export function makeStrategy(name: StrategyName, rng: RngState): Strategy {
+  // 두 칸 전략 (M2 ③에서 foodmax·greedy를 더하고 리포트를 준비 정도별로 나눈다)
   if (name === 'first') {
-    return { pickPolicy: (_d, s) => s.work.candidates[0]!.uid, pickOption: (_d, _s, _x, o) => o[0]! };
+    return { pickPlan: firstChoice.pickPlan, pickOption: (_d, _s, _x, o) => o[0]! };
   }
   if (name === 'sure') {
-    // "거의 확실하다"만 고른다 (먹을거리를 모으는 분야 먼저). 사건 선택지도 '거의 확실하다'인 것 중 첫 번째
+    // 식량 칸: "거의 확실하다" 중 먹을거리를 모으는 분야 먼저 / 발전 칸: "거의 확실하다"인 첫 번째. 사건 선택지도 '거의 확실하다' 중 첫 번째
     return {
-      pickPolicy: (def, s) => {
-        const sure = s.work.candidates.filter((c) => c.hint === 'sure');
+      pickPlan: (def, s) => {
+        const by = candidatesBySlot(def, s);
+        const sure = by.food.filter((c) => c.hint === 'sure');
         const food = sure.find((c) => ['fish', 'gather', 'trap'].includes(def.content.policies.find((p) => p.id === c.policyId)!.category));
-        return (food ?? sure[0] ?? s.work.candidates[s.work.candidates.length - 1]!).uid;
+        const pick = food ?? sure[0] ?? by.food[by.food.length - 1]!;
+        return planWith(def, s, pick.uid, by.growth.find((c) => c.hint === 'sure')?.uid);
       },
       pickOption: (def, s, d, o) => {
         if (d.kind !== 'event') return o.includes('porters') ? 'porters' : o[0]!;
@@ -38,7 +44,15 @@ export function makeStrategy(name: StrategyName, rng: RngState): Strategy {
     };
   }
   return {
-    pickPolicy: (_d, s) => s.work.candidates[nextInt(rng, 0, s.work.candidates.length - 1)]!.uid,
+    // 식량 하나를 무작위로, 발전은 후보 + "하지 않는다" 중 무작위로. 큰 일은 식량 후보와 같은 자리로 친다
+    pickPlan: (def, s) => {
+      const by = candidatesBySlot(def, s);
+      const main = [...by.food, ...by.major];
+      const first = main[nextInt(rng, 0, main.length - 1)]!;
+      if (by.major.includes(first)) return [first.uid];
+      const g = nextInt(rng, 0, by.growth.length);
+      return planWith(def, s, first.uid, by.growth[g]?.uid);
+    },
     pickOption: (_d, _s, _x, o) => o[nextInt(rng, 0, o.length - 1)]!,
   };
 }
@@ -97,10 +111,12 @@ export function playGame(def: ChapterDefinition, seed: string, strategy: Strateg
         const err = applyCommand(def, s, { type: 'chooseOption', uid: d.uid, optionId: strat.pickOption(def, s, d, availableOptions(def, s, d)) });
         if (err) throw new Error(err);
       } else {
-        const uid = strat.pickPolicy(def, s);
-        const id = s.work.candidates.find((c) => c.uid === uid)!.policyId;
-        rec.picks[id] = (rec.picks[id] ?? 0) + 1;
-        const err = applyCommand(def, s, { type: 'choosePolicy', uid });
+        const uids = strat.pickPlan(def, s);
+        for (const uid of uids) {
+          const id = s.work.candidates.find((c) => c.uid === uid)!.policyId;
+          rec.picks[id] = (rec.picks[id] ?? 0) + 1;
+        }
+        const err = applyCommand(def, s, { type: 'choosePlan', uids });
         if (err) throw new Error(err);
       }
     }

@@ -42,7 +42,7 @@ export function GameView({ def, state, onChange, onQuit }: Props) {
         console.warn(r.error);
         return;
       }
-      if (cmd.type === 'choosePolicy') setView({ month: r.state.month, index: 1, summary: true });
+      if (cmd.type === 'choosePlan') setView({ month: r.state.month, index: 1, summary: true });
       if (cmd.type === 'nextMonth') setView(null);
       onChange(r.state);
     },

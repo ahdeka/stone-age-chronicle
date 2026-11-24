@@ -41,6 +41,24 @@ export const migrations: Record<number, Migration> = {
   },
   /** v2 → v3: 부족 이름. 이전 세이브는 빈 문자열(= 프리셋의 기본 이름)로 둔다 */
   2: (st) => ({ tribeName: '', ...st }),
+  /** v3 → v4: 전략 두 칸. 고른 방침 하나는 주 전략(식량 칸)으로 옮긴다. 칸은 방침 정의에서 다시 읽으므로 정확하지 않아도 된다.
+   *  1장의 장작 덧집은 깃발(wood_shed)이었다 → 시설로 */
+  3: (st) => {
+    const work = (st['work'] ?? {}) as Record<string, unknown>;
+    const { chosen, place, ...rest } = work;
+    const plan = chosen ? [{ slot: 'food', bound: chosen, ...(place ? { place } : {}), haul: Array.isArray(work['haul']) ? work['haul'] : [] }] : [];
+    const flags = (st['flags'] ?? {}) as Record<string, unknown>;
+    const history = Array.isArray(st['history'])
+      ? (st['history'] as Record<string, unknown>[]).map(({ policyId, ...h }) => ({ ...h, policyIds: policyId ? [policyId] : [] }))
+      : [];
+    return {
+      ...st,
+      facilities: flags['wood_shed'] !== undefined ? { wood_shed: 1 } : {},
+      projects: {},
+      history,
+      work: { ...rest, plan, planIndex: 0, savings: [], haul: chosen ? [] : (work['haul'] ?? []) },
+    };
+  },
 };
 
 export function serialize(state: GameState, savedAt: string | null = null): string {

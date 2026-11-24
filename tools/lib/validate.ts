@@ -1,7 +1,7 @@
 // 콘텐츠 검증 (npm run validate:content). DESIGN.md §12, §18, CLAUDE.md "재미 검증 도구"
 // 오류: 없는 id 참조, 중복 id, 없는 문자열, 고를 수 없는 구조 / 경고: 공짜 선택지, 문장 길이, 변형 부족, 도달 불가
 
-import type { ChapterDefinition, Condition, Effect, EventDef, Id, Narrative, PolicyStep, SceneSpec } from '../../src/engine';
+import type { ChapterDefinition, Condition, Effect, EventDef, Id, Narrative, PolicyStep, PolicyTemplate, SceneSpec } from '../../src/engine';
 import { MEASURES, PHASES } from '../../src/engine';
 import { PLACEHOLDER } from '../../src/i18n';
 import { isJosaFormat } from '../../src/i18n/josa';
@@ -44,6 +44,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     ailment: ids(def.ailments),
     trait: ids(def.traits),
     knowledge: ids(def.knowledge),
+    facility: ids(def.facilities),
     clue: ids(def.clues),
     month: ids(def.calendar.months),
     season: new Set(def.seasons),
@@ -71,6 +72,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   dupCheck('places', def.places);
   dupCheck('animals', def.animals);
   dupCheck('knowledge', def.knowledge);
+  dupCheck('facilities', def.facilities);
 
   // ── 참조 사용 기록 (도달 가능성 검사용) ──
   const scheduledEvents = new Set<string>();
@@ -100,6 +102,8 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         return;
       case 'knowledge':
         return need('knowledge', c.id, where);
+      case 'facility':
+        return need('facility', c.id, where);
       case 'clue':
         return need('clue', c.id, where);
       case 'shelter':
@@ -172,6 +176,10 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         return;
       case 'knowledge':
         return need('knowledge', e.id, where);
+      case 'facility':
+        need('facility', e.id, where);
+        if (!e.level && !e.progress) err(where, `시설 효과에 level이나 progress가 없다: ${e.id}`);
+        return;
       case 'clue':
         need('clue', e.id, where);
         str(`clue.${e.id}`, where);
@@ -247,6 +255,14 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     if (p.place) need('place', p.place, w);
     for (const m of p.monthMods ?? []) if (def.balance.stats[m.stat] === undefined) err(w, `없는 스탯: ${m.stat}`);
     for (const k of Object.keys(p.knowledgeProgress ?? {})) need('knowledge', k, w);
+    if (p.builds) {
+      need('facility', p.builds.facility, w);
+      if (!(p.builds.months >= 1)) err(w, `공사 달 수는 1 이상: ${p.builds.months}`);
+    }
+    // 전략 칸 (DESIGN.md §6.4): 버티기는 식량 칸, 발전은 지속 효과를 하나 이상 남긴다
+    if (!['food', 'growth', 'major'].includes(p.slot)) err(w, `없는 전략 칸: ${p.slot}`);
+    if (p.fallback && p.slot !== 'food') err(w, '버티기 방침은 식량 칸이어야 한다');
+    if (p.slot === 'growth' && !growthLasts(p)) err(w, '발전 전략이 남기는 것이 없다 (시설·지식·단서·깃발·장소·거처·약속·물자·치료 중 하나)');
     scene(p.scene, w);
     let hasCarry = false;
     for (const ph of PHASES) {
@@ -389,6 +405,17 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   for (const f of def.foodKinds) str(`food.${f.id}`, 'food');
   for (const s of def.shelters) str(`shelter.${s.id}`, 'shelters');
   for (const k of def.knowledge) str(`knowledge.${k.id}`, `knowledge.${k.id}`);
+  for (const f of def.facilities) {
+    const fw = `facility.${f.id}`;
+    str(fw, fw);
+    if (!(f.max >= 1)) err(fw, `최대 단계는 1 이상: ${f.max}`);
+    for (const m of f.mods) {
+      if (def.balance.stats[m.stat] === undefined) err(fw, `없는 스탯: ${m.stat}`);
+      conds(m.when, fw);
+    }
+    effects(f.perPhase, fw);
+  }
+  if (!def.content.policies.some((p) => p.slot === 'food')) err('policies', '식량 칸 전략이 하나도 없다');
   for (const c of def.clues) str(`clue.${c.id}`, `clue.${c.id}`);
   for (const e of def.content.endings) {
     str(`ending.${e.id}.title`, `ending.${e.id}`);
@@ -546,6 +573,32 @@ export function uncoveredSeasons(n: Narrative, seasons: readonly Id[]): Id[] {
   const covers = (s: Id) =>
     n.variants.some((v) => (v.when ?? []).every((c) => c.type !== 'season' || c.in.includes(s)));
   return seasons.filter((s) => !covers(s));
+}
+
+/** 발전 전략이 지속되는 무언가를 남기는가: 지식 진행, 공사, 또는 단계의 효과 중 남는 것 */
+export function growthLasts(p: PolicyTemplate): boolean {
+  if (p.builds || Object.keys(p.knowledgeProgress ?? {}).length > 0) return true;
+  const outs: Effect[] = [];
+  for (const ph of PHASES) {
+    for (const st of (p.steps[ph] ?? []) as PolicyStep[]) {
+      if (st.kind === 'narrate') outs.push(...(st.effects ?? []));
+      else if (st.kind === 'activity') for (const o of Object.values(st.activity.outcomes)) outs.push(...o.effects);
+      // 사건 창은 사건이 남길 것을 정한다 (이웃 만나기, 굴 찾기)
+      else if (st.kind === 'eventWindow') return true;
+    }
+  }
+  return lastingEffects(outs);
+}
+
+const LASTING = new Set(['facility', 'knowledge', 'clue', 'flag', 'place', 'shelter', 'schedule', 'counter', 'heal']);
+function lastingEffects(es: readonly Effect[]): boolean {
+  return es.some((e) => {
+    if (LASTING.has(e.type)) return true;
+    if (e.type === 'goods') return typeof e.delta === 'number' ? e.delta > 0 : e.delta[1] > 0;
+    if (e.type === 'if') return lastingEffects(e.then) || lastingEffects(e.else ?? []);
+    if (e.type === 'random') return e.outcomes.some((o) => lastingEffects(o.effects));
+    return false;
+  });
 }
 
 /** 비용·위험이 보이는 효과가 있는가 (기회비용은 opportunity로 표시) */

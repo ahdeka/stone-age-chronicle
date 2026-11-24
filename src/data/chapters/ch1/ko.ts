@@ -54,6 +54,7 @@ export const ch1Ko: Record<string, string> = {
   'cause.fracture': '부러진 뼈', 'cause.claw': '할퀸 상처', 'cause.frostbite': '동상', 'cause.cough': '기침', 'cause.fever': '열병',
   'knowledge.meat_drying': '고기 말리기', 'knowledge.sled': '끌개 엮기', 'knowledge.storage_pit': '저장 구덩이',
   'knowledge.ice_fishing': '얼음 낚시', 'knowledge.fur_clothes': '가죽옷 짓기',
+  'facility.wood_shed': '장작 덧집',
   'clue.deer_cross_river': '서리의 옛이야기: 겨울 끝자락엔 사슴이 강을 건너러 내려온다.',
   'seat.hunt_leader': '사냥 우두머리', 'seat.elder': '이야기꾼', 'seat.healer': '약초꾼', 'seat.artisan': '장인',
   'stance.bold': '대담', 'stance.cautious': '신중', 'stance.practical': '실용', 'stance.inventive': '기술',
@@ -67,6 +68,7 @@ export const ch1Ko: Record<string, string> = {
   'ending.survive_time.chron': '{tribe:은} 여러 해를 견뎌 냈다.',
   'chron.death': '{name}, {cause} 끝에 세상을 떠났다.',
   'chron.knowledge': '부족이 새로운 앎을 얻었다: {knowledge}.',
+  'chron.built': '부족이 새로 지은 것: {facility}.',
   'chron.policy': '이달의 일: {policy}.',
   'chron.strangers_trade': '갈대호수 사람들과 처음 물건을 바꿨다. 그들은 얼음이 녹으면 다시 오겠다고 했다.',
   // ── 달의 계절감 ──

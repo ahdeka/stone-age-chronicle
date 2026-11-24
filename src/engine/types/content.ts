@@ -61,6 +61,8 @@ export interface CrewSpec {
   band?: AgeBand[];
   /** 족장도 원정에 나서는가 (기본 false: 족장은 마을에 남는다) */
   includeChief?: boolean;
+  /** 마을 안에서 일하는 무리 (원정이 아니다: 장소·운반 없음). 마을 일손에서만 빠진다 */
+  atHome?: boolean;
 }
 
 export type PolicyStep = (
@@ -74,8 +76,13 @@ export type PolicyStep = (
   when?: Condition[];
 };
 
+/** 전략 칸 (DESIGN.md §6.4): 식량(어떻게 먹을까) / 발전(어디로 클까) / 큰 일(두 칸을 모두 쓴다) */
+export type PolicySlot = 'food' | 'growth' | 'major';
+
 export interface PolicyTemplate {
   id: Id;
+  /** 전략 칸 */
+  slot: PolicySlot;
   category: Id;
   appearsWhen: Condition[];
   relevance?: { when: Condition[]; add: number }[];
@@ -98,6 +105,8 @@ export interface PolicyTemplate {
   steps: Partial<Record<Phase, PolicyStep[]>>;
   /** 이 방침을 하면 자라는 지식 */
   knowledgeProgress?: Record<Id, number>;
+  /** 짓는 일: 고른 달마다 공사가 1달씩 나아가고, months달이 차면 시설이 한 단계 오른다. 다 지으면 후보에서 빠진다 */
+  builds?: { facility: Id; months: number };
 }
 
 export interface EventOption {

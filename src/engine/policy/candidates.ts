@@ -1,7 +1,7 @@
-// 방침 후보 생성 (DESIGN.md §6)
-// 조건 통과 → 원정대 구성 → 상황 점수 → 분야 제한과 버티기 방침 보장 → 3~5개
+// 방침 후보 생성 (DESIGN.md §6, 두 칸은 §6.4)
+// 조건 통과 → 원정대 구성 → 상황 점수 → 칸별로: 식량(버티기 보장) / 발전 / 큰 일
 
-import type { ActivityDef, BoundPolicy, ChapterDefinition, GameState, Hint, Person, PolicyTemplate } from '../types';
+import type { ActivityDef, BoundPolicy, ChapterDefinition, GameState, Hint, Id, Person, PolicySlot, PolicyTemplate } from '../types';
 import { PHASES } from '../types';
 import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
 import { nextUid } from '../core/lookup';
@@ -9,18 +9,26 @@ import { cannotWork, laborUnits, living, sortForCrew } from '../people/people';
 import { nextFloat } from '../rng/rng';
 import { hintFor, type ActCtx } from '../outcome/tier';
 
+export interface CrewOpts {
+  /** 이미 다른 전략에 뽑힌 사람 (무리와 이끄는 사람) */
+  taken?: ReadonlySet<Id>;
+  /** 이미 마을 일에서 빠진 일손 (다른 전략의 무리) */
+  awayUnits?: number;
+}
+
 /** 원정대와 이끄는 사람을 정한다. 난수를 쓰지 않는다. 인원이 모자라면 undefined */
-export function formCrew(def: ChapterDefinition, state: GameState, p: PolicyTemplate): { crew: Person[]; leader?: Person } | undefined {
-  const leaderPick = p.leader ? living(state).find((x) => !cannotWork(def, x) && matchPerson(def, state, x, p.leader!)) : undefined;
+export function formCrew(def: ChapterDefinition, state: GameState, p: PolicyTemplate, opts: CrewOpts = {}): { crew: Person[]; leader?: Person } | undefined {
+  const free = (x: Person) => !opts.taken?.has(x.id);
+  const leaderPick = p.leader ? living(state).find((x) => free(x) && !cannotWork(def, x) && matchPerson(def, state, x, p.leader!)) : undefined;
   if (p.leader && !leaderPick) return undefined;
   if (!p.crew) return leaderPick ? { crew: [], leader: leaderPick } : { crew: [] };
 
   const spec = p.crew;
   const pool = living(state).filter(
-    (x) => laborUnits(def, state, x) > 0 && (spec.includeChief || !x.isChief) && (spec.band ? matchPerson(def, state, x, { band: spec.band }) : matchPerson(def, state, x, { band: ['adult'] })),
+    (x) => free(x) && laborUnits(def, state, x) > 0 && (spec.includeChief || !x.isChief) && (spec.band ? matchPerson(def, state, x, { band: spec.band }) : matchPerson(def, state, x, { band: ['adult'] })),
   );
   const totalUnits = living(state).reduce((a, x) => a + laborUnits(def, state, x), 0);
-  const room = Math.floor(totalUnits - spec.keepHome);
+  const room = Math.floor(totalUnits - (opts.awayUnits ?? 0) - spec.keepHome);
   const max = spec.max === 'all' ? pool.length : spec.max;
   const size = Math.min(max, room, pool.length);
   if (size < spec.min) return undefined;
@@ -51,8 +59,16 @@ export function policyHint(def: ChapterDefinition, state: GameState, p: PolicyTe
 
 export function isAvailable(def: ChapterDefinition, state: GameState, p: PolicyTemplate): boolean {
   if (p.once && state.usedOnce.includes(p.id)) return false;
+  // 다 지은 시설을 또 짓지 않는다
+  if (p.builds && (state.facilities[p.builds.facility] ?? 0) >= facilityMax(def, p.builds.facility)) return false;
   if ((state.cooldowns[p.id] ?? 0) > state.month) return false;
   return allTrue(def, state, p.appearsWhen);
+}
+
+export function facilityMax(def: ChapterDefinition, id: Id): number {
+  const f = def.facilities.find((x) => x.id === id);
+  if (!f) throw new Error(`unknown facility: ${id}`);
+  return f.max;
 }
 
 /** 묻어 둔 고기가 있는 곳: 많이 묻은 곳 → 가까운 곳 순, 최대 maxCacheTargets곳 */
@@ -69,7 +85,7 @@ export function cacheTargets(def: ChapterDefinition, state: GameState): string[]
 export function generateCandidates(def: ChapterDefinition, state: GameState): BoundPolicy[] {
   const b = def.balance.policy;
   const scored: { p: PolicyTemplate; bound: BoundPolicy }[] = [];
-  const savedPlace = state.work.place;
+  const savedPlace = state.work.probePlace;
   for (const p of def.content.policies) {
     if (!isAvailable(def, state, p)) continue;
     const formed = formCrew(def, state, p);
@@ -78,13 +94,14 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
     // 묻어 둔 고기마다 후보 하나 (그 곳을 이번 달의 곳으로 놓고 단서와 점수를 계산한다)
     const targets: (string | undefined)[] = p.bindCache ? cacheTargets(def, state) : [undefined];
     for (const place of targets) {
-      if (place) state.work.place = place;
+      if (place) state.work.probePlace = place;
       const hint = policyHint(def, state, p, { crew: formed.crew, ...(formed.leader ? { leader: formed.leader } : {}), actors });
       let score = p.priority + (nextFloat(state.rng) * 2 - 1) * b.jitter;
       for (const r of p.relevance ?? []) if (allTrue(def, state, r.when, actors)) score += r.add;
+      if (p.builds && (state.projects[p.builds.facility] ?? 0) > 0) score += b.projectBonus;
       if (place) {
-        if (savedPlace === undefined) delete state.work.place;
-        else state.work.place = savedPlace;
+        if (savedPlace === undefined) delete state.work.probePlace;
+        else state.work.probePlace = savedPlace;
       }
       scored.push({
         p,
@@ -102,22 +119,31 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
   }
   scored.sort((x, y) => y.bound.score - x.bound.score);
 
-  const slots = foodDays(def, state) < b.urgentFoodDays ? b.urgentSlots : b.slots;
-  const picked: typeof scored = [];
-  const perCat: Record<string, number> = {};
-  for (const s of scored) {
-    if (picked.length >= slots) break;
-    if ((perCat[s.p.category] ?? 0) >= b.maxPerCategory) continue;
-    picked.push(s);
-    perCat[s.p.category] = (perCat[s.p.category] ?? 0) + 1;
-  }
+  const urgent = foodDays(def, state) < b.urgentFoodDays;
+  const take = (slot: PolicySlot, n: number) => {
+    const picked: typeof scored = [];
+    const perCat: Record<string, number> = {};
+    for (const s of scored) {
+      if (s.p.slot !== slot) continue;
+      if (picked.length >= n) break;
+      if ((perCat[s.p.category] ?? 0) >= b.maxPerCategory) continue;
+      picked.push(s);
+      perCat[s.p.category] = (perCat[s.p.category] ?? 0) + 1;
+    }
+    return picked;
+  };
+  const foodN = urgent ? b.urgentFoodSlots : b.foodSlots;
+  const food = take('food', foodN);
   // 버티기 방침을 늘 하나 넣는다 (자리가 차 있으면 마지막 자리를 내준다)
-  if (!picked.some((s) => s.p.fallback)) {
+  if (!food.some((s) => s.p.fallback)) {
     const fb = scored.find((s) => s.p.fallback);
     if (fb) {
-      if (picked.length >= slots) picked.pop();
-      picked.push(fb);
+      if (food.length >= foodN) food.pop();
+      food.push(fb);
     }
   }
-  return picked.map((s) => s.bound);
+  const growth = take('growth', urgent ? b.urgentGrowthSlots : b.growthSlots);
+  const major = take('major', 1);
+  // 화면 순서: 큰 일(맨 위 한 줄) → 식량 → 발전
+  return [...major, ...food, ...growth].map((s) => s.bound);
 }

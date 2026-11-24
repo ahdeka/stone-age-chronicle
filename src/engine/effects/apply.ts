@@ -20,6 +20,7 @@ import { findAilment, findAnimal, findNarrative, nextUid, phaseNo } from '../cor
 import { living, sortForCrew } from '../people/people';
 import { nextFloat, nextInt, weightedIndex } from '../rng/rng';
 import { addLot } from '../stores/food';
+import { currentHaul, currentPlace } from '../policy/current';
 
 export interface RunCtx {
   def: ChapterDefinition;
@@ -74,7 +75,8 @@ export function resolveParams(ctx: RunCtx, params: Record<string, LineParam> | u
   const leader = leaderId ? state.people[leaderId] : undefined;
   if (leader) base['leader'] = leader.name;
   base['crew'] = ctx.crew.length;
-  if (state.work.place) base['place'] = { key: `place.${state.work.place}` };
+  const place = currentPlace(state);
+  if (place) base['place'] = { key: `place.${place}` };
   for (const [k, v] of Object.entries(state.work.vars)) base[k] = Math.round(v);
   for (const [slot, id] of Object.entries(ctx.actors)) {
     const p = state.people[id];
@@ -198,7 +200,7 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
   switch (e.type) {
     case 'food': {
       const kg = rollAmount(state, e.kg);
-      if (e.haul) addLot(state.work.haul, e.kind, kg);
+      if (e.haul) addLot(currentHaul(state), e.kind, kg);
       else if (kg >= 0) {
         addLot(state.stores.food, e.kind, kg);
         ledger(state, 'food', kg, ctx.source);
@@ -221,7 +223,7 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       const meat = n * a.meatKg;
       if (ctx.crew.length > 0) {
         // 원정지의 짐: 마을 식량은 운반할 때 늘어난다
-        addLot(state.work.haul, a.foodKind, meat);
+        addLot(currentHaul(state), a.foodKind, meat);
         ledger(state, 'haul', meat, `catch.${a.id}`, { n });
       } else {
         addLot(state.stores.food, a.foodKind, meat);
@@ -311,6 +313,15 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       state.knowledge.progress[e.id] = (state.knowledge.progress[e.id] ?? 0) + (e.progress ?? 0);
       return;
     }
+    case 'facility': {
+      if (e.progress) {
+        const p = Math.max(0, (state.projects[e.id] ?? 0) + e.progress);
+        if (p > 0) state.projects[e.id] = p;
+        else delete state.projects[e.id];
+      }
+      if (e.level) raiseFacility(ctx, e.id, e.level);
+      return;
+    }
     case 'clue': {
       state.clues = state.clues.filter((c) => c.id !== e.id);
       if (!e.remove) {
@@ -324,7 +335,7 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       for (const c of state.caches.filter((x) => x.place === at)) {
         c.checkedMonth = state.month;
         if (e.action === 'recover') {
-          for (const l of c.lots) addLot(state.work.haul, l.kind, l.kg);
+          for (const l of c.lots) addLot(currentHaul(state), l.kind, l.kg);
           state.work.vars['found'] = (state.work.vars['found'] ?? 0) + c.lots.reduce((a, l) => a + l.kg, 0);
           c.lots = [];
         } else {
@@ -393,9 +404,26 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
   }
 }
 
+/** 시설 단계를 올리거나 내린다 (0 ~ 최대). 올라가면 "다 지었다" 줄과 연대기 후보 */
+export function raiseFacility(ctx: RunCtx, id: Id, delta: number): void {
+  const { def, state } = ctx;
+  const f = def.facilities.find((x) => x.id === id);
+  if (!f) throw new Error(`unknown facility: ${id}`);
+  const before = state.facilities[id] ?? 0;
+  const after = Math.max(0, Math.min(f.max, before + delta));
+  if (after === before) return;
+  if (after > 0) state.facilities[id] = after;
+  else delete state.facilities[id];
+  state.work.notable = true;
+  if (after > before) {
+    currentReport(state).lines.push({ key: 'line.built', params: { facility: { key: `facility.${id}` } }, group: ctx.group });
+    offerChronicle(state, 'chron.built', def.balance.chronicle.builtImportance, { facility: { key: `facility.${id}` } });
+  }
+}
+
 /** '$place'는 이번 달 방침이 가는 곳 (묻어 둔 고기 회수처럼 후보마다 다른 곳) */
 export function resolvePlace(state: GameState, at: Id): Id {
-  return at === '$place' ? (state.work.place ?? state.campPlace) : at;
+  return at === '$place' ? (currentPlace(state) ?? state.campPlace) : at;
 }
 
 export function applyEffects(ctx: RunCtx, effects: readonly Effect[] | undefined): void {

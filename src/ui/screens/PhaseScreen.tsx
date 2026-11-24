@@ -12,6 +12,7 @@ import {
   type LedgerLine,
   type Line,
   type PhaseReport,
+  type PolicyTemplate,
 } from '../../engine';
 import type { Translator } from '../../i18n';
 import { Caret, Icon } from '../components/bits';
@@ -48,7 +49,8 @@ interface Para {
 export function paragraphs(tr: Translator, def: ChapterDefinition, state: GameState, lines: readonly Line[]): Para[] {
   const out: Para[] = [];
   let cur: (Para & { group?: string }) | undefined;
-  const policy = state.work.chosen ? findPolicy(def, state.work.chosen.policyId) : undefined;
+  // 원정 무리의 이름표는 원정에 나간 전략의 것 (두 칸 중 원정인 쪽)
+  const policy = planPolicies(def, state).find((p) => p.crew && !p.crew.atHome);
   for (const l of lines) {
     if (l.group === 'people') continue;
     if (l.group === 'event' && l.key.startsWith('event.') && l.key.endsWith('.title')) {
@@ -64,7 +66,9 @@ export function paragraphs(tr: Translator, def: ChapterDefinition, state: GameSt
             : tr.t('group.crew')
           : l.group === 'village'
             ? tr.t('group.village')
-            : undefined;
+            : l.group === 'growth'
+              ? tr.t('group.growth')
+              : undefined;
       cur = { ...(label ? { label } : {}), text: '', ...(l.group ? { group: l.group } : {}) };
       out.push(cur);
     }
@@ -74,11 +78,26 @@ export function paragraphs(tr: Translator, def: ChapterDefinition, state: GameSt
   return out.filter((x) => x.text.length > 0);
 }
 
-export function rowLabel(tr: Translator, row: LedgerLine, settlement: boolean, crewPolicy: boolean): string {
+/** 이번 달 전략 (plan 순서: 주 전략이 먼저) */
+export function planPolicies(def: ChapterDefinition, state: GameState): PolicyTemplate[] {
+  return state.work.plan.map((e) => findPolicy(def, e.bound.policyId));
+}
+
+/** 이 장부 출처가 원정에 나간 전략인가 ("메고 온 고기"로 보인다) */
+export function crewSourceTest(def: ChapterDefinition, state: GameState): (source: string) => boolean {
+  const ids = new Set(planPolicies(def, state).filter((p) => p.crew && !p.crew.atHome).map((p) => `policy.${p.id}`));
+  return (source) => ids.has(source);
+}
+
+export function rowLabel(tr: Translator, row: LedgerLine, settlement: boolean, isCrew: (source: string) => boolean): string {
   const s = row.source;
+  if (s.startsWith('bonus.')) {
+    const what = s.slice('bonus.'.length);
+    return tr.t('row.bonus', { what: tr.has(what) ? tr.t(what) : tr.t('row.other') });
+  }
   if (s.startsWith('catch.')) return tr.t(`row.${s}`, { n: row.params?.['n'] ?? 0 });
   if (s === 'upkeep.food') return settlement ? tr.t('src.upkeep.food') : tr.t('row.upkeep.food', { days: row.params?.['days'] ?? 10, people: row.params?.['people'] ?? 0 });
-  if (s.startsWith('policy.')) return crewPolicy && row.res === 'food' ? tr.t('row.carried') : tr.t(`${s}.name`);
+  if (s.startsWith('policy.')) return isCrew(s) && row.res === 'food' ? tr.t('row.carried') : tr.t(`${s}.name`);
   if (s.startsWith('event.')) return tr.t(`${s}.title`);
   const key = `row.${s}`;
   return tr.has(key) ? tr.t(key) : tr.t('row.other');
@@ -169,8 +188,9 @@ export function PhaseScreen({ def, state, index, onNext, send, paused = false, s
   const report = state.work.reports[index] as PhaseReport | undefined;
   const isLast = index === state.work.reports.length - 1;
   const settlement = report?.slot === 'settlement';
-  const policy = state.work.chosen ? findPolicy(def, state.work.chosen.policyId) : undefined;
-  const crewPolicy = !!policy?.crew;
+  const plan = planPolicies(def, state);
+  const policy = plan[0];
+  const crewPolicy = crewSourceTest(def, state);
 
   const paras = useMemo(() => (report ? paragraphs(tr, def, state, report.lines) : []), [report, tr, def, state]);
   const chronicle = settlement ? state.chronicle.filter((c) => c.month === state.month).at(-1) : undefined;
@@ -252,8 +272,9 @@ export function PhaseScreen({ def, state, index, onNext, send, paused = false, s
   else if (state.step === 'ended') nextLabel = tr.t('ui.next.ending');
   else nextLabel = tr.t('ui.next.month');
 
-  const leader = state.work.chosen?.leaderId ? state.people[state.work.chosen.leaderId] : undefined;
-  const place = report.place ?? state.work.place ?? state.campPlace;
+  const main = state.work.plan[0]?.bound;
+  const leader = main?.leaderId ? state.people[main.leaderId] : undefined;
+  const place = report.place ?? state.work.plan[0]?.place ?? state.campPlace;
 
   return (
     <div className={p.page}>
@@ -263,8 +284,8 @@ export function PhaseScreen({ def, state, index, onNext, send, paused = false, s
             <span className={`${p.month} ${u.serif}`}>{tr.t('ui.kicker', { date: dateText(tr, def, state) })}</span>
             {policy && (
               <span className={`${u.muted} ${u.small}`}>
-                {tr.t('ui.phase.policyLine', { policy: tr.t(`policy.${policy.id}.name`) })}
-                {state.work.chosen && state.work.chosen.crew.length > 0 && ` · ${tr.t('ui.phase.crew', { n: state.work.chosen.crew.length })}`}
+                {tr.t('ui.phase.policyLine', { policy: plan.map((x) => tr.t(`policy.${x.id}.name`)).join(tr.t('ui.phase.planJoin')) })}
+                {main && main.crew.length > 0 && ` · ${tr.t('ui.phase.crew', { n: main.crew.length })}`}
                 {leader && ` · ${tr.t('ui.crew.leader', { name: tr.label(leader.name) })}`}
               </span>
             )}

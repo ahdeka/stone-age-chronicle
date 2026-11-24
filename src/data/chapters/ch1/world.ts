@@ -6,6 +6,7 @@ import type {
   AilmentDef,
   AnimalDef,
   ClueDef,
+  FacilityDef,
   FoodKindDef,
   KnowledgeDef,
   ModifierDef,
@@ -161,8 +162,6 @@ export const ch1GlobalMods: ModifierDef[] = [
   // 여름 풀과 열매: 알달(늦봄)부터 돋는다
   { stat: 'yield.greens', op: 'add', value: 1, when: [{ type: 'any', of: [{ type: 'season', in: ['summer'] }, { type: 'monthOfYear', in: ['egg'] }] }] },
   { stat: 'yield.nuts', op: 'add', value: 1, when: [{ type: 'monthOfYear', in: ['fruit', 'reindeer'] }] },
-  // 장작 덧집 (장작 비축 방침): 비를 막아 더 쌓아 둔다
-  { stat: 'firewood.cap', op: 'add', value: 600, when: [{ type: 'flag', id: 'wood_shed' }] },
 ];
 
 export const ch1Weather: WeatherDef[] = [
@@ -204,6 +203,12 @@ export const ch1Traits: TraitDef[] = [
   { id: 'herbalist' },
   { id: 'crafty' },
   { id: 'storyteller' },
+];
+
+/** 시설: 지은 것 (DESIGN.md §9.1). 지식은 아는 것, 시설은 지은 것이다 */
+export const ch1Facilities: FacilityDef[] = [
+  // 장작 덧집 (장작 비축 방침): 비를 막아 장작을 더 쌓아 둔다
+  { id: 'wood_shed', max: 1, mods: [{ stat: 'firewood.cap', op: 'add', value: 600 }] },
 ];
 
 /** 지식은 행동에서 자란다 (need만큼 쌓이면 얻는다). 생존 압박을 푸는 방향으로 작동한다 (DESIGN.md §9, §10.4) */
