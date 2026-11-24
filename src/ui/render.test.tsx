@@ -137,6 +137,10 @@ describe('화면', () => {
     expect(early).toContain('초원의 여울');
     const settle = html(<PhaseScreen def={ch1} state={end} index={end.work.reports.length - 1} onNext={noop} send={noop} />);
     expect(settle).toContain('이달의 결과');
+    // 자동 진행(기본): 다음 순이 있는 화면에만 일시정지가 있고, 이달의 결과에는 없다
+    expect(html(<PhaseScreen def={ch1} state={end} index={1} onNext={noop} send={noop} setPaused={noop} />)).toContain('일시정지');
+    expect(html(<PhaseScreen def={ch1} state={end} index={end.work.reports.length - 1} onNext={noop} send={noop} setPaused={noop} />)).not.toContain('일시정지');
+    expect(html(<PhaseScreen def={ch1} state={end} index={1} onNext={noop} send={noop} paused setPaused={noop} />)).toContain('다시 진행');
   });
 
   it('봄 시작: 인트로, 1년차 · 봄 · 3월, 첫 달 소식, 전략 팝업', () => {

@@ -1,7 +1,7 @@
 // 콘텐츠 검증 (npm run validate:content). DESIGN.md §12, §18, CLAUDE.md "재미 검증 도구"
 // 오류: 없는 id 참조, 중복 id, 없는 문자열, 고를 수 없는 구조 / 경고: 공짜 선택지, 문장 길이, 변형 부족, 도달 불가
 
-import type { ChapterDefinition, Condition, Effect, EventDef, PolicyStep, SceneSpec } from '../../src/engine';
+import type { ChapterDefinition, Condition, Effect, EventDef, Id, Narrative, PolicyStep, SceneSpec } from '../../src/engine';
 import { MEASURES, PHASES } from '../../src/engine';
 import { PLACEHOLDER } from '../../src/i18n';
 import { isJosaFormat } from '../../src/i18n/josa';
@@ -336,6 +336,12 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   // ── 서술 ──
   need('narrative', def.hooks.villageNarrative, 'hooks');
   usedNarratives.add(def.hooks.villageNarrative);
+  const village = def.content.narratives.find((n) => n.id === def.hooks.villageNarrative);
+  if (village) {
+    const seasons = [...new Set(def.calendar.months.map((m) => m.season))];
+    const gap = uncoveredSeasons(village, seasons);
+    if (gap.length > 0) warn('hooks', `마을 서술에 맞는 변형이 없는 계절 (그 계절 순의 서술이 빌 수 있다): ${gap.join(', ')}`);
+  }
   for (const n of def.content.narratives) {
     const w = `narrative.${n.id}`;
     if (n.variants.length < MIN_VARIANTS) warn(w, `변형 ${n.variants.length}개 (최소 ${MIN_VARIANTS})`);
@@ -530,6 +536,17 @@ export function notationIssues(key: string, text: string, tribeNames: ReadonlySe
 
 /** 오르면 나쁜 스탯 */
 const BAD_WHEN_UP = new Set(['spoil.mul', 'cache.raid', 'firewood.burnMul']);
+
+/**
+ * 서술이 빈 순 막기: 마을 서술(hooks.villageNarrative)은 순마다 늘 나오는 유일한 서술이라
+ * 어느 계절에도 맞는 변형이 하나는 있어야 한다. 계절 조건이 없거나 그 계절을 포함한 변형이면 덮는다고 본다
+ * (날씨로 나눈 변형은 서로 덮는다고 가정한다). 덮이지 않는 계절을 돌려준다.
+ */
+export function uncoveredSeasons(n: Narrative, seasons: readonly Id[]): Id[] {
+  const covers = (s: Id) =>
+    n.variants.some((v) => (v.when ?? []).every((c) => c.type !== 'season' || c.in.includes(s)));
+  return seasons.filter((s) => !covers(s));
+}
 
 /** 비용·위험이 보이는 효과가 있는가 (기회비용은 opportunity로 표시) */
 export function hasCost(es: readonly Effect[]): boolean {

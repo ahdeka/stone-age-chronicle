@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { chapters, commonStrings } from '../../src/data/registry';
 import { ch1, tweakDef } from '../../src/test/fixtures';
 import { SCENE_IDS } from '../../src/assets/sceneIds';
-import { notationIssues, validate } from './validate';
+import { notationIssues, uncoveredSeasons, validate } from './validate';
 
 const strings = { ...commonStrings.ko, ...chapters['ch1']!.strings.ko };
 const msgs = (def: Parameters<typeof validate>[0], s = strings) => validate(def, s).map((i) => `${i.level}:${i.where}:${i.msg}`);
@@ -81,5 +81,22 @@ describe('콘텐츠 검증기', () => {
     const m = msgs(def);
     expect(m.some((x) => x.includes('event.bear_wakes') && x.includes('예약하지 않는다'))).toBe(true);
     expect(m.some((x) => x.includes('세우지 않는 깃발: never_set'))).toBe(true);
+  });
+});
+
+describe('서술이 빈 순', () => {
+  it('마을 서술에 맞는 변형이 없는 계절을 잡는다', () => {
+    const n = {
+      id: 'v',
+      variants: [
+        { when: [{ type: 'season' as const, in: ['spring', 'summer'] }], text: 'a' },
+        { when: [{ type: 'season' as const, in: ['winter'] }, { type: 'weather' as const, in: ['blizzard'] }], text: 'b' },
+      ],
+    };
+    expect(uncoveredSeasons(n, ['spring', 'summer', 'autumn', 'winter'])).toEqual(['autumn']);
+    expect(uncoveredSeasons({ id: 'w', variants: [{ text: 'c' }] }, ['spring', 'autumn'])).toEqual([]);
+    const ch = chapters['ch1']!.definition;
+    const village = ch.content.narratives.find((x) => x.id === ch.hooks.villageNarrative)!;
+    expect(uncoveredSeasons(village, [...new Set(ch.calendar.months.map((m) => m.season))])).toEqual([]);
   });
 });

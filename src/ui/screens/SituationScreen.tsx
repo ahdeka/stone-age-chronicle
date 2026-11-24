@@ -2,7 +2,7 @@
 // 상황을 읽는 곳: 장면 + 이번 달 소식 타이핑, 땅, 사람들, 시대 목표, 부족, 아직 남은 일, 연대기.
 // 결정은 아래에서 올라오는 팝업에서 한다. 소식 타이핑이 끝나면 한 번 자동으로 열린다 (설정으로 끌 수 있다).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ailingCount,
   band,
@@ -22,6 +22,7 @@ import { TopBar } from '../components/TopBar';
 import { RosterDialog } from '../components/RosterDialog';
 import { lineText, shortDateText } from '../format';
 import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
+import { useInView } from '../hooks/useInView';
 import { useT } from '../i18n';
 import { useMotion } from '../motion';
 import v from './situation.module.css';
@@ -39,7 +40,10 @@ export function SituationScreen({ def, state, send }: Props) {
   const brief = state.work.brief;
   const news = useMemo(() => (brief?.news ?? []).map((l) => lineText(tr, l)), [brief, tr]);
   const sched = useMemo(() => typeSchedule(news, { startAt: 700 * mul, perChar: 32 * mul, gap: 500 * mul }), [news, mul]);
-  const clock = useClock(sched.end, `brief-${state.month}`);
+  // 소식 타이핑은 소식 글(바로 위의 머리글로 잰다)이 화면에 보일 때 시작한다
+  const newsRef = useRef<HTMLHeadingElement>(null);
+  const newsSeen = useInView(newsRef, state.month);
+  const clock = useClock(sched.end, `brief-${state.month}`, { hold: !newsSeen });
   const typed = typedLines(news, sched, clock.elapsed, 32 * mul);
 
   const model = decisionModel(tr, def, state);
@@ -62,7 +66,7 @@ export function SituationScreen({ def, state, send }: Props) {
             <div className={v.heroShade} aria-hidden="true" />
             <div className={v.heroText}>
               <span className={u.label}>{tr.t('ui.briefingLabel')}</span>
-              <h1 className={`${v.headline} ${u.serif}`}>{brief ? lineText(tr, brief.headline) : ''}</h1>
+              <h1 ref={newsRef} className={`${v.headline} ${u.serif}`}>{brief ? lineText(tr, brief.headline) : ''}</h1>
               <div className={`${v.news} ${u.serif}`} aria-live="polite">
                 {typed.map((l, i) => (
                   <p key={i}>

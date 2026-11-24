@@ -2,7 +2,7 @@
 // 장면 → 서술 문단 타이핑(30ms/글자) → 부상·사망 알림 → 정산 행이 하나씩 들어오며 큰 숫자가 굴러간다.
 // "빨리 보기"는 끝 상태로 건너뛴다. 중순 사건이 있으면 문단이 끝난 뒤 같은 결정 팝업이 뜬다.
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   dailyFoodTotal,
   findPolicy,
@@ -18,9 +18,11 @@ import { Caret, Icon } from '../components/bits';
 import { decisionModel, DecisionPopup } from '../components/Decision';
 import { SceneView } from '../components/SceneView';
 import { dateText, lineText } from '../format';
+import { autoAdvanceDue, canPause } from '../flow';
 import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
+import { useInView } from '../hooks/useInView';
 import { useT } from '../i18n';
-import { useMotion } from '../motion';
+import { AUTO_DELAY_MS, useMotion } from '../motion';
 import p from './phase.module.css';
 import u from '../ui.module.css';
 
@@ -30,6 +32,9 @@ interface Props {
   index: number;
   onNext: () => void;
   send: (c: Command) => void;
+  /** 자동 진행 일시정지 (한 달 동안 유지된다) */
+  paused?: boolean;
+  setPaused?: (p: boolean) => void;
 }
 
 const STEPS = ['policy', 'early', 'mid', 'late', 'settlement'] as const;
@@ -158,7 +163,7 @@ export function LedgerBlock(props: {
   );
 }
 
-export function PhaseScreen({ def, state, index, onNext, send }: Props) {
+export function PhaseScreen({ def, state, index, onNext, send, paused = false, setPaused }: Props) {
   const tr = useT();
   const { mul, settings } = useMotion();
   const report = state.work.reports[index] as PhaseReport | undefined;
@@ -181,7 +186,32 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
   const rowsStart = sched.end;
   const woodStart = rowsStart + foodRows.length * rowGap;
   const end = woodStart + woodRows.length * rowGap + 300 * mul;
-  const clock = useClock(end, `${state.month}-${index}`);
+
+  // 결정 (중순 사건, 남은 고기): 이 단계의 문단이 다 나온 뒤에 팝업
+  const model = isLast && state.step === 'decision' ? decisionModel(tr, def, state) : undefined;
+
+  // 자동 진행: 서술이 보일 때 타이핑을 시작하고, 끝나면 잠시 쉰 뒤 다음 순으로 (결정과 이달의 결과에서는 멈춘다)
+  const key = `${state.month}-${index}`;
+  const storyRef = useRef<HTMLElement>(null);
+  const inView = useInView(storyRef, key);
+  const auto = !settings.stepByStep;
+  const hasNext = !isLast;
+  const pausable = canPause(auto, hasNext, !!model);
+  const delay = AUTO_DELAY_MS[settings.autoDelay] * mul;
+  const clock = useClock(end, key, {
+    hold: !inView || (paused && pausable),
+    // 결정을 기다리는 동안 시간이 쌓이면 결정 뒤 이어지는 글이 한꺼번에 나와 버린다
+    stopAtEnd: !!model,
+    tail: pausable ? delay : 0,
+  });
+  const advanced = useRef(false);
+  useEffect(() => {
+    if (advanced.current) return;
+    if (autoAdvanceDue({ auto, paused, hasNext, deciding: !!model, run: clock.run, end, delay })) {
+      advanced.current = true;
+      onNext();
+    }
+  }, [auto, paused, hasNext, model, clock.run, end, delay, onNext]);
   const typed = typedLines(texts, sched, clock.elapsed, perChar);
   const timing = { elapsed: clock.elapsed, done: clock.done, gap: rowGap, roll: 700 * mul };
 
@@ -190,8 +220,6 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
   const days = daily > 0 ? Math.max(0, Math.floor(food / daily)) : 0;
   const narrativeDone = clock.elapsed >= sched.end;
 
-  // 결정 (중순 사건, 남은 고기): 이 단계의 문단이 다 나온 뒤에 팝업
-  const model = isLast && state.step === 'decision' ? decisionModel(tr, def, state) : undefined;
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (model && narrativeDone && settings.autoOpen) setOpen(true);
@@ -262,7 +290,7 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
         </section>
 
         <div className={p.cols}>
-          <section className={p.story} aria-live="polite" onClick={clock.skip}>
+          <section ref={storyRef} className={p.story} aria-live="polite" onClick={clock.skip}>
             {typed.map((t, i) => {
               const para = paras[i];
               const label = para ? para.label : tr.t('ui.chronicle');
@@ -344,6 +372,11 @@ export function PhaseScreen({ def, state, index, onNext, send }: Props) {
               ) : (
                 <button type="button" className={u.btnGhost} onClick={clock.skip}>
                   {tr.t('ui.skip')}
+                </button>
+              )}
+              {pausable && setPaused && (
+                <button type="button" className={u.btnGhost} aria-pressed={paused} onClick={() => setPaused(!paused)}>
+                  {tr.t(paused ? 'ui.resume' : 'ui.pause')}
                 </button>
               )}
               <button type="button" className={u.btnText} onClick={clock.replay}>

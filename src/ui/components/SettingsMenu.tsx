@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n';
-import { useMotion, type Speed } from '../motion';
+import { useMotion, type AutoDelay, type Speed } from '../motion';
 import { Icon } from './bits';
 import c from './chrome.module.css';
 
@@ -61,6 +61,22 @@ export function SettingsMenu() {
             <input type="checkbox" checked={settings.autoOpen} onChange={(e) => set({ autoOpen: e.target.checked })} />
             {tr.t('ui.settings.autoOpen')}
           </label>
+          <label className={c.check}>
+            <input type="checkbox" checked={settings.stepByStep} onChange={(e) => set({ stepByStep: e.target.checked })} />
+            {tr.t('ui.settings.stepByStep')}
+          </label>
+          {!settings.stepByStep && (
+            <div className={c.settingsRow}>
+              <span>{tr.t('ui.settings.autoDelay')}</span>
+              <div className={c.segment}>
+                {(['short', 'normal', 'long'] as AutoDelay[]).map((d) => (
+                  <button key={d} type="button" aria-pressed={settings.autoDelay === d} onClick={() => set({ autoDelay: d })}>
+                    {tr.t(`delay.${d}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <label className={c.check}>
             <input type="checkbox" checked={settings.quietSummary} onChange={(e) => set({ quietSummary: e.target.checked })} />
             {tr.t('ui.settings.quietSummary')}

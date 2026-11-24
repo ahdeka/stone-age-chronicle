@@ -13,9 +13,27 @@ export interface Settings {
   fontScale: 1 | 2 | 3;
   /** 평온한 달은 상순·중순·하순을 한 화면으로 요약한다 (DESIGN.md §19) */
   quietSummary: boolean;
+  /** 한 순씩 "계속"을 눌러 넘긴다. 끄면 서술이 끝나고 잠시 쉰 뒤 저절로 다음 순으로 간다 */
+  stepByStep: boolean;
+  /** 저절로 넘어가기 전에 쉬는 시간 */
+  autoDelay: AutoDelay;
 }
 
-const DEFAULTS: Settings = { speed: 'normal', reduceMotion: false, autoOpen: true, fontScale: 1, quietSummary: true };
+export type AutoDelay = 'short' | 'normal' | 'long';
+
+const DEFAULTS: Settings = {
+  speed: 'normal',
+  reduceMotion: false,
+  autoOpen: true,
+  fontScale: 1,
+  // 자동 진행이 생겨 기본은 끈다. 새 시안에서 "이달의 결과"(순별 한 줄 회고 + 장부)로 합칠 예정
+  quietSummary: false,
+  stepByStep: false,
+  autoDelay: 'normal',
+};
+
+/** 서술이 다 나온 뒤 다음 순으로 저절로 넘어가기까지 쉬는 시간(ms, 속도 배율을 곱하기 전) */
+export const AUTO_DELAY_MS: Record<AutoDelay, number> = { short: 800, normal: 1500, long: 3000 };
 const KEY = 'sac.settings';
 
 /** 타이핑·순차 등장 시간 배율 */
