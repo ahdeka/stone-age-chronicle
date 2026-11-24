@@ -17,7 +17,6 @@ import {
   previewPlan,
   resolveSceneSpec,
   totalKg,
-  workers,
   type BoundPolicy,
   type ChapterDefinition,
   type Command,
@@ -92,7 +91,6 @@ function keyChips(tr: Translator, def: ChapterDefinition, s: GameState): Chip[] 
   const chips: Chip[] = [
     { text: tr.t('ui.chip.food', { kg: Math.round(totalKg(s.stores.food)), days }), tone: days < def.balance.ui.foodWarnDays ? 'warn' : 'normal' },
     { text: tr.t('ui.chip.firewood', { kg: Math.round(s.stores.firewood) }), tone: firewoodDays(def, s) < def.balance.ui.firewoodWarnDays ? 'warn' : 'normal' },
-    { text: tr.t('ui.chip.workers', { n: Math.round(workers(def, s)) }), tone: 'normal' },
     { text: weatherSummary(tr, s), tone: 'normal' },
   ];
   for (const ch of s.work.brief?.chips ?? []) chips.push({ text: lineText(tr, ch), tone: ch.tone });

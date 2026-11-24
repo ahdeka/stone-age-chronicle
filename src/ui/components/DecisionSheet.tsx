@@ -2,7 +2,7 @@
 // 전략 고르기, 월초 사건, 중순 사건, 남은 고기 처리가 모두 이 틀을 쓴다. 기본 글자 크기에서 세로 스크롤이 없다.
 // 위: 제목과 핵심 수치 칩 / 가운데: 전략 틀 또는 사건 틀 / 아래: 고른 것과 대가, 확정 버튼
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { Hint, SceneSpec } from '../../engine';
 import { useT } from '../i18n';
 import type { Choice, DecisionModel } from './Decision';
@@ -41,6 +41,19 @@ interface SheetProps {
 export function DecisionSheet({ open, onClose, kicker, title, chips, wide, children, footer }: SheetProps) {
   const tr = useT();
   const ref = useRef<HTMLDivElement>(null);
+  // 칩은 한 줄. 넘치면 끝을 흐리게 자르고, 마우스를 올리면 전체가 보인다 (title)
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const [clipped, setClipped] = useState(false);
+  useLayoutEffect(() => {
+    const el = chipsRef.current;
+    if (!open || !el) return;
+    const check = () => setClipped(el.scrollWidth > el.clientWidth + 1);
+    check();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, chips]);
   useEffect(() => {
     if (!open) return;
     ref.current?.focus();
@@ -57,7 +70,7 @@ export function DecisionSheet({ open, onClose, kicker, title, chips, wide, child
             <h2 className={`${d.title} ${u.serif}`}>{title}</h2>
             <span className={d.kicker}>{kicker}</span>
           </div>
-          <div className={d.chips}>
+          <div ref={chipsRef} className={`${d.chips} ${clipped ? d.clipped : ''}`} title={clipped ? chips.map((c) => c.text).join(' · ') : undefined}>
             {chips.map((c, i) => (
               <span key={i} className={`${d.chip} ${c.tone === 'warn' ? d.chipWarn : c.tone === 'good' ? d.chipGood : ''}`}>
                 {c.tone === 'warn' && <span aria-hidden="true">! </span>}
