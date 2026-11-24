@@ -5,6 +5,7 @@ import { monthDef } from '../core/lookup';
 import { chance, weightedIndex } from '../rng/rng';
 import { takeFraction } from '../stores/food';
 import { rollAmount } from '../effects/apply';
+import { stat } from '../stats/stats';
 
 export function rollWeather(def: ChapterDefinition, state: GameState): [Id, Id, Id] {
   const table = Object.entries(monthDef(def, state).weather);
@@ -45,7 +46,7 @@ export function updateCaches(def: ChapterDefinition, state: GameState): void {
     c.scent += b.scentPerMonth;
     const raider = state.animals[b.raidAnimal];
     const near = raider?.at === c.place;
-    if (chance(state.rng, c.scent * b.raidChancePerScent * (near ? 2 : 1))) {
+    if (chance(state.rng, c.scent * b.raidChancePerScent * (near ? 2 : 1) * stat(def, state, 'cache.raid'))) {
       takeFraction(c.lots, rollAmount(state, b.raidLoss));
     }
   }

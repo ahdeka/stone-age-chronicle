@@ -25,7 +25,7 @@ export function Layer({ id, uid }: { id: string; uid: string }) {
 
 export function SceneView({ scene, className, align = 'xMidYMid' }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  const layers = [scene.bg, ...(scene.subjects ?? []), ...(scene.overlay ? [scene.overlay] : [])];
+  const layers = [scene.bg, ...(scene.ground ? [scene.ground] : []), ...(scene.subjects ?? []), ...(scene.overlay ? [scene.overlay] : [])];
   return (
     <svg className={`${s.svg} ${className ?? ''}`} viewBox="0 0 1200 440" preserveAspectRatio={`${align} slice`} aria-hidden="true" focusable="false">
       {layers.map((id, i) => (

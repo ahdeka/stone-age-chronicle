@@ -87,6 +87,8 @@ export interface BoundPolicy {
   leaderId?: Id;
   hint: Hint;
   score: number;
+  /** bindCache 방침: 이 후보가 가는 곳 */
+  place?: Id;
 }
 
 export type LineParamValue = string | number | Label;

@@ -87,7 +87,7 @@ export function orderRows(rows: readonly LedgerLine[]): LedgerLine[] {
   return [...gains, ...spends];
 }
 
-interface Timing {
+export interface Timing {
   elapsed: number;
   done: boolean;
   gap: number;
@@ -108,7 +108,7 @@ function rolled(from: number, to: number | undefined, rows: readonly LedgerLine[
 const kgText = (n: number) => `${Math.round(n).toLocaleString('ko-KR')}kg`;
 
 /** 식량·장작 장부 한 칸: 시작 → 얻은 것 → 쓴 것 → 구분선 → 최종 */
-function LedgerBlock(props: {
+export function LedgerBlock(props: {
   title: string;
   from: number;
   value: number;

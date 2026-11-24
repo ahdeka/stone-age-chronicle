@@ -43,7 +43,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
       skills: pp.skills ?? {},
       ...(pp.advisor ? { advisor: pp.advisor } : {}),
       ...(pp.isChief ? { isChief: true } : {}),
-      ailments: [],
+      ailments: pp.ailing ? [{ kind: pp.ailing.kind, severity: pp.ailing.severity ?? 2, healsAt: pp.ailing.phases }] : [],
       hungerDays: 0,
     };
   }

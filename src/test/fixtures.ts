@@ -1,7 +1,7 @@
 // 테스트 공용 도구
 
 import { ch1 as realCh1 } from '../data/chapters/ch1/chapter';
-import { applyCommand, createGame, type ChapterDefinition, type Command, type GameState, type PolicyTemplate } from '../engine';
+import { applyCommand, availableOptions, createGame, type ChapterDefinition, type Command, type GameState, type PolicyTemplate } from '../engine';
 
 export const ch1 = realCh1;
 
@@ -12,7 +12,15 @@ export function tweakDef(fn: (d: ChapterDefinition) => void, base: ChapterDefini
   return d;
 }
 
+/** 엔진 시험의 기본: 숨은 늦가을 프리셋 (시험 플레이 기록과 같은 상황) */
+export const AUTUMN = 'grey_river_autumn';
+
 export function newGame(seed = 'test', def: ChapterDefinition = ch1): GameState {
+  return createGame(def, { seed, presetId: def.presets.some((p) => p.id === AUTUMN) ? AUTUMN : def.presets[0]!.id });
+}
+
+/** 화면에 보이는 기본 시작: 봄 (1년차 3월) */
+export function springGame(seed = 'spring', def: ChapterDefinition = ch1): GameState {
   return createGame(def, { seed });
 }
 
@@ -59,3 +67,14 @@ export function defWith(policies: PolicyTemplate[], fn?: (d: ChapterDefinition) 
 
 export const sumLedger = (s: GameState, res: string, source?: string) =>
   s.work.ledger.filter((l) => l.res === res && (source === undefined || l.source === source)).reduce((a, l) => a + l.delta, 0);
+
+/** 결정이 남아 있으면 고를 수 있는 첫 선택지로 끝까지 진행한다 (정산까지) */
+export function finishMonth(def: ChapterDefinition, s: GameState, prefer: string[] = []): GameState {
+  let cur = s;
+  for (let guard = 0; guard < 10 && cur.step === 'decision'; guard++) {
+    const opts = availableOptions(def, cur, cur.work.decision!);
+    const id = prefer.find((p) => opts.includes(p)) ?? opts[0]!;
+    cur = choose(def, cur, id);
+  }
+  return cur;
+}

@@ -5,9 +5,9 @@ import { renderToString } from 'react-dom/server';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { chapters, commonStrings } from '../data/registry';
-import { createGame, reduce, type GameState } from '../engine';
+import { availableOptions, createGame, reduce, type GameState } from '../engine';
 import { createTranslator } from '../i18n';
-import { ch1, choose, newGame, pick } from '../test/fixtures';
+import { ch1, choose, finishMonth, newGame, pick, springGame } from '../test/fixtures';
 import { decisionModel, DecisionPopup } from './components/Decision';
 import { I18nProvider } from './i18n';
 import { MotionProvider } from './motion';
@@ -16,6 +16,7 @@ import { IntroScreen } from './screens/IntroScreen';
 import { orderRows, PhaseScreen } from './screens/PhaseScreen';
 import { SituationScreen } from './screens/SituationScreen';
 import { TitleScreen } from './screens/TitleScreen';
+import { QuietScreen } from './screens/QuietScreen';
 
 const tables = [commonStrings.ko, chapters['ch1']!.strings.ko];
 const tr = createTranslator(tables, { tribe: '잿빛강 사람들' });
@@ -43,7 +44,9 @@ function huntMonth(): GameState[] {
   let s = pick(ch1, newGame('ui-hunt'), 'reindeer_big_hunt');
   states.push(s);
   for (let guard = 0; guard < 5 && s.step === 'decision'; guard++) {
-    s = choose(ch1, s, s.work.decision!.kind === 'leftover' ? 'cache' : 'keep_fires');
+    const opts = availableOptions(ch1, s, s.work.decision!);
+    const want = s.work.decision!.kind === 'leftover' ? 'cache' : 'keep_fires';
+    s = choose(ch1, s, opts.includes(want) ? want : opts[0]!);
     states.push(s);
   }
   return states;
@@ -134,6 +137,41 @@ describe('화면', () => {
     expect(early).toContain('초원의 여울');
     const settle = html(<PhaseScreen def={ch1} state={end} index={end.work.reports.length - 1} onNext={noop} send={noop} />);
     expect(settle).toContain('이달의 결과');
+  });
+
+  it('봄 시작: 인트로, 1년차 · 봄 · 3월, 첫 달 소식, 전략 팝업', () => {
+    const s = springGame('ui-spring');
+    const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />);
+    expect(i).toContain('긴 겨울이 끝났다');
+    expect(i).toContain('남은 식량은 4일치.');
+    expect(i).not.toContain('⟨');
+    const h = html(<SituationScreen def={ch1} state={s} send={noop} />);
+    expect(h).toContain('얼음이 갈라진다, 물고기가 돌아온다');
+    expect(h).toContain('긴 겨울을 넘겼다');
+    expect(h).not.toContain('⟨');
+    const p = sheet(s);
+    expect(p).toContain('봄 물고기 떼 잡기');
+    expect(p).toContain('거의 확실하다');
+    expect(p).toContain('1년차 · 봄 · 3월');
+    expect(p).not.toContain('⟨');
+  });
+
+  it('평온한 달 요약 화면: 순마다 한 줄, 이달의 결과, 펼쳐 보기', () => {
+    let found = false;
+    for (let k = 0; k < 20 && !found; k++) {
+      const s0 = springGame(`ui-quiet-${k}`);
+      const s = finishMonth(ch1, pick(ch1, s0, s0.work.candidates.find((c) => c.policyId === 'river_gather' || c.policyId === 'fish_run_weirs')!.policyId));
+      if (!s.history.at(-1)?.quiet) continue;
+      found = true;
+      const q = html(<QuietScreen def={ch1} state={s} onNext={noop} onExpand={noop} />);
+      expect(q).toContain('평온한 달');
+      expect(q).toContain('상순 · 1~10일');
+      expect(q).toContain('하순 · 21~30일');
+      expect(q).toContain('펼쳐 보기');
+      expect(q).toContain('최종');
+      expect(q).not.toContain('⟨');
+    }
+    expect(found).toBe(true);
   });
 
   it('장부 순서: 얻은 것(큰 것부터) → 쓴 것(큰 것부터), 0.5kg 미만은 뺀다', () => {

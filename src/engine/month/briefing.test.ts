@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ch1, newGame, pick, tweakDef } from '../../test/fixtures';
+import { ch1, finishMonth, newGame, pick, tweakDef } from '../../test/fixtures';
 import { goalProgress } from '../goals/progress';
 import { coldestMonthFirewood, cohesionBand, crewSplit } from '../display';
 import { sumLedger } from './month';
@@ -39,7 +39,6 @@ describe('조언', () => {
     const byPolicy = (pid: string) => s.work.candidates.find((c) => c.policyId === pid)?.uid;
     expect(a.find((x) => x.personId === 'bawi')!.policyUid).toBe(byPolicy('reindeer_big_hunt'));
     expect(a.find((x) => x.personId === 'bawi')!.line.key).toBe('advice.bawi.big_hunt');
-    expect(a.find((x) => x.personId === 'seori')!.line.key).toBe('advice.seori.winter_prep');
   });
 
   it('조언자가 죽으면 조언하지 않는다', () => {
@@ -69,14 +68,14 @@ describe('시대 목표 진행도', () => {
   });
 
   it('정산 때 거처에서 지낸 달 수가 쌓인다', () => {
-    const s = pick(ch1, newGame('goal'), 'hold_and_ration');
+    const s = finishMonth(ch1, pick(ch1, newGame('goal'), 'hold_and_ration'));
     expect(s.counters['shelter_months.tent']).toBe(1);
   });
 });
 
 describe('진행 화면용 보고', () => {
   it('단계마다 장부 행, 시작·끝 식량이 있고 행의 합이 식량 변화와 같다', () => {
-    const s = pick(ch1, newGame('rows'), 'river_gather');
+    const s = finishMonth(ch1, pick(ch1, newGame('rows'), 'tan_hides'));
     for (const r of s.work.reports.slice(1, 4)) {
       expect(r.to).toBeDefined();
       const sum = r.rows.filter((x) => x.res === 'food').reduce((a, x) => a + x.delta, 0);
@@ -86,7 +85,7 @@ describe('진행 화면용 보고', () => {
   });
 
   it('마을 서술은 무리 이름표 "마을"로 들어간다', () => {
-    const s = pick(ch1, newGame('rows'), 'river_gather');
+    const s = pick(ch1, newGame('rows'), 'tan_hides');
     const early = s.work.reports[1]!;
     expect(early.lines.some((l) => l.group === 'village' && l.key.startsWith('nar.village_work'))).toBe(true);
   });

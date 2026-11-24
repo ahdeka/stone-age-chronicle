@@ -6,7 +6,7 @@ import type { ComponentType } from 'react';
 import * as L from './scenes/layers';
 import type { SceneId } from './sceneIds';
 
-export type LayerKind = 'bg' | 'subject' | 'overlay' | 'portrait';
+export type LayerKind = 'bg' | 'ground' | 'subject' | 'overlay' | 'portrait';
 
 export type SceneAsset =
   | { kind: LayerKind; svg: ComponentType<L.LayerProps> }
@@ -36,6 +36,23 @@ export const manifest: Record<SceneId, SceneAsset> & Record<string, SceneAsset |
   'sub.strangers': { kind: 'subject', svg: L.SubStrangers },
   'sub.messenger': { kind: 'subject', svg: L.SubMessenger },
   'sub.reeds': { kind: 'subject', svg: L.SubReeds },
+  'sub.fish_run': { kind: 'subject', svg: L.SubFishRun },
+  'sub.birds': { kind: 'subject', svg: L.SubBirds },
+  'sub.berries': { kind: 'subject', svg: L.SubBerries },
+  'sub.flood': { kind: 'subject', svg: L.SubFlood },
+  'sub.bear': { kind: 'subject', svg: L.SubBear },
+  'sub.bear_sleeping': { kind: 'subject', svg: L.SubBearSleeping },
+  'sub.claw_marks': { kind: 'subject', svg: L.SubClawMarks },
+  'sub.meat_rack': { kind: 'subject', svg: L.SubMeatRack },
+  'sub.ice_hole': { kind: 'subject', svg: L.SubIceHole },
+  'sub.deer': { kind: 'subject', svg: L.SubDeer },
+  'sub.elder_telling': { kind: 'subject', svg: L.SubElderTelling },
+  'sub.hides': { kind: 'subject', svg: L.SubHides },
+  // 계절 지면
+  'ground.spring': { kind: 'ground', svg: L.GroundSpring },
+  'ground.summer': { kind: 'ground', svg: L.GroundSummer },
+  'ground.autumn': { kind: 'ground', svg: L.GroundAutumn },
+  'ground.snow': { kind: 'ground', svg: L.GroundSnow },
   // 날씨와 때
   'ov.dusk': { kind: 'overlay', svg: L.OvDusk },
   'ov.night': { kind: 'overlay', svg: L.OvNight },

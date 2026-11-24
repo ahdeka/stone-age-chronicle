@@ -9,7 +9,14 @@ import { byId, findPlace, monthDef } from '../core/lookup';
 export function resolveSceneSpec(def: ChapterDefinition, state: GameState, spec: SceneSpec, placeId: Id, weatherId: Id): SceneSpec {
   const overlay = spec.overlay === '{weather}' ? (weatherId ? byId(def.weather, weatherId, 'weather').overlay : undefined) : spec.overlay;
   const bg = spec.bg === '{place}' ? findPlace(def, placeId).scene : spec.bg === '{camp}' ? findPlace(def, state.campPlace).scene : spec.bg;
-  return { bg, ...(spec.subjects ? { subjects: spec.subjects } : {}), ...(overlay ? { overlay } : {}) };
+  // 계절 지면: 굴 안처럼 지면이 없는 배경은 ground: 'none'으로 끈다
+  const ground = spec.ground ?? def.scenes.groundBySeason?.[monthDef(def, state).season];
+  return {
+    bg,
+    ...(ground && ground !== 'none' && bg !== 'bg.cave_inside' ? { ground } : {}),
+    ...(spec.subjects ? { subjects: spec.subjects } : {}),
+    ...(overlay ? { overlay } : {}),
+  };
 }
 
 export function buildBriefing(def: ChapterDefinition, state: GameState): Briefing {

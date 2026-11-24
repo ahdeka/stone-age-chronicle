@@ -11,7 +11,7 @@ export const commonBalance = {
   },
   /** 위험 단서: 대가 있는 성공 이상의 확률 p로 정한다. '결과를 알 수 없다'는 숨은 변수로만 정해진다 */
   hint: { sure: 0.85, fair: 0.55 },
-  policy: { slots: 5, urgentSlots: 3, urgentFoodDays: 5, maxPerCategory: 2, jitter: 5 },
+  policy: { slots: 5, urgentSlots: 3, urgentFoodDays: 3, maxPerCategory: 2, jitter: 5, maxCacheTargets: 2 },
   events: { villageChancePerMonth: 0.35, maxPerMonth: 2 },
   cohesion: { max: 100, deathCost: 4, lowThreshold: 10 },
   chronicle: { deathImportance: 50 },

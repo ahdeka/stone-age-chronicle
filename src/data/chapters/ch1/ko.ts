@@ -2,6 +2,8 @@
 // 규칙(CLAUDE.md "화면 표기 원칙"): 화면 정보는 쉬운 말과 아라비아 숫자만, 달 이름과 분위기 있는 표현은 이야기 문장에서만.
 // 조사는 {이름:은} 서식으로, 부족 이름은 {tribe}로만 넣는다.
 
+import { ch1ContentKo } from './ko.content';
+
 const names: Record<string, string> = {
   maru: '마루', bawi: '바위', seori: '서리', noeul: '노을', ikki: '이끼',
   doljjeogwi: '돌쩌귀', galdae: '갈대', sol: '솔', yeoul: '여울', neoreok: '너럭', garam: '가람',
@@ -12,6 +14,7 @@ const names: Record<string, string> = {
 };
 
 export const ch1Ko: Record<string, string> = {
+  ...ch1ContentKo,
   // 시작 화면의 추천 부족 이름 (첫 번째가 기본값)
   'tribe.suggest.grey_river': '잿빛강 사람들',
   'tribe.suggest.willow_brook': '버들내 사람들',
@@ -55,69 +58,6 @@ export const ch1Ko: Record<string, string> = {
   'seat.hunt_leader': '사냥 우두머리', 'seat.elder': '이야기꾼', 'seat.healer': '약초꾼', 'seat.artisan': '장인',
   'stance.bold': '대담', 'stance.cautious': '신중', 'stance.practical': '실용', 'stance.inventive': '기술',
 
-  // ── 방침 ──
-  'policy.reindeer_big_hunt.name': '순록 떼 대사냥',
-  'policy.reindeer_big_hunt.summary': '성인 {crew}명을 초원의 여울로 보낸다. 마을은 비고 겨울 준비가 늦어진다.',
-  'policy.river_gather.name': '강가 어로와 채집',
-  'policy.river_gather.summary': '가까운 강가와 늪에서 뿌리와 물고기를 조금씩 모은다.',
-  'policy.winter_prep.name': '겨울 준비 우선',
-  'policy.winter_prep.summary': '마을 일손 대부분이 마른 가지와 장작을 모은다.',
-  'policy.hold_and_ration.name': '배급을 줄이고 버틴다',
-  'policy.hold_and_ration.summary': '모두 4분의 3만 먹으며 아낀다. 약한 사람부터 지친다.',
-  'policy.recover_cache.name': '여울의 고기 회수',
-  'policy.recover_cache.summary': '{crew}명이 돌무더기 아래 묻어 둔 고기를 찾으러 간다.',
-
-  // ── 사건 ──
-  'event.herd_vs_wolves.title': '두 소식이 한꺼번에',
-  'event.herd_vs_wolves.text': '본 무리가 이틀 뒤 여울에 닿는다는 소식이 왔다. 같은 날 저녁, 늑대들이 밤마다 천막 주위를 돈다는 전갈이 마을에서 왔다.',
-  'event.herd_vs_wolves.say.leader': '결정해 주십시오.',
-  'event.herd_vs_wolves.opt.stay_all': '전원 매복 유지',
-  'event.herd_vs_wolves.opt.send_back': '몇 명을 돌려보낸다',
-  'event.herd_vs_wolves.opt.keep_fires': '마을에 큰 불을 피운다',
-  'event.herd_vs_wolves.opt.call_off': '사냥 중단, 귀환',
-  'event.herd_vs_wolves.res.send_back': '사냥꾼 넷이 밤길을 걸어 마을로 돌아갔다. 매복 줄이 얇아졌다.',
-  'event.herd_vs_wolves.res.keep_fires': '마을은 천막 둘레에 불 세 개를 피우고 교대로 밤을 지켰다. 늑대들은 불빛 가장자리에서 돌아섰다.',
-
-  'event.wolves_circle_camp.title': '불빛 가장자리의 눈',
-  'event.wolves_circle_camp.text': '밤마다 천막 너머에서 눈빛이 번득인다. 어젯밤에는 말리던 고기 한 줄이 사라졌다.',
-  'event.wolves_circle_camp.opt.fires': '큰 불을 피운다',
-  'event.wolves_circle_camp.opt.watch': '교대로 밤을 지킨다',
-  'event.wolves_circle_camp.opt.ignore': '그냥 둔다',
-  'event.wolves_circle_camp.res.fires': '불 셋을 밤새 지폈다. 장작이 빠르게 줄었지만 늑대는 물러갔다.',
-  'event.wolves_circle_camp.res.watch': '어른들이 돌아가며 밤을 지켰다. 낮에는 다들 졸았다.',
-
-  'event.strangers_smoke.title': '낯선 사람들',
-  'event.strangers_smoke.text': '털가죽을 두른 여섯 명이 연기를 보고 찾아왔다. 남쪽 늪지 너머 호숫가의 갈대호수 사람들이다. 짐 속에 말린 물고기가 가득하다.',
-  'event.strangers_smoke.opt.trade_hides': '가죽 10장과 바꾼다',
-  'event.strangers_smoke.opt.decline': '정중히 돌려보낸다',
-
-  'event.reed_lake_return.title': '얼음이 녹으면, 다시',
-  'event.reed_lake_return.text': '강 얼음이 풀리자 갈대호수 사람들이 약속대로 돌아왔다. 이번에는 물고기를 말리는 틀도 메고 왔다.',
-  'event.reed_lake_return.memo': '갈대호수 사람들: 얼음이 녹으면 다시 온다고 했다.',
-  'event.reed_lake_return.opt.trade': '가죽 5장과 바꾼다',
-  'event.reed_lake_return.opt.learn': '말리는 법을 배운다',
-
-  'line.wolves_took': '늑대가 말리던 고기를 물어 갔다.',
-  'line.wolves_circled': '늑대들이 밤새 천막 주위를 돌았다. 아이들이 무서워 잠을 못 잤다.',
-  'line.spears_broken': '창 몇 자루가 부러졌다.',
-
-  // ── 서술 ──
-  'nar.ambush_good.1': '사냥대는 나흘을 걸어 순록 이동로에 닿았다. 얕은 여울 양쪽 갈대밭에 엎드려 첫 무리를 덮쳤다. 순록 {caught:count}마리가 쓰러졌다.',
-  'nar.ambush_good.2': '{leader} 우두머리가 바람을 읽고 사냥대를 갈대밭 아래로 옮겼다. 첫 매복에서 순록 {caught:count}마리를 잡았다.',
-  'nar.ambush_bad.1': '순록들이 먼저 냄새를 맡고 여울을 비껴갔다. 첫 매복은 빈손에 가까웠다.',
-  'nar.herd_good.1': '본 무리가 여울에 닿자 양쪽에서 창이 날았다. 순록 {caught:count}마리, 고기 약 {meat}kg이었다.',
-  'nar.herd_good.2': '수백 마리가 물을 건너는 사이 사냥대는 쉬지 않고 창을 던졌다. 저녁까지 순록 {caught:count}마리를 끌어냈다.',
-  'nar.herd_costly.1': '본 무리를 덮쳐 순록 {caught:count}마리를 쓰러뜨렸다. 그러나 무리에 떠밀린 사람들이 물속에서 넘어졌다.',
-  'nar.herd_bad.1': '본 무리는 여울 아래쪽으로 방향을 틀었다. 순록 {caught:count}마리만 건졌다.',
-  'nar.hunt_called_off.1': '사냥대는 매복을 풀고 마을로 돌아섰다. 등 뒤에서 본 무리가 여울을 건너는 소리가 들렸다.',
-  'nar.gather_month.1': '어른들은 강가에서 뿌리를 캐고 얕은 물에 그물을 놓았다. 양은 적었지만 다치는 사람은 없었다.',
-  'nar.gather_month.2': '노을이 늪 가장자리에서 먹을 수 있는 뿌리를 골라 주었다. 아이들도 바구니를 들고 따라다녔다.',
-  'nar.prep_month.1': '어른들은 마른 가지를 꺾어 천막 뒤에 높이 쌓았다. 서리는 아이들에게 불씨를 꺼뜨리지 않는 법을 가르쳤다.',
-  'nar.prep_month.2': '쓰러진 소나무를 끌어와 잘게 쪼갰다. 손바닥이 갈라졌지만 장작더미는 높아졌다.',
-  'nar.hold_month.1': '사냥도 먼 길도 없이 불가에 모여 지냈다. 고기는 얇게 썰어 나눴고, 다들 말이 줄었다.',
-  'nar.cache_found.1': '돌무더기는 그대로였다. 언 고기를 꺼내 짊어졌다.',
-  'nar.cache_gone.1': '돌무더기가 파헤쳐져 있었다. 뼈와 늑대 발자국만 남았다.',
-
   // ── 결말과 연대기 ──
   'ending.ruin_extinct.title': '꺼진 불',
   'ending.ruin_extinct.chron': '{tribe}의 마지막 불이 꺼졌다.',
@@ -129,127 +69,11 @@ export const ch1Ko: Record<string, string> = {
   'chron.knowledge': '부족이 새로운 앎을 얻었다: {knowledge}.',
   'chron.policy': '이달의 일: {policy}.',
   'chron.strangers_trade': '갈대호수 사람들과 처음 물건을 바꿨다. 그들은 얼음이 녹으면 다시 오겠다고 했다.',
-  // ── 시작 프리셋: 인트로, 땅, 연대기 첫 문장 (화면 시안 Main, TurnModal) ──
-  'preset.grey_river.chapter': '제1장 · 구석기',
-  'preset.grey_river.intro.1': '빙하기의 끝자락, 북쪽 땅.',
-  'preset.grey_river.intro.2': '잿빛강은 고원에서 흘러내려 넓게 굽이친다.',
-  'preset.grey_river.intro.3': '강 굽이의 바위 그늘 아래, 가죽 천막 {tents:count}채.',
-  'preset.grey_river.intro.4': '{pop}명. 성인 {adults}, 노인 {elders}, 아이 {children}.',
-  'preset.grey_river.intro.5': '지난여름은 짧았고, 사냥은 신통치 않았다.',
-  'preset.grey_river.intro.6': '밤마다 서리가 내린다. 겨울까지 두 달 남짓.',
-  'preset.grey_river.intro.7': '남은 식량은 {days:days}.',
-  'preset.grey_river.intro.8': '당신은 {tribe}의 족장이다.',
-  'preset.grey_river.meta': '{date} · {pop}명',
-  'preset.grey_river.tagline': '첫 겨울이 다가온다. 무엇을 먼저 지킬 것인가.',
-  'preset.grey_river.land.title': '잿빛강 땅',
-  'preset.grey_river.land.subtitle': '빙하기 끝자락 · 북쪽 대륙의 동쪽 끝',
-  'preset.grey_river.land.intro': '잿빛강은 북쪽 고원에서 흘러내려 넓게 굽이친다. 부족은 강 굽이의 바위 그늘 아래 천막을 쳤다. 북쪽에는 소나무 숲, 동쪽에는 바람 거센 초원, 남쪽에는 안개 낀 늪지가 펼쳐져 있다.',
-  'preset.grey_river.land.terrain.mark': '땅',
-  'preset.grey_river.land.terrain.label': '지형',
-  'preset.grey_river.land.terrain.value': '넓은 강 굽이, 북쪽 소나무 숲, 동쪽 초원, 남쪽 늪지',
-  'preset.grey_river.land.climate.mark': '철',
-  'preset.grey_river.land.climate.label': '날씨',
-  'preset.grey_river.land.climate.value': '춥다 · 여름은 짧고 겨울은 길고 혹독하다',
-  'preset.grey_river.land.rain.mark': '비',
-  'preset.grey_river.land.rain.label': '비와 눈',
-  'preset.grey_river.land.rain.value': '많지 않다 · 겨울엔 대부분 눈',
-  'preset.grey_river.land.river.mark': '강',
-  'preset.grey_river.land.river.label': '주요 강',
-  'preset.grey_river.land.river.value': '잿빛강 · 늦가을부터 가장자리가 언다',
-  'preset.grey_river.land.soil.mark': '흙',
-  'preset.grey_river.land.soil.label': '흙',
-  'preset.grey_river.land.soil.value': '강가의 고운 흙, 초원의 누런 흙',
-  'preset.grey_river.land.danger.mark': '!',
-  'preset.grey_river.land.danger.label': '위험',
-  'preset.grey_river.land.danger.value': '늑대 무리, 혹한과 눈보라, 봄에 얼음이 녹으며 나는 홍수, 겨울 식량 부족',
-  'preset.grey_river.chronicle': '서리 내린 잿빛강 굽이에서, {tribe} {pop}명이 첫 겨울을 앞두고 있었다.',
-
   // ── 달의 계절감 ──
   'month.thaw.when': '이른 봄', 'month.sprout.when': '봄', 'month.egg.when': '늦봄',
   'month.longday.when': '이른 여름', 'month.hot.when': '한여름', 'month.thunder.when': '늦여름',
   'month.fruit.when': '이른 가을', 'month.reindeer.when': '가을', 'month.leaf.when': '늦가을',
   'month.frost.when': '초겨울', 'month.snow.when': '한겨울', 'month.ice.when': '늦겨울',
-
-  // ── 월초 보고: 머리글 ──
-  'head.starving': '먹을 것이 바닥났다',
-  'head.last_sack': '마지막 고기 자루가 비어 간다',
-  'head.herd_and_wolves': '순록 떼가 내려오고, 늑대가 가까이 있다',
-  'head.fire_low': '불이 꺼져 간다',
-  'head.blizzard': '눈보라가 다가온다',
-  'head.herd': '순록 떼가 초원을 지난다',
-  'head.deer': '사슴들이 얼어붙은 강가로 내려왔다',
-  'brief.headline.spring': '얼음이 풀리기 시작한다',
-  'brief.headline.summer': '해가 길다',
-  'brief.headline.autumn': '겨울이 다가온다',
-  'brief.headline.winter': '긴 겨울의 한가운데',
-
-  // ── 월초 보고: 소식 ──
-  'news.hunger': '먹을 것이 바닥났다. 아이와 노인부터 기운을 잃고 있다.',
-  'news.food_low': '고기 자루가 가벼워졌다. 열흘을 버티기 어렵다.',
-  'news.reindeer.migrating': '동쪽 초원에서 순록 떼가 남쪽으로 내려오고 있다. 보름 안에 지나가 버린다.',
-  'news.blizzard': '하늘빛이 무겁다. 눈보라가 몰려올 것 같다.',
-  'news.firewood_low': '장작더미가 낮아졌다. 며칠 안에 밤을 데울 불이 꺼진다.',
-  'news.deer.crossing': '붉은사슴들이 얼어붙은 강가로 내려와 있다. 곧 강을 건널 것이다.',
-  'news.wolves.near': '강가 진흙에 늑대 발자국이 여럿 찍혀 있다. 무리가 가까이 있다.',
-  'news.cache.unknown': '여울에 묻어 둔 고기 냄새를 짐승들이 맡았을지도 모른다.',
-  'news.seori.early_frost': '서리가 말한다. “이렇게 일찍 서리가 내리는 해는 겨울이 길다.”',
-  'news.cold_snap': '바람이 칼날 같다. 이번 달은 장작이 더 들 것이다.',
-  'news.ailing': '몸져누운 사람들이 있다. 일손이 그만큼 모자란다.',
-  'news.river_ice': '강 가장자리에 얇은 얼음이 언다. 물고기 잡기가 어려워진다.',
-  'news.bear.denning': '북쪽 숲의 곰은 깊은 잠에 들었다.',
-  'news.hides': '손질하지 않은 가죽이 쌓였다. 옷과 천막에 쓸 수 있다.',
-
-  // ── 결정 팝업: 상황 칩 ──
-  'chip.hunger': '굶주림',
-  'chip.food_low': '식량 10일치 미만',
-  'chip.reindeer.migrating': '순록 떼 15일 안에 지나감',
-  'chip.blizzard': '눈보라 기미',
-  'chip.firewood_low': '장작 바닥',
-  'chip.deer': '사슴이 강가에',
-  'chip.wolves.near': '늑대 무리 가까이',
-  'chip.cache': '여울의 고기, 알 수 없음',
-  'chip.cold_snap': '한파',
-
-  // ── 조언 ──
-  'advice.bawi.big_hunt': '순록 떼를 놓치면 겨울을 못 넘깁니다. 모두 데리고 나가게 해 주십시오.',
-  'advice.bawi.cache': '여울의 고기를 늑대에게 넘길 수는 없습니다.',
-  'advice.bawi.hold': '앉아서 버티면 힘만 빠집니다.',
-  'advice.bawi.generic': '사냥꾼은 쉬면 무뎌집니다. 나가게 해 주십시오.',
-  'advice.seori.winter_prep': '고기보다 먼저 불과 지붕을 챙겨야 합니다. 얼어 죽는 건 굶어 죽는 것보다 빠릅니다.',
-  'advice.seori.hold': '버티는 것도 싸움입니다. 아이들 몫부터 떼어 두십시오.',
-  'advice.seori.generic': '옛 겨울들은 늘 생각보다 길었습니다.',
-  'advice.noeul.gather': '강가와 늪에는 아직 캘 뿌리와 물고기가 있어요. 위험하지 않게 조금씩 모으면 됩니다.',
-  'advice.noeul.hold': '아픈 사람이 늘기 전에 먹는 양을 고르게 나눠야 해요.',
-  'advice.noeul.generic': '다치는 사람이 없어야 겨울을 나요.',
-  'advice.ikki.gather': '그물을 하나 더 짜면 강가에서 더 건질 수 있습니다. 시간이 조금 들 뿐입니다.',
-  'advice.ikki.winter_prep': '가죽을 손질해 옷을 지으면 불을 덜 때도 버틸 수 있습니다.',
-  'advice.ikki.generic': '손이 놀면 도구가 늘지 않습니다.',
-  'advice.generic.bold': '움직여야 먹습니다.',
-  'advice.generic.cautious': '서두르지 마십시오.',
-  'advice.generic.practical': '가까운 것부터 챙기지요.',
-  'advice.generic.inventive': '다른 방법이 있을 겁니다.',
-
-  // ── 방침: 대가와 원정대 이름 ──
-  'policy.reindeer_big_hunt.cost': '성공하면 많은 고기와 가죽. 그동안 마을이 비고 겨울 준비가 늦어진다.',
-  'policy.reindeer_big_hunt.crewLabel': '사냥대',
-  'policy.river_gather.cost': '다칠 일은 없지만 얻는 양이 많지 않다.',
-  'policy.winter_prep.cost': '추위는 막지만 식량은 거의 늘지 않는다.',
-  'policy.hold_and_ration.cost': '식량은 아끼지만 약한 사람부터 지치고 결속이 떨어진다.',
-  'policy.recover_cache.cost': '늑대가 먼저 다녀갔을 수 있다. 다칠 수도 있다.',
-  'policy.recover_cache.crewLabel': '회수대',
-
-  // ── 사건 선택지의 대가 ──
-  'event.herd_vs_wolves.opt.stay_all.cost': '마을이 무방비가 된다',
-  'event.herd_vs_wolves.opt.send_back.cost': '매복이 서툴러진다',
-  'event.herd_vs_wolves.opt.keep_fires.cost': '장작 약 80kg, 마을 채집이 줄어든다',
-  'event.herd_vs_wolves.opt.call_off.cost': '본 무리를 놓친다',
-  'event.wolves_circle_camp.opt.fires.cost': '장작 약 60kg',
-  'event.wolves_circle_camp.opt.watch.cost': '이번 달 마을 채집이 줄어든다',
-  'event.wolves_circle_camp.opt.ignore.cost': '고기를 잃거나 아이들이 겁먹는다',
-  'event.strangers_smoke.opt.trade_hides.cost': '가죽 10장 → 말린 물고기 약 150kg',
-  'event.strangers_smoke.opt.decline.cost': '인연을 놓친다',
-  'event.reed_lake_return.opt.trade.cost': '가죽 5장 → 말린 물고기 약 100kg',
-  'event.reed_lake_return.opt.learn.cost': '가죽 2장, 고기 말리는 법을 배운다',
 
   // ── 부상·병의 영향 ──
   'ailment.fracture.effect': '몇 달 동안 걷지 못한다.',

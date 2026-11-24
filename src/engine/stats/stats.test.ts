@@ -30,12 +30,14 @@ describe('스탯', () => {
     expect(firewoodPerDay(ch1, s)).toBeCloseTo(tent * 0.5);
   });
 
-  it('지식은 조건부 모디파이어를 건다 (끌개는 겨울에만)', () => {
+  it('지식은 조건부 모디파이어를 건다 (끌개: 눈 없는 철 ×1.4, 겨울 ×1.8)', () => {
     const s = newGame();
+    const base = ch1.balance.stats['carry.perPerson']!;
+    expect(stat(ch1, s, 'carry.perPerson')).toBeCloseTo(base);
     s.knowledge.has.push('sled');
-    expect(stat(ch1, s, 'carry.perPerson')).toBeCloseTo(ch1.balance.stats['carry.perPerson']!);
+    expect(stat(ch1, s, 'carry.perPerson')).toBeCloseTo(base * 1.4);
     s.month += 1; // 서리달 (겨울)
-    expect(stat(ch1, s, 'carry.perPerson')).toBeGreaterThan(ch1.balance.stats['carry.perPerson']!);
+    expect(stat(ch1, s, 'carry.perPerson')).toBeCloseTo(base * 1.8);
   });
 
   it('모르는 스탯 키는 오류', () => {

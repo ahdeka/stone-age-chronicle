@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chapters, commonStrings } from '../../src/data/registry';
-import { tweakDef } from '../../src/test/fixtures';
+import { ch1, tweakDef } from '../../src/test/fixtures';
 import { SCENE_IDS } from '../../src/assets/sceneIds';
 import { notationIssues, validate } from './validate';
 
@@ -46,7 +46,7 @@ describe('콘텐츠 검증기', () => {
     const s = { ...strings, 'event.herd_vs_wolves.opt.stay_all': '아주 아주 아주 긴 선택지 라벨이다' };
     delete (s as Record<string, string>)['policy.river_gather.summary'];
     const m = msgs(def, s);
-    expect(m.some((x) => x.includes('중복 id: reindeer_big_hunt'))).toBe(true);
+    expect(m.some((x) => x.includes(`중복 id: ${ch1.content.policies[0]!.id}`))).toBe(true);
     expect(m.some((x) => x.includes('문자열 없음: policy.river_gather.summary'))).toBe(true);
     expect(m.some((x) => x.includes('선택지 라벨'))).toBe(true);
   });
@@ -74,11 +74,12 @@ describe('콘텐츠 검증기', () => {
 
   it('도달할 수 없는 사건과 세우지 않는 깃발을 경고한다', () => {
     const def = tweakDef((d) => {
-      d.content.events.find((e) => e.id === 'strangers_smoke')!.options[0]!.effects = [{ type: 'goods', id: 'hide', delta: -10 }];
+      const ev = d.content.events.find((e) => e.id === 'cave_bear_last_sack')!;
+      ev.options.find((o) => o.id === 'use_mouth')!.effects = [{ type: 'cohesion', delta: -1 }];
       d.content.policies[0]!.appearsWhen.push({ type: 'flag', id: 'never_set' });
     });
     const m = msgs(def);
-    expect(m.some((x) => x.includes('event.reed_lake_return') && x.includes('예약하지 않는다'))).toBe(true);
+    expect(m.some((x) => x.includes('event.bear_wakes') && x.includes('예약하지 않는다'))).toBe(true);
     expect(m.some((x) => x.includes('세우지 않는 깃발: never_set'))).toBe(true);
   });
 });

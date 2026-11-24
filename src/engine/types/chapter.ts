@@ -129,6 +129,8 @@ export interface PresetPerson {
   parents?: Id[];
   advisor?: { seat: Id; stance: Id };
   isChief?: boolean;
+  /** 시작할 때 앓고 있는 병·부상 (phases: 회복까지 남은 순) */
+  ailing?: { kind: Id; severity?: 1 | 2 | 3; phases: number };
 }
 
 /** 시작 프리셋의 화면용 글 (모두 문자열 키) — 인트로, 땅 정보, 연대기 첫 문장 */
@@ -251,6 +253,13 @@ export interface ChapterBalance {
     dryKind: Id;
     dryKnowledge: Id;
     abandonCohesion: number;
+    /** 짐꾼 부르기: 원정지가 이 일수 이하로 가까우면 마을에서 사람을 불러 나른다 */
+    portersMaxDays: number;
+    /** 짐꾼 수 (마을 일손에서), 한 사람이 나르는 양은 carry.perPerson × 왕복 수 */
+    porters: number;
+    porterTrips: number;
+    /** 짐꾼이 빠진 동안 마을 일 배율 (이번 달) */
+    porterVillageMul: number;
   };
   cache: {
     /** 은닉물의 부패 배율, 냄새 증가, 짐승 습격 */
@@ -268,7 +277,7 @@ export interface ChapterBalance {
     thresholds: Record<Exclude<Tier, 'disaster'>, number>;
   };
   hint: { sure: number; fair: number };
-  policy: { slots: number; urgentSlots: number; urgentFoodDays: number; maxPerCategory: number; jitter: number };
+  policy: { slots: number; urgentSlots: number; urgentFoodDays: number; maxPerCategory: number; jitter: number; maxCacheTargets: number };
   events: { villageChancePerMonth: number; maxPerMonth: number };
   cohesion: {
     max: number;
@@ -317,7 +326,7 @@ export interface ChapterDefinition {
     endings: EndingDef[];
   };
   /** 기본 장면 (보고, 정산, 인트로) */
-  scenes: { briefing: SceneSpec; settlement: SceneSpec; intro: SceneSpec };
+  scenes: { briefing: SceneSpec; settlement: SceneSpec; intro: SceneSpec; groundBySeason?: Record<Id, Id> };
   briefing: BriefingRules;
   advisors: { stances: StanceDef[]; lines: AdvisorLine[] };
   goals: EraGoalDef[];

@@ -23,5 +23,7 @@ export const ch1Months: MonthDef[] = base.map((m) =>
   m.season === 'winter' ? { ...m, mods: [{ stat: 'yield.fish', op: 'add' as const, value: -1 }] } : m,
 );
 
-/** 낙엽달 (늦가을) */
-export const CH1_START_MONTH_INDEX = 8;
+/** 기본 시작: 녹는달 (봄, 3월) */
+export const CH1_START_MONTH_INDEX = 0;
+/** 숨은 테스트 시작: 낙엽달 (늦가을, 11월) — 시험 플레이 재현 */
+export const CH1_AUTUMN_MONTH_INDEX = 8;

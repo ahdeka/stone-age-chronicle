@@ -9,13 +9,14 @@ import { ch1Months } from './calendar';
 import { ch1Events } from './events';
 import { ch1Narratives } from './narratives';
 import { ch1Policies } from './policies';
-import { ch1Preset } from './preset';
+import { ch1AutumnPreset, ch1SpringPreset } from './preset';
 import { ch1Theme } from './theme';
 import {
   ch1Ailments,
   ch1Animals,
   ch1Clues,
   ch1FoodKinds,
+  ch1GlobalMods,
   ch1Goods,
   ch1Knowledge,
   ch1Places,
@@ -55,13 +56,14 @@ export const ch1: ChapterDefinition = {
     briefing: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle', 'sub.reeds'], overlay: '{weather}' },
     settlement: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle'], overlay: 'ov.night' },
     intro: { bg: 'bg.camp_tents', subjects: ['sub.fire_circle', 'sub.reeds'], overlay: 'ov.night' },
+    groundBySeason: { spring: 'ground.spring', summer: 'ground.summer', autumn: 'ground.autumn', winter: 'ground.snow' },
   },
   briefing: ch1Briefing,
   advisors: { stances: ch1Stances, lines: ch1AdvisorLines },
   goals: ch1Goals,
   hooks: { villageNarrative: 'village_work' },
-  globalMods: [],
+  globalMods: ch1GlobalMods,
   balance: ch1Balance,
-  presets: [ch1Preset],
+  presets: [ch1SpringPreset, ch1AutumnPreset],
   theme: ch1Theme,
 };

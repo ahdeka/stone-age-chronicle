@@ -61,6 +61,10 @@ export function SettingsMenu() {
             <input type="checkbox" checked={settings.autoOpen} onChange={(e) => set({ autoOpen: e.target.checked })} />
             {tr.t('ui.settings.autoOpen')}
           </label>
+          <label className={c.check}>
+            <input type="checkbox" checked={settings.quietSummary} onChange={(e) => set({ quietSummary: e.target.checked })} />
+            {tr.t('ui.settings.quietSummary')}
+          </label>
         </div>
       )}
     </div>

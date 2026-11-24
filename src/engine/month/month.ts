@@ -25,7 +25,7 @@ import { buildAdvice } from '../advice/advice';
 import { buildBriefing, resolveSceneSpec } from './briefing';
 import { markUsed, optionStatuses, pickEvent, villageEventIds } from '../events/events';
 import { runActivity } from '../outcome/activity';
-import { band, living, population } from '../people/people';
+import { band, laborUnits, living, population } from '../people/people';
 import { generateCandidates } from '../policy/candidates';
 import { chance } from '../rng/rng';
 import { stat } from '../stats/stats';
@@ -155,7 +155,8 @@ export function choosePolicy(def: ChapterDefinition, state: GameState, uid: Id):
   state.work.chosen = c;
   if (p.cooldown > 0) state.cooldowns[p.id] = state.month + p.cooldown;
   if (p.once) state.usedOnce.push(p.id);
-  if (p.place) state.work.place = p.place;
+  const place = c.place ?? p.place;
+  if (place) state.work.place = place;
   run(def, state);
   return undefined;
 }
@@ -228,10 +229,21 @@ export function carry(def: ChapterDefinition, state: GameState): boolean {
   return true;
 }
 
-export const LEFTOVER_OPTIONS = ['cache', 'dry', 'abandon'] as const;
+export const LEFTOVER_OPTIONS = ['porters', 'cache', 'dry', 'abandon'] as const;
+
+/** 짐꾼으로 부를 수 있는 마을 사람 수 (원정대 밖의 일할 수 있는 사람) */
+function porterCount(def: ChapterDefinition, state: GameState): number {
+  const away = new Set(state.work.chosen?.crew ?? []);
+  const home = living(state).filter((p) => !away.has(p.id) && laborUnits(def, state, p) >= 1).length;
+  return Math.min(def.balance.carry.porters, home);
+}
 
 export function leftoverAvailable(def: ChapterDefinition, state: GameState, id: string): boolean {
   if (id === 'dry') return state.knowledge.has.includes(def.balance.carry.dryKnowledge);
+  if (id === 'porters') {
+    const place = findPlace(def, state.work.place ?? state.campPlace);
+    return place.travelDays <= def.balance.carry.portersMaxDays && porterCount(def, state) > 0;
+  }
   return (LEFTOVER_OPTIONS as readonly string[]).includes(id);
 }
 
@@ -240,7 +252,25 @@ function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: str
   const ctx = runCtx(def, state);
   const b = def.balance.carry;
   const kg = totalKg(w.haul);
-  if (optionId === 'cache') {
+  if (optionId === 'porters') {
+    // 마을에서 사람을 불러 나른다: 나를 수 있는 만큼만, 그동안 마을 일이 준다 (DESIGN.md §15.3 S10)
+    const n = porterCount(def, state);
+    let cap = n * stat(def, state, 'carry.perPerson') * b.porterTrips;
+    let moved = 0;
+    for (const lot of w.haul) {
+      const per = carryWeight(def, { kind: lot.kind, kg: 1 });
+      const take = per > 0 ? Math.min(lot.kg, cap / per) : lot.kg;
+      addLot(state.stores.food, lot.kind, take);
+      cap -= take * per;
+      moved += take;
+    }
+    ledger(state, 'food', moved, 'leftover.porters');
+    state.modifiers.push({ mod: { stat: 'yield.wood', op: 'mul', value: b.porterVillageMul }, until: state.month, source: 'leftover.porters' });
+    state.modifiers.push({ mod: { stat: 'yield.gather', op: 'mul', value: b.porterVillageMul }, until: state.month, source: 'leftover.porters' });
+    pushLine(ctx, 'line.leftover.porters', { n, kg: Math.round(moved) });
+    const lost = kg - moved;
+    if (lost >= 1) pushLine(ctx, 'line.leftover.abandon', { kg: Math.round(lost) });
+  } else if (optionId === 'cache') {
     const place = w.place ?? state.campPlace;
     state.caches.push({ id: nextUid(state, 'k'), place, lots: w.haul, month: state.month, scent: 0, checkedMonth: state.month });
     state.work.notable = true;

@@ -7,6 +7,8 @@ import type { Effect, StatKey, WhoRef } from './effect';
 /** 장면 레이어 조합. '{place}'는 방침 장소, '{camp}'는 거처, '{weather}'는 지금 날씨로 채운다 */
 export interface SceneSpec {
   bg: Id;
+  /** 계절 지면 (배경 위에 겹친다). 없으면 장 정의의 groundBySeason으로 채운다. 'none'이면 그리지 않는다 */
+  ground?: Id;
   subjects?: Id[];
   overlay?: Id;
 }
@@ -85,6 +87,8 @@ export interface PolicyTemplate {
   crew?: CrewSpec;
   /** 원정지. 없으면 마을 근처 */
   place?: Id;
+  /** 묻어 둔 고기마다 후보를 하나씩 만든다 (원정지 = 은닉물 장소, 가치·거리 순 최대 maxCacheTargets개) */
+  bindCache?: boolean;
   leader?: PersonQuery;
   /** 마을 일손 중 장작에 쓰는 비율을 고정한다 (없으면 장작 상황에 따라 자동) */
   firewoodShare?: number;

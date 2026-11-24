@@ -536,3 +536,195 @@ export function makePortrait(color: string) {
     );
   };
 }
+
+// ── 계절 지면 (배경 위, 대상 아래에 겹친다. 봄 시작 2026-11-20) ──
+
+export function GroundSpring() {
+  const tufts = Array.from({ length: 22 }, (_, i) => 20 + i * 55 + ((i * 37) % 23));
+  return (
+    <g opacity="0.85">
+      <path d="M0 440 L0 412 C240 402 480 418 720 408 C960 398 1080 410 1200 404 L1200 440 Z" fill="#2c3322" opacity="0.55" />
+      {tufts.map((x, i) => (
+        <path key={x} className={s.reed} style={delay((i * 0.29) % 3)} d={`M${x} 424 l-4 -12 M${x} 424 l2 -14 M${x} 424 l7 -10`} stroke="#7d9a5a" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      ))}
+    </g>
+  );
+}
+
+export function GroundSummer() {
+  const tufts = Array.from({ length: 26 }, (_, i) => 10 + i * 47 + ((i * 29) % 19));
+  return (
+    <g opacity="0.8">
+      <path d="M0 440 L0 406 C240 396 480 414 720 402 C960 392 1080 404 1200 398 L1200 440 Z" fill="#3a3a1e" opacity="0.5" />
+      {tufts.map((x, i) => (
+        <path key={x} className={s.reed} style={delay((i * 0.31) % 3)} d={`M${x} 426 q-3 -16 -8 -22 M${x} 426 q2 -18 4 -26 M${x} 426 q5 -12 12 -18`} stroke="#a3a05a" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+      ))}
+    </g>
+  );
+}
+
+export function GroundAutumn() {
+  const leaves = Array.from({ length: 30 }, (_, i) => [(i * 41) % 1200, 412 + ((i * 13) % 24)]);
+  return (
+    <g opacity="0.8">
+      <path d="M0 440 L0 410 C300 400 600 418 900 406 C1050 400 1120 408 1200 404 L1200 440 Z" fill="#3a2614" opacity="0.5" />
+      {leaves.map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="4" ry="2" fill={i % 3 === 0 ? '#b8682e' : '#8a5a2c'} opacity="0.8" />
+      ))}
+    </g>
+  );
+}
+
+export function GroundSnow() {
+  return (
+    <g>
+      <path d="M0 440 L0 404 C200 394 420 412 640 400 C860 388 1040 404 1200 396 L1200 440 Z" fill="#cfc6b6" opacity="0.32" />
+      <path className={s.lnBone} d="M0 404 C200 394 420 412 640 400 C860 388 1040 404 1200 396" />
+    </g>
+  );
+}
+
+// ── 봄·여름·가을의 대상 ──
+
+/** 거슬러 오르는 물고기 떼 */
+export function SubFishRun() {
+  const fish: [number, number][] = Array.from({ length: 14 }, (_, i) => [140 + i * 70 + ((i * 23) % 30), 336 + ((i * 17) % 26)]);
+  return (
+    <g className={s.herd}>
+      {fish.map(([x, y], i) => (
+        <path key={i} className={s.lnBone} d={`M${x} ${y} q12 -6 24 0 q-12 6 -24 0 M${x + 24} ${y} l8 -5 M${x + 24} ${y} l8 5`} />
+      ))}
+    </g>
+  );
+}
+
+/** 하늘을 지나는 철새 */
+export function SubBirds() {
+  const birds = Array.from({ length: 9 }, (_, i) => [600 + i * 46, 90 + ((i * 19) % 50)]);
+  return (
+    <g className={s.drift}>
+      {birds.map(([x, y], i) => (
+        <path key={i} className={s.lnThin} d={`M${x} ${y} q8 -8 16 0 q8 -8 16 0`} />
+      ))}
+    </g>
+  );
+}
+
+/** 열매 덤불과 견과 */
+export function SubBerries() {
+  const bushes = [120, 260, 980, 1100];
+  return (
+    <g>
+      {bushes.map((x, i) => (
+        <g key={x}>
+          <path d={`M${x - 40} 412 q40 -60 80 0 Z`} fill="#1f1d14" />
+          {Array.from({ length: 7 }, (_, k) => (
+            <circle key={k} cx={x - 26 + k * 9} cy={392 - ((k * 7 + i * 3) % 14)} r="3" fill="#b0432e" opacity="0.9" />
+          ))}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** 불어난 강물 */
+export function SubFlood() {
+  return (
+    <g className={s.drift}>
+      <path d="M0 360 C200 344 400 372 600 352 C800 332 1000 362 1200 346 L1200 440 L0 440 Z" fill="#3b4a52" opacity="0.55" />
+      <path className={s.lnBone} d="M20 372 C220 356 420 384 620 364 M700 356 C860 340 1020 368 1180 352" />
+    </g>
+  );
+}
+
+/** 깨어 있는 곰 (실루엣) */
+export function SubBear() {
+  return (
+    <g>
+      <path d="M760 404 q0 -60 70 -66 q40 -4 70 18 q24 -10 34 6 q6 14 -12 18 q4 30 -6 44 h-20 v-20 h-70 v20 h-22 q-6 -10 -6 -20 Z" fill="#100d0a" />
+      <path className={s.ln} d="M760 404 q0 -60 70 -66 q40 -4 70 18 q24 -10 34 6" />
+      <circle cx="922" cy="350" r="2.6" fill="#e0a15a" />
+    </g>
+  );
+}
+
+/** 굴 안에 잠든 곰 */
+export function SubBearSleeping() {
+  return (
+    <g>
+      <path d="M520 410 q-10 -50 70 -56 q90 -6 110 40 q6 16 -10 16 Z" fill="#0d0b09" />
+      <path className={s.ln} d="M520 410 q-10 -50 70 -56 q90 -6 110 40" opacity="0.7" />
+      <path className={s.lnBone} d="M640 340 q10 -14 22 -8 M664 328 q10 -12 22 -6" />
+    </g>
+  );
+}
+
+/** 입구 바위의 발톱 자국 */
+export function SubClawMarks() {
+  return (
+    <g>
+      <path className={s.ln} d="M300 250 l30 70 M318 246 l30 72 M336 244 l28 70 M354 246 l24 66" strokeWidth="4" />
+    </g>
+  );
+}
+
+/** 고기와 물고기를 말리는 건조대 */
+export function SubMeatRack() {
+  return (
+    <g>
+      <path className={s.ln} d="M420 410 l20 -90 M560 410 l-20 -90 M432 330 h116 M436 352 h108" />
+      {Array.from({ length: 8 }, (_, i) => (
+        <path key={i} className={s.lnBone} d={`M${444 + i * 13} 330 v18 M${446 + i * 12} 352 v16`} />
+      ))}
+      <path className={s.lnBone} d="M470 410 q10 -20 0 -40 q-10 -20 6 -36" opacity="0.4" />
+    </g>
+  );
+}
+
+/** 얼음 구멍과 낚시꾼 */
+export function SubIceHole() {
+  return (
+    <g>
+      <ellipse cx="620" cy="388" rx="34" ry="9" fill="#0f1416" />
+      <ellipse cx="620" cy="388" rx="34" ry="9" className={s.lnBone} />
+      <path className={s.ln} d="M660 402 v-38 M660 364 l-30 18 M630 382 v8" />
+      <circle cx="660" cy="356" r="6" fill="#c9813a" />
+    </g>
+  );
+}
+
+/** 붉은사슴 */
+export function SubDeer() {
+  return (
+    <g className={s.herd}>
+      {[820, 900, 990, 1080].map((x, i) => (
+        <path
+          key={x}
+          className={s.lnThin}
+          transform={`translate(${x} ${350 + (i % 2) * 10}) scale(1.4)`}
+          d="M0 0 q20 -10 40 0 M8 0 l-2 18 M14 0 l2 18 M30 0 l-2 18 M36 0 l2 18 M0 -4 l-8 -16 M-8 -20 l-6 -10 l-6 4 M-8 -20 l2 -12 l6 -4 M-8 -20 l-12 2"
+        />
+      ))}
+    </g>
+  );
+}
+
+/** 불가에서 이야기하는 노인과 아이들 */
+export function SubElderTelling() {
+  return (
+    <g>
+      <path className={s.ln} d="M520 404 v-34 M520 370 l-14 16 M520 370 l14 10 M520 370 m-7 -14 a7 7 0 1 0 14 0 a7 7 0 1 0 -14 0" />
+      <path className={s.lnThin} d="M470 404 v-18 m-5 -9 a5 5 0 1 0 10 0 a5 5 0 1 0 -10 0 M570 404 v-18 m-5 -9 a5 5 0 1 0 10 0 a5 5 0 1 0 -10 0 M600 404 v-16 m-4 -8 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0" />
+    </g>
+  );
+}
+
+/** 널어 둔 가죽 */
+export function SubHides() {
+  return (
+    <g>
+      <path className={s.ln} d="M380 410 v-80 M520 410 v-80 M380 332 h140" />
+      <path d="M392 336 q20 -4 40 0 l-4 50 q-16 6 -32 0 Z M450 336 q22 -4 46 0 l-6 54 q-18 6 -34 0 Z" fill="#6a4a2a" opacity="0.85" />
+    </g>
+  );
+}

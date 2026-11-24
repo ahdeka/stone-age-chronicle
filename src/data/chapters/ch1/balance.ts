@@ -18,6 +18,16 @@ export const ch1Balance: ChapterBalance = {
     'yield.wood': 1,
     'yield.gather': 1,
     'yield.fish': 1,
+    /** 계절 수확: 기본 0, 장 전역 모디파이어가 철에 맞춰 켠다 (world.ts ch1GlobalMods). 올가미는 올가미 방침만 켠다 */
+    'yield.fish_run': 0,
+    'yield.eggs': 0,
+    'yield.greens': 0,
+    'yield.nuts': 0,
+    'yield.snare': 0,
+    /** 묻어 둔 고기를 짐승이 노리는 정도 (저장 구덩이가 줄인다) */
+    'cache.raid': 1,
+    /** 쌓아 둘 수 있는 장작 kg (천막 기준. 바위굴 +900, 장작 덧집 +600) */
+    'firewood.cap': 700,
     /** 한 사람이 나르는 kg (시험 플레이: 14명이 450kg) */
     'carry.perPerson': 32,
     'spoil.mul': 1,
@@ -42,7 +52,7 @@ export const ch1Balance: ChapterBalance = {
     sickDeathMul: 2,
   },
   cold: { sickChance: 0.15, sickness: 'cough', deathChance: 0.02, cohesion: -4 },
-  chores: { firewoodTargetPhases: 2, firewoodShareLow: 0.4, firewoodShareNormal: 0.15 },
+  chores: { firewoodTargetPhases: 2, firewoodShareLow: 0.3, firewoodShareNormal: 0.15 },
   carry: {
     multiTripMaxDays: 2,
     maxTrips: 3,
@@ -51,6 +61,10 @@ export const ch1Balance: ChapterBalance = {
     dryKind: 'dried_meat',
     dryKnowledge: 'meat_drying',
     abandonCohesion: -2,
+    portersMaxDays: 4,
+    porters: 8,
+    porterTrips: 1,
+    porterVillageMul: 0.5,
   },
   cache: {
     spoilMul: 1.5,

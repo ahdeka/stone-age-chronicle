@@ -40,7 +40,9 @@ export function chores(ctx: RunCtx): void {
   const share =
     chosen?.firewoodShare ?? (state.stores.firewood < target ? def.balance.chores.firewoodShareLow : def.balance.chores.firewoodShareNormal);
 
-  const wood = units * share * m.woodPerWorkerDay * d * stat(def, state, 'yield.wood');
+  // 장작은 쌓아 둘 수 있는 만큼만 (천막은 비에 젖는다. 굴과 장작 덧집이 한계를 올린다)
+  const room = Math.max(0, stat(def, state, 'firewood.cap') - state.stores.firewood);
+  const wood = Math.min(room, units * share * m.woodPerWorkerDay * d * stat(def, state, 'yield.wood'));
   state.stores.firewood += wood;
   ledger(state, 'firewood', wood, 'village.wood');
 

@@ -6,6 +6,8 @@ import { reduce, type ChapterDefinition, type Command, type GameState } from '..
 import { DebugPanel } from '../components/DebugPanel';
 import { EndingScreen } from './EndingScreen';
 import { PhaseScreen } from './PhaseScreen';
+import { QuietScreen } from './QuietScreen';
+import { useMotion } from '../motion';
 import { SituationScreen } from './SituationScreen';
 
 interface Props {
@@ -23,7 +25,9 @@ function situationTime(s: GameState): boolean {
 
 export function GameView({ def, state, onChange, onQuit }: Props) {
   // 진행 화면에서 보고 있는 보고 번호. 불러온 직후에는 마지막 보고부터
-  const [view, setView] = useState<{ month: number; index: number } | null>(null);
+  // summary: 평온한 달을 한 화면으로 볼 차례인가 (펼쳐 보면 false)
+  const [view, setView] = useState<{ month: number; index: number; summary?: boolean } | null>(null);
+  const { settings } = useMotion();
   const [showEnding, setShowEnding] = useState(false);
 
   const send = useCallback(
@@ -33,7 +37,7 @@ export function GameView({ def, state, onChange, onQuit }: Props) {
         console.warn(r.error);
         return;
       }
-      if (cmd.type === 'choosePolicy') setView({ month: r.state.month, index: 1 });
+      if (cmd.type === 'choosePolicy') setView({ month: r.state.month, index: 1, summary: true });
       if (cmd.type === 'nextMonth') setView(null);
       onChange(r.state);
     },
@@ -50,12 +54,21 @@ export function GameView({ def, state, onChange, onQuit }: Props) {
   else {
     const last = state.work.reports.length - 1;
     const index = view && view.month === state.month ? Math.min(view.index, last) : last;
-    const onNext = () => {
-      if (index < last) setView({ month: state.month, index: index + 1 });
-      else if (state.step === 'settlement') send({ type: 'nextMonth' });
+    const finish = () => {
+      if (state.step === 'settlement') send({ type: 'nextMonth' });
       else if (state.step === 'ended') setShowEnding(true);
     };
-    body = <PhaseScreen key={`${state.month}-${index}`} def={def} state={state} index={index} onNext={onNext} send={send} />;
+    const onNext = () => {
+      if (index < last) setView({ month: state.month, index: index + 1 });
+      else finish();
+    };
+    const h = state.history[state.history.length - 1];
+    const quiet = settings.quietSummary && view?.summary && view.month === state.month && h?.month === state.month && h.quiet && state.step !== 'decision';
+    body = quiet ? (
+      <QuietScreen def={def} state={state} onNext={finish} onExpand={() => setView({ month: state.month, index: 1, summary: false })} />
+    ) : (
+      <PhaseScreen key={`${state.month}-${index}`} def={def} state={state} index={index} onNext={onNext} send={send} />
+    );
   }
 
   return (

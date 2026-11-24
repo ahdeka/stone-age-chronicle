@@ -1,8 +1,8 @@
-// 시작 프리셋: 잿빛강 사람들, 낙엽달 (docs/playtest-log.md "시작 브리핑")
+// 시작 프리셋: 봄 시작(기본)과 숨은 늦가을 시작(시험 플레이 재현용, docs/playtest-log.md "시작 브리핑")
 // 34명: 성인 18(남 9, 여 9), 노인 4, 아이 12. 모두 이름, 나이, 부모·자식 관계를 가진다.
 
 import type { PresetPerson, StartPreset } from '../../../engine';
-import { CH1_START_MONTH_INDEX } from './calendar';
+import { CH1_AUTUMN_MONTH_INDEX, CH1_START_MONTH_INDEX } from './calendar';
 
 type Row = [id: string, sex: 'f' | 'm', age: number, extra?: Partial<PresetPerson>];
 
@@ -64,31 +64,67 @@ export const ch1People: PresetPerson[] = rows.map(([id, sex, age, extra]) => ({
 }));
 
 const P = 'preset.grey_river';
+const A = 'preset.grey_river_autumn';
 
-export const ch1Preset: StartPreset = {
+const landFacts = ['terrain', 'climate', 'rain', 'river', 'soil', 'danger'].map((f) => ({
+  mark: `${P}.land.${f}.mark`,
+  label: `${P}.land.${f}.label`,
+  value: `${P}.land.${f}.value`,
+}));
+const land = { title: `${P}.land.title`, subtitle: `${P}.land.subtitle`, intro: `${P}.land.intro`, facts: landFacts };
+const nameSuggestions = ['tribe.suggest.grey_river', 'tribe.suggest.willow_brook', 'tribe.suggest.white_ford', 'tribe.suggest.dawn_fire'];
+const discovered = ['river_bend', 'reindeer_ford', 'east_steppe', 'north_forest', 'south_marsh'];
+const lines = (k: string) => [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${k}.intro.${n}`);
+
+/** 기본 시작: 긴 겨울을 막 넘긴 봄 (1년차 3월 녹는달). DESIGN.md §10.2 */
+export const ch1SpringPreset: StartPreset = {
   id: 'grey_river',
   presentation: {
     chapterLabel: `${P}.chapter`,
-    introLines: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${P}.intro.${n}`),
-    nameSuggestions: ['tribe.suggest.grey_river', 'tribe.suggest.willow_brook', 'tribe.suggest.white_ford', 'tribe.suggest.dawn_fire'],
+    introLines: lines(P),
+    nameSuggestions,
     meta: `${P}.meta`,
     tagline: `${P}.tagline`,
-    land: {
-      title: `${P}.land.title`,
-      subtitle: `${P}.land.subtitle`,
-      intro: `${P}.land.intro`,
-      facts: ['terrain', 'climate', 'rain', 'river', 'soil', 'danger'].map((f) => ({
-        mark: `${P}.land.${f}.mark`,
-        label: `${P}.land.${f}.label`,
-        value: `${P}.land.${f}.value`,
-      })),
-    },
+    land,
     chronicleOpening: `${P}.chronicle`,
   },
   shelterUnits: 5,
   startMonthIndex: CH1_START_MONTH_INDEX,
   campPlace: 'river_bend',
   shelter: 'tent',
+  // 겨울 끝의 기침: 노인 억새 (서리는 건강하다 — C5를 위해)
+  people: ch1People.map((p) => (p.id === 'eoksae' ? { ...p, ailing: { kind: 'cough', severity: 1 as const, phases: 4 } } : p)),
+  food: [
+    { kind: 'roots', kg: 70 },
+    { kind: 'dried_meat', kg: 50 },
+  ],
+  firewood: 80,
+  goods: { hide: 4, bear_hide: 0, spear: 14, knife: 9, net: 1, willow_bark: 0 },
+  cohesion: 55,
+  discovered,
+  animals: {
+    reindeer: { state: 'migrating', at: 'reindeer_ford', known: true, vars: {} },
+    wolves: { state: 'roaming', known: true, vars: {} },
+    bear: { state: 'active', at: 'north_forest', known: false, vars: {} },
+    red_deer: { state: 'scattered', known: false, vars: {} },
+    fish: { state: 'running', known: true, vars: {} },
+  },
+  knowledge: [],
+};
+
+/** 숨은 시작: 시험 플레이 재현 테스트용 늦가을 (낙엽달). 화면의 시작에는 나오지 않는다 */
+export const ch1AutumnPreset: StartPreset = {
+  ...ch1SpringPreset,
+  id: 'grey_river_autumn',
+  hidden: true,
+  presentation: {
+    ...ch1SpringPreset.presentation,
+    introLines: lines(A),
+    meta: `${A}.meta`,
+    tagline: `${A}.tagline`,
+    chronicleOpening: `${A}.chronicle`,
+  },
+  startMonthIndex: CH1_AUTUMN_MONTH_INDEX,
   people: ch1People,
   food: [
     { kind: 'raw_meat', kg: 220 },
@@ -96,14 +132,13 @@ export const ch1Preset: StartPreset = {
     { kind: 'dried_meat', kg: 100 },
   ],
   firewood: 150,
-  goods: { hide: 12, bear_hide: 0, spear: 14, knife: 9, net: 1 },
+  goods: { hide: 12, bear_hide: 0, spear: 14, knife: 9, net: 1, willow_bark: 0 },
   cohesion: 60,
-  discovered: ['river_bend', 'reindeer_ford', 'east_steppe', 'north_forest', 'south_marsh'],
   animals: {
     reindeer: { state: 'migrating', at: 'reindeer_ford', known: true, vars: {} },
     wolves: { state: 'near_camp', at: 'river_bend', known: true, vars: { hunger: 1 } },
     bear: { state: 'active', at: 'north_cave', known: false, vars: {} },
     red_deer: { state: 'scattered', known: false, vars: {} },
+    fish: { state: 'scarce', known: true, vars: {} },
   },
-  knowledge: [],
 };

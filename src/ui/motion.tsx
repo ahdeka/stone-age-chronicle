@@ -11,9 +11,11 @@ export interface Settings {
   reduceMotion: boolean;
   autoOpen: boolean;
   fontScale: 1 | 2 | 3;
+  /** 평온한 달은 상순·중순·하순을 한 화면으로 요약한다 (DESIGN.md §19) */
+  quietSummary: boolean;
 }
 
-const DEFAULTS: Settings = { speed: 'normal', reduceMotion: false, autoOpen: true, fontScale: 1 };
+const DEFAULTS: Settings = { speed: 'normal', reduceMotion: false, autoOpen: true, fontScale: 1, quietSummary: true };
 const KEY = 'sac.settings';
 
 /** 타이핑·순차 등장 시간 배율 */

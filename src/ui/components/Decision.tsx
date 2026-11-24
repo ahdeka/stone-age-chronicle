@@ -107,11 +107,15 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
         return {
           id: cand.uid,
           title: tr.t(`policy.${p.id}.name`),
-          desc: tr.t(`policy.${p.id}.summary`, { crew: cand.crew.length, ...(leader ? { leader: tr.label(leader.name) } : {}) }),
+          desc: tr.t(`policy.${p.id}.summary`, {
+            crew: cand.crew.length,
+            ...(leader ? { leader: tr.label(leader.name) } : {}),
+            ...((cand.place ?? p.place) ? { place: tr.t(`place.${cand.place ?? p.place}`) } : {}),
+          }),
           cost: opt(tr, `policy.${p.id}.cost`),
           crew: crewText,
           hint: cand.hint,
-          scene: resolveSceneSpec(def, s, p.scene, p.place ?? s.campPlace, s.work.weather[0] ?? ''),
+          scene: resolveSceneSpec(def, s, p.scene, cand.place ?? p.place ?? s.campPlace, s.work.weather[0] ?? ''),
         };
       }),
       command: (uid) => ({ type: 'choosePolicy', uid }),

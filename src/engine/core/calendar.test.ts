@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ch1, newGame, tweakDef } from '../../test/fixtures';
 import { calendarDate } from './lookup';
+import { createGame } from './createGame';
 
 describe('화면 날짜 (1년차 · 봄 · 3월)', () => {
   it('녹는달은 3월, 서리달은 12월, 얼음달은 2월이고 년차는 3월에 바뀐다', () => {
@@ -27,6 +28,8 @@ describe('화면 날짜 (1년차 · 봄 · 3월)', () => {
       const hidden = { ...structuredClone(d.presets[0]!), id: 'hidden_one', hidden: true, startMonthIndex: 3 };
       d.presets.unshift(hidden);
     });
-    expect(newGame('h', def).presetId).toBe(ch1.presets[0]!.id);
+    // 기본 시작은 숨지 않은 첫 프리셋 (봄). 숨은 늦가을 프리셋은 presetId로만 고른다
+    expect(createGame(def, { seed: 'h' }).presetId).toBe('grey_river');
+    expect(createGame(ch1, { seed: 'h' }).presetId).toBe('grey_river');
   });
 });

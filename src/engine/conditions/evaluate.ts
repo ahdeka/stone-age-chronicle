@@ -89,7 +89,7 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
       const a = state.animals[c.id];
       if (!a) return false;
       if (c.state && !c.state.includes(a.state)) return false;
-      if (c.at !== undefined && a.at !== c.at) return false;
+      if (c.at !== undefined && a.at !== (c.at === '$place' ? (state.work.place ?? state.campPlace) : c.at)) return false;
       if (c.known !== undefined && a.known !== c.known) return false;
       return true;
     }
@@ -121,8 +121,10 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
       return state.clues.some((x) => x.id === c.id) === (c.has ?? true);
     case 'cache': {
       const stale = def.balance.cache.staleAfterMonths;
+      // '$place': 이번 달 방침이 가는 곳 (후보를 만들 때는 그 후보의 곳)
+      const at = c.at === '$place' ? (state.work.place ?? state.campPlace) : c.at;
       const found = state.caches.filter(
-        (x) => (c.at === undefined || x.place === c.at) && (c.known === undefined || state.month - x.checkedMonth < stale === c.known),
+        (x) => (at === undefined || x.place === at) && (c.known === undefined || state.month - x.checkedMonth < stale === c.known),
       );
       return found.length > 0 === (c.has ?? true);
     }

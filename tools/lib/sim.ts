@@ -5,6 +5,8 @@ import {
   applyCommand,
   availableOptions,
   createGame,
+  findEvent,
+  optionStatuses,
   nextInt,
   population,
   seedToState,
@@ -14,11 +16,26 @@ import {
   type Strategy,
 } from '../../src/engine';
 
-export type StrategyName = 'random' | 'first';
+export type StrategyName = 'random' | 'first' | 'sure';
 
 export function makeStrategy(name: StrategyName, rng: RngState): Strategy {
   if (name === 'first') {
     return { pickPolicy: (_d, s) => s.work.candidates[0]!.uid, pickOption: (_d, _s, _x, o) => o[0]! };
+  }
+  if (name === 'sure') {
+    // "거의 확실하다"만 고른다 (먹을거리를 모으는 분야 먼저). 사건 선택지도 '거의 확실하다'인 것 중 첫 번째
+    return {
+      pickPolicy: (def, s) => {
+        const sure = s.work.candidates.filter((c) => c.hint === 'sure');
+        const food = sure.find((c) => ['fish', 'gather', 'trap'].includes(def.content.policies.find((p) => p.id === c.policyId)!.category));
+        return (food ?? sure[0] ?? s.work.candidates[s.work.candidates.length - 1]!).uid;
+      },
+      pickOption: (def, s, d, o) => {
+        if (d.kind !== 'event') return o.includes('porters') ? 'porters' : o[0]!;
+        const st = optionStatuses(def, s, findEvent(def, d.eventId), d.actors).filter((x) => x.available && x.hint === 'sure');
+        return st[0]?.option.id ?? o[0]!;
+      },
+    };
   }
   return {
     pickPolicy: (_d, s) => s.work.candidates[nextInt(rng, 0, s.work.candidates.length - 1)]!.uid,
@@ -56,8 +73,8 @@ function foodDaysOf(s: GameState, def: ChapterDefinition): number {
   return daily > 0 ? kg / daily : 0;
 }
 
-export function playGame(def: ChapterDefinition, seed: string, strategy: StrategyName, maxMonths: number): GameRecord {
-  const s = createGame(def, { seed });
+export function playGame(def: ChapterDefinition, seed: string, strategy: StrategyName, maxMonths: number, presetId?: string): GameRecord {
+  const s = createGame(def, { seed, ...(presetId ? { presetId } : {}) });
   const strat = makeStrategy(strategy, seedToState(`strategy:${seed}`));
   const rec: GameRecord = {
     seed,

@@ -1033,7 +1033,12 @@ export const manifest: Record<SceneId, SceneAsset> = {
 
 ## 22. 인수인계 (새 세션이 먼저 읽을 것)
 
-### 22.1 지금 상태 (M2 화면 + 표기와 이름 기반, §22.5의 1~2번)
+### 22.1 지금 상태 (§22.5의 1~7번까지, 커밋 ② 승인 대기)
+- 2026-11-24: 3~7번 완료. 방침 25개, 사건 27개, 서술 43개. 봄 시작 프리셋이 기본이고 늦가을 프리셋(`grey_river_autumn`)은 숨은 테스트용이다.
+- 검증: typecheck, test(16개 파일, 120개), validate:content(오류 0, 경고 0), build 통과.
+- 시뮬레이터(임시 스크립트로 잰 값, 8번에서 `npm run sim`에 넣는다): "거의 확실하다" 전략 300판에서 3월 굶주림 0%, 3~10월 사망 중앙값 0(p90 1). 첫 겨울은 아직 너무 혹독하고(그 전략으로 판당 약 16명), random 전략은 봄 굶주림 악순환에 빠진다(3~10월 사망 중앙값 7). 8번에서 맞춘다.
+
+#### (이전 기록) M2 화면 + 표기와 이름 기반, §22.5의 1~2번
 - 검증: `npm run typecheck`, `npm test`(16개 파일, 110개), `npm run validate:content`(오류 0, 경고 0), `npm run build` 모두 통과.
 - 1~2번 완료: 날짜 "1년차 · 봄 · 3월", 숫자 서식(화면은 아라비아 숫자, `{n:days}` = "18일치"), 조사 서식, 부족 이름 기반(입력 화면은 2026-11-24에 보류), 세이브 v3, 쉬운 표현 교체(§21.1), 검증기 표기 규칙, 숨은 프리셋 필드(`StartPreset.hidden`). **아직 시작 프리셋은 늦가을이다** — 봄 시작은 3번.
 - 콘텐츠는 아직 M1 시험용 수준이다: 방침 5개(대사냥, 강가 어로, 겨울 준비, 버티기, 여울 고기 회수), 사건 4개(두 소식, 늑대 눈빛, 낯선 사람들, 얼음이 녹으면 다시), 서술 12개. M2 목표(방침 15+, 사건 20+)까지 채워야 한다.
@@ -1073,6 +1078,13 @@ export const manifest: Record<SceneId, SceneAsset> = {
 - **화면 표기는 검증기가 잡는다**(§12, §21.1): 화면용 키에 `:count`·`:num`을 쓰면 오류, `{x}` 바로 뒤에 은·는·이·가·을·를·와·과·으로·로를 글자로 붙이면 오류(`{x:이}`로), `{n:count}` 뒤를 띄우면 오류(서식이 띄어쓰기를 넣는다), 추천 부족 이름을 문자열에 직접 쓰면 오류(`{tribe}`로).
 - **`{tribe}`는 전역 변수다.** 번역기(`createTranslator(tables, globals)`)가 모든 문자열에 넣는다. 화면은 `App`의 `I18nProvider globals`, 이름은 `ui/format.ts`의 `tribeDisplayName`.
 - **화면 날짜**는 `engine/core/lookup.ts`의 `calendarDate`와 `ui/format.ts`의 `dateText`·`shortDateText`. 달 숫자는 `MonthDef.number`, 년차가 바뀌는 달은 `calendar.yearStartsAt`.
+- **엔진 시험의 기본 프리셋은 숨은 늦가을이다.** `src/test/fixtures.ts`의 `newGame`은 `grey_river_autumn`(시험 플레이와 같은 상황), 봄 시작은 `springGame`. 결정이 남은 달을 끝까지 진행하려면 `finishMonth`.
+- **1장 콘텐츠 문자열은 `ch1/ko.content.ts`**(방침·사건·서술·프리셋·월초 보고·조언). `ch1/ko.ts`는 이름, 세계, 결말, 목표 같은 바탕 문자열이다.
+- **`'$place'`**: 조건(`cache`, `animal`의 `at`)과 효과(`cache`)에서 "이번 달 방침이 가는 곳". `bindCache` 방침은 묻은 곳마다 후보를 만들고 `BoundPolicy.place`로 그 곳을 들고 다닌다.
+- **계절 수확은 스탯으로 켠다.** `yield.fish_run/eggs/greens/nuts/snare`는 기본 0이고 `world.ts`의 `ch1GlobalMods`(철)나 방침의 `monthMods`(올가미)가 켠다. 마을 수확은 수확 종류마다 더해진다(나눠 가지지 않는다).
+- **장작은 쌓아 둘 수 있는 만큼만**(`firewood.cap`: 천막 700, 장작 덧집 +600, 바위굴 +900). 이것이 없으면 여름 장작이 끝없이 쌓여 겨울 장작 위기(C2)가 사라진다.
+- **`preserve` 효과**: 날것을 말린 것으로 바꾼다(무게 yield 비율). 이번 달 말린 양은 `$preserved`에 더해진다.
+- **오르면 나쁜 스탯**(`spoil.mul`, `cache.raid`, `firewood.burnMul`)을 올리는 모디파이어는 검증기가 비용으로 본다(`BAD_WHEN_UP`).
 - **세이브는 버전 3이다**(v3: `tribeName`). `GameState` 구조를 바꾸면 `SAVE_VERSION`을 올리고 `migrations`에 변환을 넣는다(`src/engine/save/`).
 - **npm 설치가 회사망에서 인증서 오류로 막힌다**(CLAUDE.md "미해결"). 새 의존성이 필요하면 먼저 사용자에게 알린다.
 

@@ -85,7 +85,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         need('animal', c.id, where);
         const a = def.animals.find((x) => x.id === c.id);
         for (const st of c.state ?? []) if (a && !a.states.includes(st)) err(where, `${c.id}에 없는 상태: ${st}`);
-        if (c.at) need('place', c.at, where);
+        if (c.at && c.at !== '$place') need('place', c.at, where);
         return;
       }
       case 'animalVar':
@@ -115,7 +115,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         for (const k of c.in) need('weather', k, where);
         return;
       case 'cache':
-        if (c.at) need('place', c.at, where);
+        if (c.at && c.at !== '$place') need('place', c.at, where);
         return;
       case 'policy':
         if (c.id) need('policy', c.id, where);
@@ -177,7 +177,12 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         str(`clue.${e.id}`, where);
         return;
       case 'cache':
-        return need('place', e.at, where);
+        if (e.at !== '$place') need('place', e.at, where);
+        return;
+      case 'preserve':
+        for (const k of e.from) need('food', k, where);
+        need('food', e.to, where);
+        return;
       case 'schedule':
         need('event', e.event, where);
         scheduledEvents.add(e.event);
@@ -221,12 +226,13 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
       if (!['{place}', '{camp}', '{weather}'].includes(id)) err(where, `알 수 없는 장면 자리표시자: ${id}`);
       return;
     }
-    if (!/^(bg|sub|ov|portrait)\.[a-z_]+$/.test(id)) err(where, `장면 id 형식이 아니다: ${id}`);
+    if (!/^(bg|ground|sub|ov|portrait)\.[a-z_]+$/.test(id)) err(where, `장면 id 형식이 아니다: ${id}`);
     else if (sceneIds && !sceneIds.has(id)) err(where, `매니페스트에 없는 그림: ${id}`);
   };
   const scene = (s: SceneSpec | undefined, where: string) => {
     if (!s) return;
     sceneId(s.bg, where);
+    if (s.ground && s.ground !== 'none') sceneId(s.ground, where);
     for (const x of s.subjects ?? []) sceneId(x, where);
     if (s.overlay) sceneId(s.overlay, where);
   };
@@ -307,7 +313,14 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         need('narrative', o.narrative, ow);
         usedNarratives.add(o.narrative);
       }
-      if (o.activity) for (const out of Object.values(o.activity.outcomes)) effects(out.effects, ow);
+      if (o.activity)
+        for (const out of Object.values(o.activity.outcomes)) {
+          effects(out.effects, ow);
+          if (out.narrative) {
+            need('narrative', out.narrative, ow);
+            usedNarratives.add(out.narrative);
+          }
+        }
       if (!o.activity && !hasCost(o.effects)) warn(ow, '비용·위험·기회비용이 보이지 않는 선택지');
       const sig = JSON.stringify({ e: o.effects, a: o.activity });
       if (sigs.has(sig)) err(ow, '결과가 같은 선택지 (가짜 선택지)');
@@ -404,6 +417,18 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   scene(def.scenes.briefing, 'scenes.briefing');
   scene(def.scenes.settlement, 'scenes.settlement');
   scene(def.scenes.intro, 'scenes.intro');
+  for (const [sn, g] of Object.entries(def.scenes.groundBySeason ?? {})) {
+    need('season', sn, 'scenes.groundBySeason');
+    sceneId(g, 'scenes.groundBySeason');
+  }
+  for (const sh of def.shelters) for (const m of sh.mods ?? []) if (def.balance.stats[m.stat] === undefined) err(`shelter.${sh.id}`, `없는 스탯: ${m.stat}`);
+  for (const m of def.globalMods) {
+    if (def.balance.stats[m.stat] === undefined) err('globalMods', `없는 스탯: ${m.stat}`);
+    conds(m.when, 'globalMods');
+  }
+  for (const k of def.knowledge) for (const m of k.mods) if (def.balance.stats[m.stat] === undefined) err(`knowledge.${k.id}`, `없는 스탯: ${m.stat}`);
+  for (const c of def.clues) for (const m of c.mods ?? []) if (def.balance.stats[m.stat] === undefined) err(`clue.${c.id}`, `없는 스탯: ${m.stat}`);
+  for (const y of def.yields) if (def.balance.stats[`yield.${y.id}`] === undefined) err(`yield.${y.id}`, `스탯 기본값 없음: yield.${y.id}`);
   for (const w of def.weather) if (w.overlay) sceneId(w.overlay, `weather.${w.id}`);
   for (const sh of def.shelters) sceneId(sh.scene, `shelter.${sh.id}`);
 
@@ -503,6 +528,9 @@ export function notationIssues(key: string, text: string, tribeNames: ReadonlySe
   return out;
 }
 
+/** 오르면 나쁜 스탯 */
+const BAD_WHEN_UP = new Set(['spoil.mul', 'cache.raid', 'firewood.burnMul']);
+
 /** 비용·위험이 보이는 효과가 있는가 (기회비용은 opportunity로 표시) */
 export function hasCost(es: readonly Effect[]): boolean {
   return es.some((e) => {
@@ -519,6 +547,8 @@ export function hasCost(es: readonly Effect[]): boolean {
       case 'random':
         return true;
       case 'modifier':
+        // 오르면 나쁜 스탯(부패, 짐승의 습격, 장작 소모)은 올리는 것이 비용이다
+        if (BAD_WHEN_UP.has(e.mod.stat)) return e.mod.op === 'add' ? e.mod.value > 0 : e.mod.value > 1;
         return e.mod.op === 'add' ? e.mod.value < 0 : e.mod.value < 1;
       case 'flag':
         // 기회비용 깃발: 'opportunity.'로 시작하거나 다음 단계를 건너뛰게 하는 깃발

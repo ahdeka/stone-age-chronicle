@@ -47,6 +47,8 @@ export type Effect =
   | { type: 'clue'; id: Id; months?: number; remove?: boolean }
   /** 은닉물: recover = 남은 것을 짐으로 꺼낸다 / check = 상태만 확인한다 */
   | { type: 'cache'; at: Id; action: 'recover' | 'check' }
+  /** 저장: 마을의 날것(from)을 오래 가는 것(to)으로 바꾼다. 먹을 수 있는 양 기준 yield 비율. $preserved를 채운다 */
+  | { type: 'preserve'; from: Id[]; to: Id; maxKg: Amount; yield: number }
   /** 기억: 몇 달 뒤 월초 사건으로 돌아온다. window 동안 조건이 맞는 첫 달에 발생 */
   | { type: 'schedule'; event: Id; after: number; window?: number; when?: Condition[] }
   | { type: 'modifier'; mod: ModifierDef; months: number }

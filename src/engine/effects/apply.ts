@@ -320,7 +320,8 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       return;
     }
     case 'cache': {
-      for (const c of state.caches.filter((x) => x.place === e.at)) {
+      const at = resolvePlace(state, e.at);
+      for (const c of state.caches.filter((x) => x.place === at)) {
         c.checkedMonth = state.month;
         if (e.action === 'recover') {
           for (const l of c.lots) addLot(state.work.haul, l.kind, l.kg);
@@ -332,6 +333,30 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       }
       state.caches = state.caches.filter((c) => c.lots.length > 0);
       state.work.notable = true;
+      return;
+    }
+    case 'preserve': {
+      // 날것을 오래 가는 것으로: 상하기 쉬운 것부터 (먹을 수 있는 양 기준으로 yield를 곱한다)
+      const max = Math.max(0, rollAmount(state, e.maxKg));
+      let left = max;
+      let made = 0;
+      for (const lot of state.stores.food) {
+        if (left <= 0) break;
+        if (!e.from.includes(lot.kind)) continue;
+        const take = Math.min(lot.kg, left);
+        lot.kg -= take;
+        left -= take;
+        made += take * e.yield;
+      }
+      state.stores.food = state.stores.food.filter((l) => l.kg > 1e-6);
+      const used = max - left;
+      if (made > 0) {
+        addLot(state.stores.food, e.to, made);
+        ledger(state, 'food', -(used - made), 'preserve');
+        state.work.notable = true;
+      }
+      // 이번 달에 말린 양 (여러 번 말려도 더한다)
+      state.work.vars['preserved'] = (state.work.vars['preserved'] ?? 0) + made;
       return;
     }
     case 'schedule': {
@@ -366,6 +391,11 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       throw new Error(`unknown effect: ${JSON.stringify(never)}`);
     }
   }
+}
+
+/** '$place'는 이번 달 방침이 가는 곳 (묻어 둔 고기 회수처럼 후보마다 다른 곳) */
+export function resolvePlace(state: GameState, at: Id): Id {
+  return at === '$place' ? (state.work.place ?? state.campPlace) : at;
 }
 
 export function applyEffects(ctx: RunCtx, effects: readonly Effect[] | undefined): void {

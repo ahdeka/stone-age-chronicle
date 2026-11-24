@@ -55,28 +55,50 @@ export function isAvailable(def: ChapterDefinition, state: GameState, p: PolicyT
   return allTrue(def, state, p.appearsWhen);
 }
 
+/** 묻어 둔 고기가 있는 곳: 많이 묻은 곳 → 가까운 곳 순, 최대 maxCacheTargets곳 */
+export function cacheTargets(def: ChapterDefinition, state: GameState): string[] {
+  const byPlace = new Map<string, number>();
+  for (const c of state.caches) byPlace.set(c.place, (byPlace.get(c.place) ?? 0) + c.lots.reduce((a, l) => a + l.kg, 0));
+  const travel = (id: string) => def.places.find((x) => x.id === id)?.travelDays ?? 0;
+  return [...byPlace.entries()]
+    .sort((a, b) => b[1] - a[1] || travel(a[0]) - travel(b[0]) || (a[0] < b[0] ? -1 : 1))
+    .slice(0, def.balance.policy.maxCacheTargets)
+    .map(([id]) => id);
+}
+
 export function generateCandidates(def: ChapterDefinition, state: GameState): BoundPolicy[] {
   const b = def.balance.policy;
   const scored: { p: PolicyTemplate; bound: BoundPolicy }[] = [];
+  const savedPlace = state.work.place;
   for (const p of def.content.policies) {
     if (!isAvailable(def, state, p)) continue;
     const formed = formCrew(def, state, p);
     if (!formed) continue;
     const actors: Record<string, string> = formed.leader ? { leader: formed.leader.id } : {};
-    const hint = policyHint(def, state, p, { crew: formed.crew, ...(formed.leader ? { leader: formed.leader } : {}), actors });
-    let score = p.priority + (nextFloat(state.rng) * 2 - 1) * b.jitter;
-    for (const r of p.relevance ?? []) if (allTrue(def, state, r.when, actors)) score += r.add;
-    scored.push({
-      p,
-      bound: {
-        uid: nextUid(state, 'p'),
-        policyId: p.id,
-        crew: formed.crew.map((x) => x.id),
-        ...(formed.leader ? { leaderId: formed.leader.id } : {}),
-        hint,
-        score,
-      },
-    });
+    // 묻어 둔 고기마다 후보 하나 (그 곳을 이번 달의 곳으로 놓고 단서와 점수를 계산한다)
+    const targets: (string | undefined)[] = p.bindCache ? cacheTargets(def, state) : [undefined];
+    for (const place of targets) {
+      if (place) state.work.place = place;
+      const hint = policyHint(def, state, p, { crew: formed.crew, ...(formed.leader ? { leader: formed.leader } : {}), actors });
+      let score = p.priority + (nextFloat(state.rng) * 2 - 1) * b.jitter;
+      for (const r of p.relevance ?? []) if (allTrue(def, state, r.when, actors)) score += r.add;
+      if (place) {
+        if (savedPlace === undefined) delete state.work.place;
+        else state.work.place = savedPlace;
+      }
+      scored.push({
+        p,
+        bound: {
+          uid: nextUid(state, 'p'),
+          policyId: p.id,
+          crew: formed.crew.map((x) => x.id),
+          ...(formed.leader ? { leaderId: formed.leader.id } : {}),
+          hint,
+          score,
+          ...(place ? { place } : {}),
+        },
+      });
+    }
   }
   scored.sort((x, y) => y.bound.score - x.bound.score);
 
