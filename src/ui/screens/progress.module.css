@@ -44,6 +44,25 @@
   height: 100%;
 }
 
+/* 그림 겹쳐 바꾸기: 새 그림이 옛 그림 위에서 서서히 나타난다 (5차 피드백, 깜빡임 없이) */
+@keyframes sceneIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sceneLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.sceneIn {
+  animation: sceneIn calc(0.9s * var(--motion-scale)) ease-in-out both;
+}
+
 .caption {
   flex: none;
   padding: 10px 16px;
@@ -193,54 +212,16 @@
   background: var(--warn-text);
 }
 
-/* 아래: 속도 · 일시정지 · 글 바로 보기 · 계속 */
+/* 아래: 일시정지 · 글 바로 보기(하순 끝에는 결과 보기). 속도는 설정에서만 (5차 피드백) */
 .foot {
   flex: none;
   padding: 10px 24px;
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.speed {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.speedLabel {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
-.segment {
-  display: flex;
-  border-radius: 20px;
-  border: 1px solid var(--border-soft);
-  overflow: hidden;
-}
-
-.segment button {
-  min-height: 40px;
-  padding: 0 16px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
-.segment button[aria-pressed='true'] {
-  background: #3a3127;
-  color: var(--text);
-  font-weight: 700;
-}
-
-.buttons {
-  display: flex;
+  justify-content: flex-end;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .btn {

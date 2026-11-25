@@ -1,11 +1,12 @@
 // 이달의 결과 (화면 시안 Result, 2026-11-24 3차 피드백). 평온한 달 요약 화면을 대신한다.
-// 순별 한 줄 회고(중순 사건은 고른 것), 결과 등급, 덕분에, 사람 변화, 식량 장부(시작 → 얻은 것 → 쓴 것 → 최종 · 며칠치),
-// 장작 장부 한 줄, 아직 남은 일, 연대기 한 줄, "다음 달로". 수치는 이 화면에서만 보인다.
+// 순별 한 줄 회고(중순 사건은 고른 것), 결과 등급, 덕분에, 사람 변화, 식량 장부(시작 → 얻은 것 → 쓴 것),
+// 장작 장부 한 줄, 장부 맨 아래 "이달 말" 상자(식량·장작 최종 + 이달 바뀐 물자·인구), 아직 남은 일, 연대기 한 줄, "다음 달로".
+// 수치는 이 화면에서만 보인다.
 
 import { useEffect } from 'react';
-import { foodDays, totalKg, type Alert, type ChapterDefinition, type GameState, type LedgerLine, type PhaseReport, type Tier } from '../../engine';
+import { foodDays, population, totalKg, type Alert, type ChapterDefinition, type GameState, type LedgerLine, type PhaseReport, type Tier } from '../../engine';
 import { StatusBar, StepTrail } from '../components/StatusBar';
-import { lineText } from '../format';
+import { lineText, resName } from '../format';
 import { useT } from '../i18n';
 import { crewSourceTest, foldRows, orderRows, recapOf, rowLabel } from '../story';
 import { memoryItems } from './SituationScreen';
@@ -20,6 +21,8 @@ interface Props {
 
 /** 한 칸에 보일 장부 행 수 (얻은 것, 쓴 것 각각) */
 const MAX_ROWS = 4;
+/** 식량 장부의 얻은 것 + 쓴 것 줄 수 상한 (최종 상자가 커져서, 2026-11-25 5차 피드백) */
+const MAX_LEDGER_ROWS = 7;
 /** 사람 칸에 보일 사람 수 */
 const MAX_PEOPLE = 3;
 /** 머리 등급 배지: 이달의 일을 가장 잘 말해 주는 것 (큰 실패와 대가 있는 성공이 먼저) */
@@ -62,9 +65,18 @@ export function ResultScreen({ def, state, onNext }: Props) {
     foodRows.filter((x) => x.delta > 0),
     MAX_ROWS,
   );
+  // 이달 말 상자: 식량·장작 + 이달 바뀐 물자와 인구 (2026-11-25 5차 피드백 2차)
+  const goodsChange = new Map<string, number>();
+  for (const x of rows) if (x.res !== 'food' && x.res !== 'firewood') goodsChange.set(x.res, (goodsChange.get(x.res) ?? 0) + x.delta);
+  const goodsEnd = [...goodsChange].filter(([, d]) => Math.round(d) !== 0);
+  const popFrom = state.work.start.population;
+  const popTo = population(state);
+  // 물자가 둘 이상 바뀌면 한 줄("물자 가죽 −3 · 그물 +1")로 합친다 → 상자는 많아야 4줄
+  const extraEnd = (goodsEnd.length > 0 ? 1 : 0) + (popTo !== popFrom ? 1 : 0);
+  // 얻은 것·쓴 것을 합쳐 MAX_LEDGER_ROWS줄까지, 이달 말 상자의 줄이 늘면 그만큼 줄인다 (1366×650에서 장부 칸이 넘치지 않게)
   const spends = foldRows(
     foodRows.filter((x) => x.delta < 0),
-    MAX_ROWS,
+    Math.max(2, Math.min(MAX_ROWS, MAX_LEDGER_ROWS - extraEnd - gains.shown.length - (gains.rest ? 1 : 0))),
   );
   const bonus = rows.filter((x) => x.source.startsWith('bonus.') && Math.abs(x.delta) >= 0.5);
   const foodFrom = settle?.from.food ?? state.work.start.food;
@@ -115,6 +127,19 @@ export function ResultScreen({ def, state, onNext }: Props) {
       </div>
     );
 
+  // 이달 말 상자의 한 줄: 이름 | 값(· 며칠치) | 증감. 조금 큰 굵은 글씨 (2026-11-25 5차 피드백)
+  const endRow = (key: string, name: string, value: string, days: string | undefined, change: number) => (
+    <div key={key} className={r.endRow} data-end={key}>
+      <span className={r.endName}>{name}</span>
+      <span className={r.endValue}>
+        {value}
+        {days && <span className={r.endDays}>{` · ${days}`}</span>}
+      </span>
+      <span className={`${r.endDelta} ${deltaClass(change)}`}>{signed(change)}</span>
+    </div>
+  );
+  const unit = (id: string, n: number) => tr.t(tr.has(`unit.${id}`) ? `unit.${id}` : 'ui.result.amount', { n: Math.round(n) });
+
   return (
     <div className={r.page}>
       <StatusBar def={def} state={state} mode="result">
@@ -122,23 +147,9 @@ export function ResultScreen({ def, state, onNext }: Props) {
       </StatusBar>
 
       <div className={r.body} data-fit="result">
-        <div className={`${r.top} ${u.in}`}>
-          <div className={r.titleRow}>
-            <h1 className={`${r.title} ${u.serif}`}>{tr.t('ui.result.title')}</h1>
-            {tier && <span className={`${r.tier} ${r[tier]}`}>{tr.t(`tier.${tier}`)}</span>}
-          </div>
-          {/* 최종: 맨 위에 크게 (2026-11-25 4차 피드백). 상세 장부는 아래에 작게 */}
-          <div className={r.finals}>
-            <span className={r.finalLabel}>{tr.t('ui.ledger.final')}</span>
-            <div className={r.bigCell}>
-              <b className={r.bigValue}>{tr.t('ui.result.finalFood', { kg: Math.round(foodTo).toLocaleString('ko-KR'), days })}</b>
-              <span className={`${r.bigDelta} ${deltaClass(foodTo - foodFrom)}`}>({signed(foodTo - foodFrom)})</span>
-            </div>
-            <div className={r.bigCell}>
-              <b className={r.bigValue}>{tr.t('ui.result.finalWood', { kg: Math.round(woodTo).toLocaleString('ko-KR') })}</b>
-              <span className={`${r.bigDelta} ${deltaClass(woodTo - woodFrom)}`}>({signed(woodTo - woodFrom)})</span>
-            </div>
-          </div>
+        <div className={`${r.titleRow} ${u.in}`}>
+          <h1 className={`${r.title} ${u.serif}`}>{tr.t('ui.result.title')}</h1>
+          {tier && <span className={`${r.tier} ${r[tier]}`}>{tr.t(`tier.${tier}`)}</span>}
         </div>
 
         <div className={r.cols}>
@@ -201,16 +212,11 @@ export function ResultScreen({ def, state, onNext }: Props) {
           {(spends.shown.length > 0 || spends.rest) && <span className={r.group}>{tr.t('ui.ledger.spend')}</span>}
           {spends.shown.map(ledgerRow)}
           {restRow(spends.rest)}
-          <div className={`${r.row} ${r.final}`}>
-            <b>{tr.t('ui.ledger.final')}</b>
-            <b>
-              {kg(foodTo)} · {tr.t('ui.top.foodDays', { days })}
-            </b>
-          </div>
 
-          <h2 className={`${r.ledgerTitle} ${r.woodTitle}`}>{tr.t('ui.result.woodLedger')}</h2>
-          <div className={r.row}>
-            <span className={r.muted}>
+          {/* 장작: 제목 줄에 시작 · 모음 · 태움 (스크롤 없는 높이를 지키려고 한 줄로). 최종은 아래 이달 말 상자에 */}
+          <div className={r.woodHead}>
+            <h2 className={r.ledgerTitle}>{tr.t('ui.result.woodLedger')}</h2>
+            <span className={`${r.woodLine} ${r.muted}`}>
               {tr.t('ui.result.wood', { from: Math.round(woodFrom) })}
               {woodIn > 0.5 && (
                 <>
@@ -225,7 +231,29 @@ export function ResultScreen({ def, state, onNext }: Props) {
                 </>
               )}
             </span>
-            <b>{kg(woodTo)}</b>
+          </div>
+
+          {/* 이달 말: 최종 자원을 한 상자에 (식량·장작, 이달 바뀐 물자와 인구) */}
+          <div className={r.monthEnd} data-fit="month-end">
+            <span className={r.endTitle}>{tr.t('ui.result.monthEnd')}</span>
+            {endRow('food', tr.t('res.food'), kg(foodTo), tr.t('ui.top.foodDays', { days }), foodTo - foodFrom)}
+            {endRow('firewood', tr.t('res.firewood'), kg(woodTo), undefined, woodTo - woodFrom)}
+            {goodsEnd.length === 1 && goodsEnd.map(([id, d]) => endRow(id, resName(tr, id), unit(id, state.stores.goods[id] ?? 0), undefined, d))}
+            {goodsEnd.length > 1 && (
+              <div className={r.endRow} data-end="goods">
+                <span className={r.endName}>{tr.t('ui.result.goods')}</span>
+                <span className={`${r.endValue} ${r.endGoods}`}>
+                  {goodsEnd.map(([id, d], i) => (
+                    <span key={id}>
+                      {i > 0 && ' · '}
+                      {`${resName(tr, id)} `}
+                      <span className={deltaClass(d)}>{signed(d)}</span>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+            {popTo !== popFrom && endRow('population', tr.t('ui.result.population'), tr.t('ui.top.people', { n: popTo }), undefined, popTo - popFrom)}
           </div>
         </section>
         </div>

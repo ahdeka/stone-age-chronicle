@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoAdvanceDue, canPause, screenKey, type AutoAdvanceInput } from './flow';
+import { autoAdvanceDue, canPause, progressAction, screenKey, type AutoAdvanceInput } from './flow';
 
 const base: AutoAdvanceInput = { auto: true, paused: false, hasNext: true, deciding: false, run: 0, end: 4000, delay: 1500 };
 
@@ -25,6 +25,25 @@ describe('자동 진행', () => {
     expect(canPause(false, true, false)).toBe(false);
     expect(canPause(true, false, false)).toBe(false);
     expect(canPause(true, true, true)).toBe(false);
+  });
+});
+
+describe('진행 화면 버튼 (계속 버튼 없음)', () => {
+  const b = { done: true, deciding: false, toResult: false, hasNext: true, auto: true };
+  it('글이 나오는 중에는 글 바로 보기', () => {
+    expect(progressAction({ ...b, done: false })).toBe('skip');
+    expect(progressAction({ ...b, done: false, toResult: true })).toBe('skip');
+  });
+  it('하순 글이 다 나오면 결과 보기로 바뀐다', () => {
+    expect(progressAction({ ...b, hasNext: false, toResult: true })).toBe('result');
+    expect(progressAction({ ...b, hasNext: false, toResult: true, auto: false })).toBe('result');
+  });
+  it('결정을 기다리면 결정하기', () => {
+    expect(progressAction({ ...b, hasNext: false, deciding: true })).toBe('decide');
+  });
+  it('저절로 넘어가는 순 끝에서는 누를 버튼이 없고, 한 순씩 넘기기면 이어서 보기', () => {
+    expect(progressAction(b)).toBe('skipDone');
+    expect(progressAction({ ...b, auto: false })).toBe('nextPhase');
   });
 });
 

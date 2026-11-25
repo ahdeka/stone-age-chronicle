@@ -57,4 +57,20 @@ describe('글 만들기', () => {
     expect(f.shown.map((r) => r.delta)).toEqual([5, 4, 3]);
     expect(f.rest).toEqual({ delta: 3, count: 2 });
   });
+
+  it('"그 밖"에는 양이 작은 줄부터 들어가고, 먹은 양 줄은 작아도 묶이지 않는다', () => {
+    const rows = [
+      { res: 'food', source: 'spoil', delta: -90 },
+      { res: 'food', source: 'feast', delta: -40 },
+      { res: 'food', source: 'upkeep.food', delta: -12 },
+      { res: 'food', source: 'gift', delta: -8 },
+      { res: 'food', source: 'wolves', delta: -3 },
+    ];
+    const f = foldRows(rows, 3);
+    expect(f.shown.map((r) => r.source)).toEqual(['spoil', 'upkeep.food']);
+    expect(f.rest).toEqual({ delta: -51, count: 3 });
+    // 들어온 순서가 크기 순이 아니어도 작은 것부터 묶인다
+    const g = foldRows([rows[4]!, rows[0]!, rows[3]!, rows[1]!], 3);
+    expect(g.shown.map((r) => r.source)).toEqual(['spoil', 'feast']);
+  });
 });

@@ -90,10 +90,11 @@ const opt = (tr: Translator, key: string) => (tr.has(key) ? tr.t(key) : undefine
 function keyChips(tr: Translator, def: ChapterDefinition, s: GameState): Chip[] {
   const days = Math.floor(foodDays(def, s));
   const chips: Chip[] = [
-    { text: tr.t('ui.chip.food', { kg: Math.round(totalKg(s.stores.food)), days }), tone: days < def.balance.ui.foodWarnDays ? 'warn' : 'normal' },
-    { text: tr.t('ui.chip.firewood', { kg: Math.round(s.stores.firewood) }), tone: firewoodDays(def, s) < def.balance.ui.firewoodWarnDays ? 'warn' : 'normal' },
-    { text: weatherSummary(tr, s), tone: 'normal' },
+    { text: tr.t('ui.chip.food', { kg: Math.round(totalKg(s.stores.food)), days }), tone: days < def.balance.ui.foodWarnDays ? 'warn' : 'normal', base: true },
+    { text: tr.t('ui.chip.firewood', { kg: Math.round(s.stores.firewood) }), tone: firewoodDays(def, s) < def.balance.ui.firewoodWarnDays ? 'warn' : 'normal', base: true },
+    { text: weatherSummary(tr, s), tone: 'normal', base: true },
   ];
+  // 위험·기회 칩 (늑대 무리, 곰, 물고기 떼 등)은 기본 칩 뒤에. 넘치면 팝업 머리에서 "외 n개"로 접힌다
   for (const ch of s.work.brief?.chips ?? []) chips.push({ text: lineText(tr, ch), tone: ch.tone });
   return chips;
 }

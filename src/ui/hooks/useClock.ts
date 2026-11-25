@@ -36,16 +36,20 @@ export function useClock(end: number, key: unknown, opts: ClockOpts = {}): Clock
   const tail = opts.tail ?? 0;
   const run = useRef(0);
   const jump = useRef(0);
-  const [t, setT] = useState({ run: 0, jump: 0 });
+  // 잰 시간은 어느 열쇠의 것인지 함께 둔다: 열쇠가 바뀐 첫 그림에서 앞 열쇠의 시간을 쓰면
+  // 새 글이 한 번 통째로 보였다가 사라진다 (진행 화면에서 순이 바뀔 때의 깜빡임, 5차 피드백)
+  const [t, setT] = useState({ key, run: 0, jump: 0 });
   // 다시 보기를 누르면 늘려서 시간 재기를 새로 시작한다
   const [gen, setGen] = useState(0);
   const endRef = useRef(end);
   endRef.current = end;
+  const keyRef = useRef(key);
+  keyRef.current = key;
 
   useEffect(() => {
     run.current = 0;
     jump.current = 0;
-    setT({ run: 0, jump: 0 });
+    setT({ key, run: 0, jump: 0 });
   }, [key]);
 
   useEffect(() => {
@@ -57,7 +61,7 @@ export function useClock(end: number, key: unknown, opts: ClockOpts = {}): Clock
     const tick = (now: number) => {
       run.current = Math.min(limit, run.current + Math.max(0, now - last));
       last = now;
-      setT({ run: run.current, jump: jump.current });
+      setT({ key, run: run.current, jump: jump.current });
       if (run.current < limit) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -66,18 +70,19 @@ export function useClock(end: number, key: unknown, opts: ClockOpts = {}): Clock
 
   const skip = useCallback(() => {
     jump.current = Math.max(jump.current, endRef.current - run.current + 1);
-    setT({ run: run.current, jump: jump.current });
+    setT({ key: keyRef.current, run: run.current, jump: jump.current });
   }, []);
 
   const replay = useCallback(() => {
     run.current = 0;
     jump.current = 0;
-    setT({ run: 0, jump: 0 });
+    setT({ key: keyRef.current, run: 0, jump: 0 });
     setGen((g) => g + 1);
   }, []);
 
-  const e = reduced ? end + 1 : t.run + t.jump;
-  return { elapsed: e, run: t.run, skip, replay, done: e >= end };
+  const cur = Object.is(t.key, key) ? t : { run: 0, jump: 0 };
+  const e = reduced ? end + 1 : cur.run + cur.jump;
+  return { elapsed: e, run: cur.run, skip, replay, done: e >= end };
 }
 
 export interface TypedLine {

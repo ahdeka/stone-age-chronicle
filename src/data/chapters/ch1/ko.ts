@@ -47,6 +47,8 @@ export const ch1Ko: Record<string, string> = {
 
   // ── 물자, 병, 앎 ──
   'res.hide': '가죽', 'res.bear_hide': '곰 가죽', 'res.spear': '돌창', 'res.knife': '돌칼', 'res.net': '그물',
+  // 이달의 결과 "이달 말" 상자의 수량 (화면 정보: 아라비아 숫자)
+  'unit.hide': '{n}장', 'unit.bear_hide': '{n}장', 'unit.spear': '{n}자루', 'unit.knife': '{n}개', 'unit.net': '{n}개', 'unit.willow_bark': '{n}묶음',
   'food.raw_meat': '날고기', 'food.dried_meat': '말린 고기', 'food.dried_fish': '말린 물고기', 'food.fish': '물고기', 'food.roots': '뿌리와 열매',
   'shelter.tent': '가죽 천막', 'shelter.rock_cave': '바위굴', 'shelter.pit_house': '움집',
   'ailment.fracture': '뼈가 부러짐', 'ailment.claw': '깊게 할퀸 상처', 'ailment.frostbite': '동상',

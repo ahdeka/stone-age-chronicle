@@ -9,7 +9,7 @@ import { availableOptions, createGame, reduce, type GameState } from '../engine'
 import { createTranslator } from '../i18n';
 import { ch1, choose, finishMonth, newGame, pick, pickFood, springGame } from '../test/fixtures';
 import { decisionModel, DecisionPopup } from './components/Decision';
-import { PlanBody } from './components/DecisionSheet';
+import { orderChips, PlanBody } from './components/DecisionSheet';
 import { I18nProvider } from './i18n';
 import { MotionProvider } from './motion';
 import { EndingScreen } from './screens/EndingScreen';
@@ -173,6 +173,10 @@ describe('화면', () => {
     expect(early).toContain('상순 · 1~10일');
     expect(early).toContain('순록 떼 대사냥');
     expect(early).toContain('글 바로 보기');
+    // 5차 피드백: 머리의 단계 표시, 속도 고르기, "계속" 버튼이 없다
+    expect(early).not.toContain('이달의 결과');
+    expect(early).not.toContain('느림');
+    expect(early).not.toMatch(/>계속</);
     // 세 순은 한 칸에 쌓인다: 하순 화면에도 상순·중순 소제목이 그대로 있다 (4차 피드백)
     const late = html(<ProgressScreen def={ch1} state={end} index={last - 1} onNext={noop} send={noop} />);
     expect(late).toContain('상순 · 1~10일');
@@ -181,14 +185,35 @@ describe('화면', () => {
     const result = html(<ResultScreen def={ch1} state={end} onNext={noop} />);
     expect(result).toContain('이달의 결과');
     expect(result).toContain('식량 장부');
-    expect(result).toContain('최종');
-    expect(result).toMatch(/식량 [\d,]+kg · \d+일치/);
+    // 이달 말 상자 하나에 식량(값 · 며칠치 · 증감)과 장작(값 · 증감). 장부마다 따로 둔 최종 줄은 없다 (5차 피드백)
+    expect(result.match(/data-fit="month-end"/g)).toHaveLength(1);
+    expect(result).not.toContain('>최종<');
+    expect(result).toMatch(/data-end="food"><span class="[^"]+">식량<\/span><span class="[^"]+">[\d,]+kg<span class="[^"]+"> · \d+일치<\/span><\/span><span class="[^"]+">[+−±][\d,]+<\/span>/);
+    expect(result).toMatch(/data-end="firewood"><span class="[^"]+">장작<\/span><span class="[^"]+">[\d,]+kg<\/span><span class="[^"]+">[+−±][\d,]+<\/span>/);
     expect(result).toMatch(/장작 [\d,]+kg/);
     expect(result).toContain('다음 달로');
     expect(result).not.toContain('⟨');
     // 자동 진행(기본): 다음 순이 있는 화면에만 일시정지가 있다
     expect(html(<ProgressScreen def={ch1} state={end} index={1} onNext={noop} send={noop} setPaused={noop} />)).toContain('일시정지');
     expect(html(<ProgressScreen def={ch1} state={end} index={1} onNext={noop} send={noop} paused setPaused={noop} />)).toContain('다시 진행');
+  });
+
+  it('팝업 머리 칩: 기본 칩(식량·장작·날씨) → 경고 칩 → 나머지, 묶음 안은 들어온 순서 (5차 피드백)', () => {
+    const chips = [
+      { text: '물고기 떼', tone: 'good' as const },
+      { text: '늑대', tone: 'warn' as const },
+      { text: '식량', tone: 'normal' as const, base: true },
+      { text: '순록', tone: 'normal' as const },
+      { text: '곰', tone: 'warn' as const },
+      { text: '장작', tone: 'normal' as const, base: true },
+    ];
+    expect(orderChips(chips).map((c) => c.text)).toEqual(['식량', '장작', '늑대', '곰', '물고기 떼', '순록']);
+    for (const s of huntMonth().filter((x) => x.step === 'decision' || x.step === 'policy')) {
+      const m = decisionModel(tr, ch1, s)!;
+      const firstExtra = m.chips.findIndex((c) => !c.base);
+      expect(m.chips.slice(0, 3).every((c) => c.base)).toBe(true);
+      if (firstExtra >= 0) expect(m.chips.slice(firstExtra).some((c) => c.base)).toBe(false);
+    }
   });
 
   it('중순 사건: 진행 화면에 사건 직전 문장이 먼저 나오고, 이달의 결과에 고른 것이 남는다', () => {
@@ -229,10 +254,40 @@ describe('화면', () => {
     expect(q).toContain('상순');
     expect(q).toContain('하순');
     expect(q).toContain('시작');
-    expect(q).toContain('최종');
+    expect(q).toContain('이달 말');
     expect(q).toContain('장작 장부');
     expect(q).toContain('덕분에');
     expect(q).not.toContain('⟨');
+  });
+
+  it('이달 말 상자: 물자가 하나만 바뀌면 그 이름으로, 둘 이상이면 "물자" 한 줄로 합친다 (증감마다 색)', () => {
+    const s0 = springGame('ui-goods');
+    const s = finishMonth(ch1, pick(ch1, s0, s0.work.candidates[0]!.policyId));
+    const settle = s.work.reports.find((x) => x.slot === 'settlement')!;
+    const base = settle.rows.filter((x) => x.res === 'food' || x.res === 'firewood');
+    const withRows = (extra: typeof settle.rows) => {
+      const t = structuredClone(s);
+      t.work.reports.find((x) => x.slot === 'settlement')!.rows = [...base, ...extra];
+      return html(<ResultScreen def={ch1} state={t} onNext={noop} />);
+    };
+    const one = withRows([{ res: 'hide', source: 'policy.tan_hides', delta: -3 }]);
+    expect(one).toContain('data-end="hide"');
+    expect(one).not.toContain('data-end="goods"');
+
+    const two = withRows([
+      { res: 'hide', source: 'policy.tan_hides', delta: -3 },
+      { res: 'net', source: 'policy.tan_hides', delta: 1 },
+    ]);
+    expect(two).toContain('data-end="goods"');
+    expect(two).not.toContain('data-end="hide"');
+    expect(two).not.toContain('data-end="net"');
+    const line = two.match(/data-end="goods">.*?<\/div>/)![0];
+    expect(line).toContain('물자');
+    const up = line.match(/가죽 <span class="([^"]+)">−3<\/span>/)![1];
+    const down = line.match(/그물 <span class="([^"]+)">\+1<\/span>/)![1];
+    expect(up).not.toBe(down);
+    // 식량·장작 + 물자 한 줄 (+ 인구) = 많아야 4줄
+    expect((two.match(/data-end="/g) ?? []).length).toBeLessThanOrEqual(4);
   });
 
   it('장부 순서: 얻은 것(큰 것부터) → 쓴 것(큰 것부터), 0.5kg 미만은 뺀다', () => {

@@ -103,19 +103,55 @@
   white-space: nowrap;
 }
 
-/* 칩은 한 줄. 넘치면 끝을 흐리게 자른다 (전체는 title로) */
+/* 칩: 기본 칩(식량·장작·날씨)이 맨 앞, 그 뒤 위험·기회 칩. 최대 2줄까지 줄바꿈하고,
+   넘치면 마지막에 "외 n개" 칩 → 누르거나 마우스를 올리면 나머지가 팝오버로 (2026-11-25 5차 피드백) */
 .chips {
+  position: relative;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  align-content: center;
   gap: 6px;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
 }
 
-.clipped {
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent);
-  mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent);
+.moreWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.moreChip {
+  font-family: var(--font-sans);
+  color: var(--text);
+  cursor: pointer;
+  border-style: dashed;
+}
+
+.moreChip:hover,
+.moreChip[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+/* 팝오버: 칩 바로 아래. 위쪽 여백은 투명해서 마우스가 칩에서 팝오버로 건너가도 닫히지 않는다 */
+.morePop {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 5;
+  padding-top: 6px;
+}
+
+.morePopInner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: max-content;
+  max-width: 340px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--sheet);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 
 .chip {

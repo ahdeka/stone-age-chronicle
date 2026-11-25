@@ -14,7 +14,7 @@ export interface Settings {
    *  진행 화면의 결정(중순 사건, 남은 고기)은 이 설정과 상관없이 늘 자동으로 연다. */
   autoOpenPlan: boolean;
   fontScale: 1 | 2 | 3;
-  /** 한 순씩 "계속"을 눌러 넘긴다. 끄면 서술이 끝나고 잠시 쉰 뒤 저절로 다음 순으로 간다 */
+  /** 한 순씩 "이어서 보기"를 눌러 넘긴다. 끄면 서술이 끝나고 잠시 쉰 뒤 저절로 다음 순으로 간다 (하순 끝은 늘 "결과 보기") */
   stepByStep: boolean;
   /** 저절로 넘어가기 전에 쉬는 시간 */
   autoDelay: AutoDelay;

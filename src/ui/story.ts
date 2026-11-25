@@ -118,10 +118,23 @@ export function orderRows(rows: readonly LedgerLine[]): LedgerLine[] {
   return [...gains, ...spends];
 }
 
-/** 행이 너무 많으면 큰 것 n개만 두고 나머지는 "그 밖"으로 합친다 (스크롤 없는 화면) */
-export function foldRows(rows: readonly LedgerLine[], n: number): { shown: LedgerLine[]; rest?: { delta: number; count: number } } {
+/** 묶이지 않는 장부 줄: 먹은 양(소비 줄) */
+export const pinnedRow = (r: LedgerLine): boolean => r.source === 'upkeep.food';
+
+/**
+ * 행이 너무 많으면 양이 큰 것부터 남기고, 양이 작은 줄부터 "그 밖"으로 합친다 (스크롤 없는 화면).
+ * pin에 맞는 줄(먹은 양)은 크기와 상관없이 늘 남는다. 줄 순서는 들어온 순서(크기 순) 그대로.
+ */
+export function foldRows(
+  rows: readonly LedgerLine[],
+  n: number,
+  pin: (r: LedgerLine) => boolean = pinnedRow,
+): { shown: LedgerLine[]; rest?: { delta: number; count: number } } {
   if (rows.length <= n) return { shown: [...rows] };
-  const shown = rows.slice(0, n - 1);
-  const tail = rows.slice(n - 1);
+  const pinned = rows.filter(pin);
+  const others = [...rows.filter((r) => !pin(r))].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const keep = new Set([...pinned, ...others.slice(0, Math.max(0, n - 1 - pinned.length))]);
+  const shown = rows.filter((r) => keep.has(r));
+  const tail = others.filter((r) => !keep.has(r));
   return { shown, rest: { delta: tail.reduce((a, r) => a + r.delta, 0), count: tail.length } };
 }
