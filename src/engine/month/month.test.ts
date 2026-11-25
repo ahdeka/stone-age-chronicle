@@ -65,8 +65,10 @@ describe('게임 생성과 월초 보고', () => {
     for (const pp of preset.people) expect(ageYears(s, s.people[pp.id]!)).toBe(pp.age);
   });
 
-  it('후보는 칸별로: 식량 3~4개(버티기 포함), 발전 3개 이하, 큰 일 1개 이하 — 큰 일 → 식량 → 발전 순', () => {
-    const s = newGame();
+  it('후보는 칸별로: 식량 3~4개, 발전 3개 이하, 큰 일 1개 이하 — 큰 일 → 식량 → 발전 순. 버티기는 식량 10일치 미만일 때만', () => {
+    const plenty = newGame();
+    expect(plenty.work.candidates.some((c) => c.policyId === 'hold_and_ration')).toBe(false);
+    const s = newGame('short', tweakDef((d) => (d.presets.find((p) => p.id === 'grey_river_autumn')!.food = [{ kind: 'dried_meat', kg: 150 }])));
     const by = candidatesBySlot(ch1, s);
     expect(by.food.length).toBeGreaterThanOrEqual(3);
     expect(by.food.length).toBeLessThanOrEqual(4);

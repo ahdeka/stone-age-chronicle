@@ -84,10 +84,12 @@ export function cacheTargets(def: ChapterDefinition, state: GameState): string[]
 
 export function generateCandidates(def: ChapterDefinition, state: GameState): BoundPolicy[] {
   const b = def.balance.policy;
-  const scored: { p: PolicyTemplate; bound: BoundPolicy }[] = [];
+  const scored: { p: PolicyTemplate; bound: BoundPolicy; offered: boolean }[] = [];
   const savedPlace = state.work.probePlace;
   for (const p of def.content.policies) {
-    if (!isAvailable(def, state, p)) continue;
+    // 버티기 방침은 등장 조건이 안 맞아도 계산해 둔다: 식량 후보가 하나도 없을 때 넣는다
+    const offered = isAvailable(def, state, p);
+    if (!offered && !p.fallback) continue;
     const formed = formCrew(def, state, p);
     if (!formed) continue;
     const actors: Record<string, string> = formed.leader ? { leader: formed.leader.id } : {};
@@ -114,6 +116,7 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
           score,
           ...(place ? { place } : {}),
         },
+        offered,
       });
     }
   }
@@ -124,7 +127,7 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
     const picked: typeof scored = [];
     const perCat: Record<string, number> = {};
     for (const s of scored) {
-      if (s.p.slot !== slot) continue;
+      if (s.p.slot !== slot || !s.offered) continue;
       if (picked.length >= n) break;
       if ((perCat[s.p.category] ?? 0) >= b.maxPerCategory) continue;
       picked.push(s);
@@ -134,9 +137,10 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
   };
   const foodN = urgent ? b.urgentFoodSlots : b.foodSlots;
   const food = take('food', foodN);
-  // 버티기 방침을 늘 하나 넣는다 (자리가 차 있으면 마지막 자리를 내준다)
+  // 버티기 방침: 나올 때(식량이 모자랄 때)는 늘 하나 넣는다 (자리가 차 있으면 마지막 자리를 내준다).
+  // 식량 후보가 하나도 없으면 등장 조건과 무관하게 넣는다
   if (!food.some((s) => s.p.fallback)) {
-    const fb = scored.find((s) => s.p.fallback);
+    const fb = scored.find((s) => s.p.fallback && (s.offered || food.length === 0));
     if (fb) {
       if (food.length >= foodN) food.pop();
       food.push(fb);

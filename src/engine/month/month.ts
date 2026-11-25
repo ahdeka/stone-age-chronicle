@@ -27,7 +27,7 @@ import { previewPlan } from '../policy/plan';
 import { findEvent, findPlace, findPolicy, monthDef, nextUid } from '../core/lookup';
 import { buildAdvice } from '../advice/advice';
 import { buildBriefing, resolveSceneSpec } from './briefing';
-import { markUsed, optionStatuses, pickEvent, villageEventIds } from '../events/events';
+import { briefingEventIds, markUsed, optionStatuses, pickEvent, villageEventIds } from '../events/events';
 import { runActivity } from '../outcome/activity';
 import { band, laborUnits, living, population } from '../people/people';
 import { generateCandidates } from '../policy/candidates';
@@ -143,6 +143,11 @@ export function startMonth(def: ChapterDefinition, state: GameState): void {
     state.scheduled = state.scheduled.filter((y) => y.uid !== x.uid);
     openEvent(def, state, picked.event.id, 'briefing', picked.actors);
     break;
+  }
+  // 월초 사건 (애도 등): 예약 사건이 없을 때
+  if (state.step === 'policy') {
+    const picked = pickEvent(def, state, 'briefing', briefingEventIds(def), {});
+    if (picked) openEvent(def, state, picked.event.id, 'briefing', picked.actors);
   }
 }
 
@@ -308,7 +313,7 @@ function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: str
     ledger(state, 'food', dried, 'leftover.dry');
     pushLine(ctx, 'line.leftover.dry', { kg: Math.round(dried) });
   } else {
-    addCohesion(state, def, b.abandonCohesion);
+    addCohesion(state, def, b.abandonCohesion, 'leftover.abandon');
     pushLine(ctx, 'line.leftover.abandon', { kg: Math.round(kg) });
   }
   setHaul(state, []);
@@ -536,7 +541,8 @@ export function forceEvent(def: ChapterDefinition, state: GameState, eventId: Id
   if (!ev) return 'error.unknownEvent';
   const actors: Record<string, Id> = {};
   for (const [slot, q] of Object.entries(ev.actors ?? {})) {
-    const p = living(state).find((x) => matchPerson(def, state, x, q));
+    const pool = q.alive === false ? Object.values(state.people) : living(state);
+    const p = pool.find((x) => matchPerson(def, state, x, q));
     if (!p) return 'error.noActor';
     actors[slot] = p.id;
   }

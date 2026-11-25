@@ -207,6 +207,8 @@ export interface MonthWork {
   probePlace?: Id;
   /** 발전 덕분에 아낀 양 (이달의 결과에 보인다) */
   savings: SavingLine[];
+  /** 이번 달 결속 변화의 출처별 합 (시뮬레이터 집계용. 없던 세이브는 비어 있다) */
+  cohesionBy?: Record<string, number>;
   /** 직전 활동의 결과 맥락 ($caught, $meat 등) */
   vars: Record<string, number>;
   /** 마을 사건 판정을 이번 달에 했는가 */

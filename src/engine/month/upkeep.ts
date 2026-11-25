@@ -29,7 +29,7 @@ export function villageWorkers(def: ChapterDefinition, state: GameState): Person
 /** 마을 일손 (원정대 제외), 굶주림 효율 반영 */
 export function villageUnits(def: ChapterDefinition, state: GameState): number {
   const units = villageWorkers(def, state).reduce((a, p) => a + laborUnits(def, state, p), 0);
-  return units * (def.balance.ration.efficiency[state.hungerStage] ?? 1);
+  return units * (def.balance.ration.efficiency[state.hungerStage] ?? 1) * stat(def, state, 'village.labor');
 }
 
 function push(state: GameState, line: Line): void {
@@ -61,9 +61,12 @@ export function villageHarvest(def: ChapterDefinition, state: GameState): { wood
   const d = days(def);
   const units = villageUnits(def, state);
   const m = monthDef(def, state);
-  const share = firewoodShare(def, state);
+  const planned = firewoodShare(def, state);
   const room = Math.max(0, stat(def, state, 'firewood.cap') - state.stores.firewood);
-  const wood = Math.min(room, units * share * m.woodPerWorkerDay * d * stat(def, state, 'yield.wood'));
+  const perShare = units * m.woodPerWorkerDay * d * stat(def, state, 'yield.wood');
+  const wood = Math.min(room, perShare * planned);
+  // 장작을 더 쌓을 곳이 없으면 장작에 묶였던 일손은 채집으로 돌아간다 (③a: 일손이 그냥 버려지지 않게)
+  const share = perShare > 0 ? Math.min(planned, wood / perShare) : planned;
 
   const camp = findPlace(def, state.campPlace);
   const cs = state.places[camp.id];
@@ -159,7 +162,11 @@ export function consume(ctx: RunCtx): void {
   const eaten = eat(def, state.stores.food, need * ratio, monthDef(def, state).temp);
   ledger(state, 'food', -eaten, 'upkeep.food', { people: people.length, days: d });
 
-  const stage = ratio >= 1 - 1e-9 ? 0 : ratio >= r.reduced - 1e-9 ? 1 : 2;
+  // 단계 (DESIGN.md §10.5): 감축을 먼저 밟는다. 감축 배급에도 못 미치는 순이 이어지거나 거의 먹을 것이 없으면 굶주림
+  const shortKey = 'ration_short_phases';
+  const short = ratio < r.reduced - 1e-9 ? (state.counters[shortKey] ?? 0) + 1 : 0;
+  state.counters[shortKey] = short;
+  const stage = ratio >= 1 - 1e-9 ? 0 : ratio < r.starveRatio - 1e-9 || short >= r.starveAfterPhases ? 2 : 1;
   if (stage !== state.hungerStage) {
     state.work.notable = true;
     push(state, { key: `line.hunger.${stage}`, group: 'village' });
@@ -170,7 +177,11 @@ export function consume(ctx: RunCtx): void {
     if (stage === 0) p.hungerDays = Math.max(0, p.hungerDays - r.recoverPerPhase);
     else p.hungerDays += d * (1 - ratio);
   }
-  addCohesion(state, def, r.cohesionPerPhase[stage] ?? 0);
+  addCohesion(state, def, r.cohesionPerPhase[stage] ?? 0, `hunger.${stage}`);
+  // 배급이 다 찬 순: 결속이 평소까지 돌아온다
+  if (stage === 0 && state.cohesion < r.recoverCohesion.upTo) {
+    addCohesion(state, def, Math.min(r.recoverCohesion.perPhase, r.recoverCohesion.upTo - state.cohesion), 'ration.recover');
+  }
 }
 
 export function burnFirewood(ctx: RunCtx): void {
@@ -190,7 +201,7 @@ export function burnFirewood(ctx: RunCtx): void {
   const c = def.balance.cold;
   push(state, { key: 'line.cold', group: 'village' });
   state.work.notable = true;
-  addCohesion(state, def, c.cohesion * short);
+  addCohesion(state, def, c.cohesion * short, 'cold');
   for (const p of living(state).sort(byPersonId)) {
     if (!isVulnerable(def, state, p)) continue;
     if (chance(state.rng, short * c.deathChance)) killPerson(ctx, p, 'cold');

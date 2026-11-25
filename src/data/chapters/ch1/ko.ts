@@ -67,6 +67,7 @@ export const ch1Ko: Record<string, string> = {
   'ending.survive_time.title': '살아남은 사람들',
   'ending.survive_time.chron': '{tribe:은} 여러 해를 견뎌 냈다.',
   'chron.death': '{name}, {cause} 끝에 세상을 떠났다.',
+  'chron.mourning': '부족은 {name:을} 강가 언덕에 묻고 밤새 불을 지켰다.',
   'chron.knowledge': '부족이 새로운 앎을 얻었다: {knowledge}.',
   'chron.built': '부족이 새로 지은 것: {facility}.',
   'chron.policy': '이달의 일: {policy}.',

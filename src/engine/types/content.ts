@@ -123,8 +123,9 @@ export type EventSlot = Phase | 'briefing';
 
 export interface EventDef {
   id: Id;
-  /** policy: 방침의 eventWindow pool로만 / village: 어느 방침이든 마을 소식으로 / scheduled: 예약으로만 */
-  scope: 'policy' | 'village' | 'scheduled';
+  /** policy: 방침의 eventWindow pool로만 / village: 어느 방침이든 마을 소식으로 / scheduled: 예약으로만
+   *  / briefing: 월초에 조건이 맞으면 나온다 (예약 사건이 없을 때. 예: 애도) */
+  scope: 'policy' | 'village' | 'scheduled' | 'briefing';
   slots: EventSlot[];
   when: Condition[];
   weight: number;
@@ -132,6 +133,8 @@ export interface EventDef {
   once?: boolean;
   actors?: Record<string, PersonQuery>;
   scene: SceneSpec;
+  /** 본문 바꾸기: 조건이 맞는 첫 변형의 키를 event.<id>.text 대신 쓴다 (예: 여럿이 죽었을 때) */
+  textVariants?: { when: Condition[]; key: string }[];
   speakers?: { who: WhoRef | { seat: Id }; line: string }[];
   options: EventOption[];
 }

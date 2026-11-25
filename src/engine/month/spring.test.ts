@@ -10,12 +10,12 @@ import { totalKg } from '../stores/food';
 import { cacheTargets, generateCandidates } from '../policy/candidates';
 
 describe('봄 시작', () => {
-  it('1년차 3월, 34명, 식량 120kg(4일치), 장작 80kg, 노인 한 명이 기침', () => {
+  it('1년차 3월, 34명, 식량 200kg(7일치), 장작 80kg, 노인 한 명이 기침', () => {
     const s = springGame();
     expect(calendarDate(ch1, s)).toMatchObject({ year: 1, season: 'spring', number: 3 });
     expect(Object.values(s.people).filter((p) => p.alive)).toHaveLength(34);
-    expect(totalKg(s.stores.food)).toBeCloseTo(120);
-    expect(Math.floor(foodDays(ch1, s))).toBe(4);
+    expect(totalKg(s.stores.food)).toBeCloseTo(200);
+    expect(Math.floor(foodDays(ch1, s))).toBe(7);
     expect(s.stores.firewood).toBe(80);
     expect(s.people['eoksae']!.ailments[0]?.kind).toBe('cough');
     expect(s.animals['fish']!.state).toBe('running');

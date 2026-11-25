@@ -230,8 +230,14 @@ export interface ChapterBalance {
   /** 기본 스탯. 모디파이어가 여기에 얹힌다 */
   stats: Record<string, number>;
   ration: {
-    /** 감축 배급 비율. 이만큼도 못 먹으면 굶주림(2단계)이고 남은 식량을 다 먹는다 */
+    /** 감축 배급 비율. 이만큼도 못 먹으면 남은 식량을 다 먹는다 (DESIGN.md §10.5) */
     reduced: number;
+    /** 먹은 비율이 이보다 낮으면(거의 먹을 것이 없음) 곧바로 굶주림(2단계) */
+    starveRatio: number;
+    /** 감축 배급 아래로 모자란 순이 이만큼 이어지면 굶주림(2단계). 그 전에는 감축(1단계)으로 버틴다 */
+    starveAfterPhases: number;
+    /** 다 먹은 순마다 결속이 회복된다 (upTo까지만) */
+    recoverCohesion: { perPhase: number; upTo: number };
     /** 정상 배급 한 순마다 hungerDays가 줄어드는 양 */
     recoverPerPhase: number;
     /** 이만큼 굶은 날이 쌓이면 쓰러짐 판정 (약한 사람 / 나머지) */

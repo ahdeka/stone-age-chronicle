@@ -629,7 +629,7 @@ export function hasCost(es: readonly Effect[]): boolean {
         return e.mod.op === 'add' ? e.mod.value < 0 : e.mod.value < 1;
       case 'flag':
         // 기회비용 깃발: 'opportunity.'로 시작하거나 다음 단계를 건너뛰게 하는 깃발
-        return e.set && e.id.startsWith('hunt_called_off');
+        return e.set && (e.id.startsWith('hunt_called_off') || e.id.startsWith('opportunity.'));
       case 'if':
         return hasCost(e.then) || hasCost(e.else ?? []);
       default:

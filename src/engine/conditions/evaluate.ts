@@ -4,7 +4,7 @@ import type { ChapterDefinition, Condition, GameState, NumRange, Person, PersonQ
 import { findPolicy, monthDef } from '../core/lookup';
 import { ageYears, bandDef, countBand, dailyFoodTotal, laborUnits, living, population } from '../people/people';
 import { totalKg } from '../stores/food';
-import { firewoodPerDay } from '../stats/stats';
+import { firewoodPerDay, stat } from '../stats/stats';
 import { currentEntry, currentPlace } from '../policy/current';
 
 export function inRange(value: number, r: NumRange): boolean {
@@ -22,6 +22,7 @@ export function matchPerson(def: ChapterDefinition, state: GameState, p: Person,
   if (q.seat !== undefined && p.advisor?.seat !== q.seat) return false;
   if (q.isChief !== undefined && (p.isChief ?? false) !== q.isChief) return false;
   if (q.ailing !== undefined && p.ailments.length > 0 !== q.ailing) return false;
+  if (q.diedMonthsAgo !== undefined && p.diedMonth !== state.month - q.diedMonthsAgo) return false;
   return true;
 }
 
@@ -55,6 +56,10 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
       return inRange(state.stores.firewood, c);
     case 'firewoodDays':
       return inRange(firewoodDays(def, state), c);
+    case 'firewoodFill': {
+      const cap = stat(def, state, 'firewood.cap');
+      return inRange(cap > 0 ? state.stores.firewood / cap : 1, c);
+    }
     case 'goods':
       return inRange(state.stores.goods[c.id] ?? 0, c);
     case 'cohesion':
@@ -68,6 +73,10 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
     case 'person': {
       const n = living(state).filter((p) => matchPerson(def, state, p, c.match)).length;
       return c.count ? inRange(n, c.count) : n > 0;
+    }
+    case 'deaths': {
+      const at = state.month - (c.monthsAgo ?? 1);
+      return inRange(Object.values(state.people).filter((p) => !p.alive && p.diedMonth === at).length, c);
     }
     case 'actor': {
       const id = actors[c.slot] ?? (c.slot === 'leader' ? currentEntry(state)?.bound.leaderId : undefined);

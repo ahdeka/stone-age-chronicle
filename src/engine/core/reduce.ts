@@ -15,7 +15,7 @@ function applyDebug(def: ChapterDefinition, s: GameState, d: DebugOp): string | 
       s.stores.firewood = Math.max(0, d.kg);
       return undefined;
     case 'setCohesion':
-      addCohesion(s, def, d.value - s.cohesion);
+      addCohesion(s, def, d.value - s.cohesion, 'debug');
       return undefined;
     case 'setFlag':
       setFlag(s, d.id, d.set);

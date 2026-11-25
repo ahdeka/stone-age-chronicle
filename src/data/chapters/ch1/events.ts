@@ -40,8 +40,8 @@ function bearHunt(difficulty: number, extraWin: Effect[]): ActivityDef {
       },
     ],
     outcomes: {
-      triumph: { narrative: 'bear_down', effects: [...win, { type: 'chronicle', key: 'chron.bear_clean', importance: 55 }] },
-      success: { narrative: 'bear_down', effects: [...win, { type: 'chronicle', key: 'chron.bear_clean', importance: 55 }] },
+      triumph: { narrative: 'bear_down', effects: [...win, { type: 'chronicle', key: 'chron.bear_clean', importance: 55 }, { type: 'cohesion', delta: 5 }] },
+      success: { narrative: 'bear_down', effects: [...win, { type: 'chronicle', key: 'chron.bear_clean', importance: 55 }, { type: 'cohesion', delta: 3 }] },
       costly: { narrative: 'bear_down_costly', effects: [...win, { type: 'chronicle', key: 'chron.bear_cost', importance: 70 }] },
       failure: { narrative: 'bear_escaped', effects: [{ type: 'animal', id: 'bear', state: 'active', at: 'north_forest' }] },
       disaster: { narrative: 'bear_escaped', effects: [{ type: 'animal', id: 'bear', state: 'active', at: 'north_forest' }] },
@@ -155,8 +155,8 @@ export const ch1Events: EventDef[] = [
           power: [{ src: 'const', value: 2 }, { src: 'goods', id: 'spear', weight: 0.15, cap: 14 }],
           difficulty: 5,
           outcomes: {
-            triumph: { narrative: 'spring_bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }] },
-            success: { narrative: 'spring_bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }] },
+            triumph: { narrative: 'spring_bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'cohesion', delta: 5 }] },
+            success: { narrative: 'spring_bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'cohesion', delta: 3 }] },
             costly: {
               narrative: 'spring_bear_down',
               effects: [
@@ -817,8 +817,8 @@ export const ch1Events: EventDef[] = [
           power: [{ src: 'const', value: 2.5 }, { src: 'goods', id: 'spear', weight: 0.15, cap: 14 }, { src: 'stat', id: 'hunt.bonus', weight: 1 }],
           difficulty: 5,
           outcomes: {
-            triumph: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'clue', id: 'bear_sinew', months: 4 }] },
-            success: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'clue', id: 'bear_sinew', months: 4 }] },
+            triumph: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'clue', id: 'bear_sinew', months: 4 }, { type: 'cohesion', delta: 5 }] },
+            success: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'clue', id: 'bear_sinew', months: 4 }, { type: 'cohesion', delta: 3 }] },
             costly: {
               narrative: 'bear_down_costly',
               effects: [
@@ -928,8 +928,8 @@ export const ch1Events: EventDef[] = [
           power: [{ src: 'const', value: 2 }, { src: 'goods', id: 'spear', weight: 0.15, cap: 14 }],
           difficulty: 5.5,
           outcomes: {
-            triumph: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }] },
-            success: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }] },
+            triumph: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'cohesion', delta: 5 }] },
+            success: { narrative: 'bear_down', effects: [{ type: 'catch', animal: 'bear', count: 1 }, { type: 'flag', id: 'bear_killed', set: true }, { type: 'cohesion', delta: 3 }] },
             costly: {
               narrative: 'bear_down_costly',
               effects: [
@@ -1250,6 +1250,46 @@ export const ch1Events: EventDef[] = [
             else: [{ type: 'modifier', mod: { stat: 'cache.raid', op: 'mul', value: 1.5 }, months: 3 }],
           },
         ],
+      },
+    ],
+  },
+
+  // ───────────── 애도 (③a, M3의 애도를 최소한으로 앞당김) ─────────────
+  {
+    // 지난달 죽은 사람이 있으면 월초에 나온다. 계승과 여러 가지 애도는 M3
+    id: 'mourning',
+    scope: 'briefing',
+    slots: ['briefing'],
+    when: [{ type: 'deaths', min: 1 }],
+    weight: 1,
+    cooldown: 0,
+    actors: { dead: { alive: false, diedMonthsAgo: 1 } },
+    scene: { bg: '{camp}', subjects: ['sub.fire_circle'], overlay: '{weather}' },
+    textVariants: [{ when: [{ type: 'deaths', min: 2 }], key: 'event.mourning.text.many' }],
+    speakers: [
+      { who: { seat: 'elder' }, line: 'event.mourning.say.seori' },
+      { who: { seat: 'hunt_leader' }, line: 'event.mourning.say.bawi' },
+    ],
+    options: [
+      {
+        // 장례: 장작 약 20kg + 이번 달 마을 일손 조금 (한 순의 3할쯤), 결속 +3 (둘 이상이면 +6)
+        id: 'rite',
+        hint: 'sure',
+        narrative: 'mourning_rite',
+        effects: [
+          { type: 'firewood', kg: -20 },
+          { type: 'modifier', mod: { stat: 'village.labor', op: 'mul', value: 0.9 }, months: 1 },
+          { type: 'cohesion', delta: 3 },
+          { type: 'if', when: [{ type: 'deaths', min: 2 }], then: [{ type: 'cohesion', delta: 3 }] },
+          { type: 'chronicle', key: 'chron.mourning', importance: 45, params: { name: '$actor_dead' } },
+        ],
+      },
+      {
+        // 슬픔을 미룬다: 대가는 없지만 결속도 돌아오지 않는다 (기회비용)
+        id: 'work_on',
+        hint: 'sure',
+        narrative: 'mourning_postponed',
+        effects: [{ type: 'flag', id: 'opportunity.grief_postponed', set: true }],
       },
     ],
   },

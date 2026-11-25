@@ -64,6 +64,8 @@ export const ch1Yields: YieldDef[] = [
   { id: 'nuts', foodKind: 'nuts' },
   /** 올가미 (올가미 방침을 할 때만). 같은 자리를 계속 쓰면 준다 */
   { id: 'snare', foodKind: 'raw_meat' },
+  /** 겨울 여울목 물고기: 얼지 않는 여울에서 겨울에만 잡는다. 여름 어로와 재고를 나누지 않는다 (③a, DESIGN.md §10.3) */
+  { id: 'winter_fish', foodKind: 'fish' },
 ];
 
 export const ch1Places: PlaceDef[] = [
@@ -76,10 +78,10 @@ export const ch1Places: PlaceDef[] = [
     yields: {
       spring: { gather: 5, fish: 2, fish_run: 10, eggs: 6, greens: 6 },
       summer: { gather: 4, fish: 3, greens: 12 },
-      autumn: { gather: 4, fish: 1.5, nuts: 9, snare: 6 },
-      winter: { gather: 1, fish: 5, snare: 6 },
+      autumn: { gather: 4, fish: 1.5, nuts: 12, snare: 6 },
+      winter: { gather: 1, winter_fish: 5, snare: 6 },
     },
-    stockMax: { gather: 400, fish: 300, fish_run: 1600, eggs: 500, greens: 2500, nuts: 900, snare: 450 },
+    stockMax: { gather: 400, fish: 300, fish_run: 1600, eggs: 500, greens: 2500, nuts: 2000, snare: 900, winter_fish: 900 },
     recoverPerMonth: 0.3,
   },
   { id: 'reindeer_ford', kind: 'ford', travelDays: 4, scene: 'bg.river_ford', yields: {}, stockMax: {}, recoverPerMonth: 0 },

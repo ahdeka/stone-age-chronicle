@@ -1,6 +1,6 @@
 // 사건 고르기와 선택 처리 (DESIGN.md §4.2, §8)
 
-import type { ChapterDefinition, EventDef, EventOption, EventSlot, GameState, Hint, Id, Person } from '../types';
+import type { ChapterDefinition, EventDef, EventOption, EventSlot, GameState, Hint, Id, LineParamValue, Person } from '../types';
 import { hintFor } from '../outcome/tier';
 import { allTrue, matchPerson } from '../conditions/evaluate';
 import { findEvent } from '../core/lookup';
@@ -18,7 +18,9 @@ export function bindActors(def: ChapterDefinition, state: GameState, ev: EventDe
   const actors: Record<string, Id> = { ...base };
   const used = new Set(Object.values(actors));
   for (const [slot, q] of Object.entries(ev.actors ?? {})) {
-    const pool = living(state).filter((p) => !used.has(p.id) && matchPerson(def, state, p, q));
+    // 죽은 사람 슬롯(alive: false)은 죽은 사람 중에서 고른다 (애도 사건)
+    const people = q.alive === false ? Object.values(state.people).sort((a, b) => (a.id < b.id ? -1 : 1)) : living(state);
+    const pool = people.filter((p) => !used.has(p.id) && matchPerson(def, state, p, q));
     if (pool.length === 0) return undefined;
     const p = pool[nextInt(state.rng, 0, pool.length - 1)]!;
     actors[slot] = p.id;
@@ -73,6 +75,26 @@ export function optionStatuses(def: ChapterDefinition, state: GameState, ev: Eve
     available: allTrue(def, state, option.requires, all),
     hint: option.activity ? hintFor(def, state, option.activity, { crew, ...(leader ? { leader } : {}), actors: all }) : (option.hint ?? 'sure'),
   }));
+}
+
+/** 사건 본문의 키와 변수: 묶인 인물 이름(actor_<슬롯>), 지난달 죽은 사람 수(deaths_last, 슬롯 인물을 뺀 수 deaths_others) */
+export function eventText(def: ChapterDefinition, state: GameState, ev: EventDef, actors: Record<string, Id>): { key: string; params: Record<string, LineParamValue> } {
+  const variant = (ev.textVariants ?? []).find((v) => allTrue(def, state, v.when, actors));
+  const params: Record<string, LineParamValue> = {};
+  for (const [slot, id] of Object.entries(actors)) {
+    const p = state.people[id];
+    if (p) params[`actor_${slot}`] = p.name;
+  }
+  const dead = Object.values(state.people).filter((p) => !p.alive && p.diedMonth === state.month - 1);
+  const named = new Set(Object.values(actors));
+  params['deaths_last'] = dead.length;
+  params['deaths_others'] = dead.filter((p) => !named.has(p.id)).length;
+  return { key: variant?.key ?? `event.${ev.id}.text`, params };
+}
+
+/** 월초 사건 (scope 'briefing') 중 조건이 맞는 것 하나 */
+export function briefingEventIds(def: ChapterDefinition): Id[] {
+  return def.content.events.filter((e) => e.scope === 'briefing').map((e) => e.id);
 }
 
 export function markUsed(state: GameState, ev: EventDef): void {

@@ -24,6 +24,10 @@ export const ch1Balance: ChapterBalance = {
     'yield.greens': 0,
     'yield.nuts': 0,
     'yield.snare': 0,
+    /** 마을 일손 배율 (장례 등으로 한동안 일손이 빠질 때 낮춘다) */
+    'village.labor': 1,
+    /** 겨울 여울목 물고기 (겨울 수확에만 있다) */
+    'yield.winter_fish': 1,
     /** 묻어 둔 고기를 짐승이 노리는 정도 (저장 구덩이가 줄인다) */
     'cache.raid': 1,
     /** 쌓아 둘 수 있는 장작 kg (천막 기준. 바위굴 +900, 장작 덧집 +600) */
@@ -40,13 +44,17 @@ export const ch1Balance: ChapterBalance = {
   },
   ration: {
     reduced: 0.75,
+    starveRatio: 0.4,
+    starveAfterPhases: 3,
+    /** 배급이 다 차면 결속이 평소(봄 시작값 55)까지 돌아온다 (DESIGN.md §10.6, ③a) */
+    recoverCohesion: { perPhase: 1, upTo: 55 },
     recoverPerPhase: 5,
     collapseDays: { vulnerable: 12, others: 25 },
     collapseChance: 0.03,
     collapseSlopeDays: 30,
     collapseMax: 0.25,
     efficiency: [1, 0.9, 0.7],
-    cohesionPerPhase: [0, -2, -5],
+    cohesionPerPhase: [0, -1, -3],
     sicknessChance: 0.06,
     sickness: 'cough',
     sickDeathMul: 2,

@@ -38,15 +38,24 @@ function candidate(s: GameState, policyId: string) {
   return c;
 }
 
-/** 후보 중 이 전략을 고른다. 발전 전략만 주면 식량 칸은 버티기 방침으로 채운다. growthId로 발전을 붙인다 */
+/** 식량 칸 후보 하나: 버티기 방침이 있으면 그것 (식량이 10일치 미만일 때만 나온다), 없으면 첫 번째 식량 후보 */
+export function foodCandidate(def: ChapterDefinition, s: GameState) {
+  const food = s.work.candidates.filter((x) => findPolicy(def, x.policyId).slot === 'food');
+  const c = food.find((x) => findPolicy(def, x.policyId).fallback) ?? food[0];
+  if (!c) throw new Error('no food candidate');
+  return c;
+}
+
+/** 아무 식량 전략이나 고른다 (버티기가 있으면 버티기). 달을 넘기기만 하면 되는 시험용 */
+export function pickFood(def: ChapterDefinition, s: GameState): GameState {
+  return run(def, s, { type: 'choosePlan', uids: [foodCandidate(def, s).uid] });
+}
+
+/** 후보 중 이 전략을 고른다. 발전 전략만 주면 식량 칸은 foodCandidate로 채운다. growthId로 발전을 붙인다 */
 export function pick(def: ChapterDefinition, s: GameState, policyId: string, growthId?: string): GameState {
   const c = candidate(s, policyId);
   const uids = [c.uid];
-  if (findPolicy(def, c.policyId).slot === 'growth') {
-    const fb = s.work.candidates.find((x) => findPolicy(def, x.policyId).fallback);
-    if (!fb) throw new Error('no fallback policy among candidates');
-    uids.unshift(fb.uid);
-  }
+  if (findPolicy(def, c.policyId).slot === 'growth') uids.unshift(foodCandidate(def, s).uid);
   if (growthId) uids.push(candidate(s, growthId).uid);
   return run(def, s, { type: 'choosePlan', uids });
 }

@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { chapters, commonStrings } from '../data/registry';
 import { availableOptions, createGame, reduce, type GameState } from '../engine';
 import { createTranslator } from '../i18n';
-import { ch1, choose, finishMonth, newGame, pick, springGame } from '../test/fixtures';
+import { ch1, choose, finishMonth, newGame, pick, pickFood, springGame } from '../test/fixtures';
 import { decisionModel, DecisionPopup } from './components/Decision';
 import { PlanBody } from './components/DecisionSheet';
 import { I18nProvider } from './i18n';
@@ -83,7 +83,7 @@ describe('화면', () => {
     let e = structuredClone(s);
     e.cohesion = 1;
     e.counters['low_cohesion_months'] = 2;
-    e = pick(ch1, e, 'hold_and_ration');
+    e = pickFood(ch1, e);
     expect(html(<EndingScreen def={ch1} state={e} onQuit={noop} />, s.tribeName)).toContain('새벽불 부족은 서로를 믿지 못해');
   });
 
@@ -139,8 +139,14 @@ describe('화면', () => {
 
   it('모든 사건을 팝업으로 띄워도 누락 문자열이 없다', () => {
     const base = newGame('ui');
+    // 애도 사건은 지난달 죽은 사람이 있어야 묶인다
+    const mourning = structuredClone(base);
+    const gone = Object.values(mourning.people).find((x) => x.alive && !x.advisor && !x.isChief)!;
+    gone.alive = false;
+    gone.diedMonth = mourning.month - 1;
     for (const ev of ch1.content.events) {
-      const r = reduce(ch1, base, { type: 'debug', debug: { op: 'forceEvent', eventId: ev.id } });
+      const from = Object.values(ev.actors ?? {}).some((q) => q.alive === false) ? mourning : base;
+      const r = reduce(ch1, from, { type: 'debug', debug: { op: 'forceEvent', eventId: ev.id } });
       expect(r.error, ev.id).toBeUndefined();
       expect(sheet(r.state), ev.id).not.toContain('⟨');
       expect(html(<SituationScreen def={ch1} state={r.state} send={noop} />), ev.id).not.toContain('⟨');
@@ -202,7 +208,7 @@ describe('화면', () => {
     const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />);
     expect(i).toContain('긴 겨울이 끝났다');
     expect(i).toContain('낡은 천막 다섯 채, 34명이 살아남았다.');
-    expect(i).toContain('남은 식량은 4일치.');
+    expect(i).toContain('남은 식량은 7일치.');
     expect(i).toContain('겨울은 다시 온다. 당신은 잿빛강 사람들의 족장이다.');
     expect(i).not.toContain('⟨');
     const h = html(<SituationScreen def={ch1} state={s} send={noop} />);
@@ -244,7 +250,7 @@ describe('화면', () => {
     let s = newGame('ui-end');
     s.cohesion = 1;
     s.counters['low_cohesion_months'] = 2;
-    s = pick(ch1, s, 'hold_and_ration');
+    s = pickFood(ch1, s);
     expect(s.step).toBe('ended');
     const h = html(<EndingScreen def={ch1} state={s} onQuit={noop} />);
     expect(h).toContain('흩어진 사람들');

@@ -98,8 +98,8 @@ export const ch1SpringPreset: StartPreset = {
   // 겨울 끝의 기침: 노인 억새 (서리는 건강하다 — C5를 위해)
   people: ch1People.map((p) => (p.id === 'eoksae' ? { ...p, ailing: { kind: 'cough', severity: 1 as const, phases: 4 } } : p)),
   food: [
-    { kind: 'roots', kg: 70 },
-    { kind: 'dried_meat', kg: 50 },
+    { kind: 'roots', kg: 120 },
+    { kind: 'dried_meat', kg: 80 },
   ],
   firewood: 80,
   goods: { hide: 4, bear_hide: 0, spear: 14, knife: 9, net: 1, willow_bark: 0 },

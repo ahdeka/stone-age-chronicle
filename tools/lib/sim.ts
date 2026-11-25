@@ -1,5 +1,6 @@
 // 밸런스 시뮬레이터 (DESIGN.md §10.8). 헤드리스로 자동 플레이하고 지표를 모은다.
-// M1: 겨울별 사망·굶주림, 결말, 방침 선택률, 사건 발생. 목표치 비교와 greedy 전략은 M2 이후.
+// ③a(2026-11-25): 겨울 구간은 달력 기준(11~2월, §10.7), sure는 "거의 확실하다" 중 기대 식량이 가장 큰 전략,
+// 결속 경로별 집계(work.cohesionBy), 겨울 전(봄~가을) 사망과 월초 식량 며칠치.
 
 import {
   applyCommand,
@@ -9,38 +10,79 @@ import {
   planWith,
   createGame,
   findEvent,
+  foodDays,
+  monthDef,
   optionStatuses,
   nextInt,
+  playMonth,
   population,
   seedToState,
+  type BoundPolicy,
   type ChapterDefinition,
   type GameState,
+  type Id,
   type RngState,
   type Strategy,
 } from '../../src/engine';
 
 export type StrategyName = 'random' | 'first' | 'sure';
 
-export function makeStrategy(name: StrategyName, rng: RngState): Strategy {
-  // 두 칸 전략 (M2 ③에서 foodmax·greedy를 더하고 리포트를 준비 정도별로 나눈다)
+/** 첫 겨울 구간의 달 (달력 숫자): 1년차 11월(낙엽달) ~ 2월(얼음달). DESIGN.md §10.7 */
+export const WINTER_MONTHS = [11, 12, 1, 2];
+/** 겨울 몇 번째까지 따로 잰다 */
+const WINTER_COUNT = 3;
+/** sure 전략이 식량 전략의 기대 식량을 재는 표본 수 (상태를 복사해 다른 난수로 한 달을 돌려 본다) */
+const PROBE_SAMPLES = 2;
+
+/** 사건 선택지: '거의 확실하다' 중 첫 번째. 남은 고기는 짐꾼 */
+const surePickOption: Strategy['pickOption'] = (def, s, d, o) => {
+  if (d.kind !== 'event') return o.includes('porters') ? 'porters' : o[0]!;
+  const st = optionStatuses(def, s, findEvent(def, d.eventId), d.actors).filter((x) => x.available && x.hint === 'sure');
+  return st[0]?.option.id ?? o[0]!;
+};
+
+/** 이 전략으로 한 달을 돌렸을 때 들어온 식량 (먹은 것 빼기 전, 상한 것은 뺀다). 상태를 복사해 다른 난수로 돌린다 */
+function probeIncome(def: ChapterDefinition, s: GameState, uids: Id[], tag: string): number {
+  let sum = 0;
+  for (let k = 0; k < PROBE_SAMPLES; k++) {
+    const c = JSON.parse(JSON.stringify(s)) as GameState;
+    c.rng = seedToState(`probe:${tag}:${s.month}:${k}`);
+    if (applyCommand(def, c, { type: 'choosePlan', uids })) return -Infinity;
+    playMonth(def, c, { pickPlan: () => uids, pickOption: surePickOption });
+    const ledger = c.history[c.history.length - 1]?.ledger ?? [];
+    sum += ledger.filter((l) => l.res === 'food' && l.source !== 'upkeep.food').reduce((a, l) => a + l.delta, 0);
+  }
+  return sum / PROBE_SAMPLES;
+}
+
+export function makeStrategy(name: StrategyName, rng: RngState, seed = ''): Strategy {
   if (name === 'first') {
     return { pickPlan: firstChoice.pickPlan, pickOption: (_d, _s, _x, o) => o[0]! };
   }
   if (name === 'sure') {
-    // 식량 칸: "거의 확실하다" 중 먹을거리를 모으는 분야 먼저 / 발전 칸: "거의 확실하다"인 첫 번째. 사건 선택지도 '거의 확실하다' 중 첫 번째
+    // 식량 칸: "거의 확실하다"인 식량·큰 일 중 기대 식량이 가장 큰 것 (없으면 마지막 식량 후보)
+    // 발전 칸: "거의 확실하다"인 첫 번째 (전과 같다). 사건 선택지도 '거의 확실하다' 중 첫 번째
     return {
       pickPlan: (def, s) => {
         const by = candidatesBySlot(def, s);
-        const sure = by.food.filter((c) => c.hint === 'sure');
-        const food = sure.find((c) => ['fish', 'gather', 'trap'].includes(def.content.policies.find((p) => p.id === c.policyId)!.category));
-        const pick = food ?? sure[0] ?? by.food[by.food.length - 1]!;
-        return planWith(def, s, pick.uid, by.growth.find((c) => c.hint === 'sure')?.uid);
+        const growth = by.growth.find((c) => c.hint === 'sure')?.uid;
+        const plans = [...by.food, ...by.major]
+          .filter((c) => c.hint === 'sure')
+          .map((c: BoundPolicy) => (by.major.includes(c) ? [c.uid] : planWith(def, s, c.uid, growth)));
+        if (plans.length === 0) return planWith(def, s, by.food[by.food.length - 1]!.uid, growth);
+        if (plans.length === 1) return plans[0]!;
+        let best = plans[0]!;
+        let bestKg = -Infinity;
+        for (const p of plans) {
+          const kg = probeIncome(def, s, p, seed);
+          if (kg > bestKg) {
+            best = p;
+            bestKg = kg;
+          }
+        }
+        return best;
       },
-      pickOption: (def, s, d, o) => {
-        if (d.kind !== 'event') return o.includes('porters') ? 'porters' : o[0]!;
-        const st = optionStatuses(def, s, findEvent(def, d.eventId), d.actors).filter((x) => x.available && x.hint === 'sure');
-        return st[0]?.option.id ?? o[0]!;
-      },
+      pickOption: surePickOption,
     };
   }
   return {
@@ -57,54 +99,62 @@ export function makeStrategy(name: StrategyName, rng: RngState): Strategy {
   };
 }
 
-/** 겨울 구간 (시작 달 기준): 첫 겨울 1~5달, 둘째 겨울 13~17달 ... */
-export const WINTERS = [
-  { name: 'winter1', from: 1, to: 5 },
-  { name: 'winter2', from: 13, to: 17 },
-  { name: 'winter3', from: 25, to: 29 },
-];
+export interface WinterRecord {
+  reached: boolean;
+  deaths: number;
+  /** 겨울 중 가장 심한 배급 단계 (0 정상, 1 감축, 2 굶주림) */
+  maxHunger: number;
+  minFoodDays: number;
+}
 
 export interface GameRecord {
   seed: string;
   ending: string;
   months: number;
-  winters: Record<string, { reached: boolean; deaths: number; hungryPhases: number; minFoodDays: number }>;
+  /** 첫 겨울 전(봄 시작이면 3~10월) 사망 */
+  preWinterDeaths: number;
+  winters: Record<string, WinterRecord>;
+  /** 첫 해 달력 숫자별 월초 식량 며칠치 */
+  startFoodDays: Record<number, number>;
+  /** 첫 해 달력 숫자별 결속 변화 (출처별) */
+  cohesion: Record<number, Record<string, number>>;
   picks: Record<string, number>;
   presented: Record<string, number>;
   events: Record<string, number>;
   quietMonths: number;
 }
 
-function foodDaysOf(s: GameState, def: ChapterDefinition): number {
-  const daily = Object.values(s.people)
-    .filter((p) => p.alive)
-    .reduce((a, p) => {
-      const age = Math.floor((s.month - p.birthMonth) / 12);
-      const band = def.ageBands.filter((b) => age >= b.fromAge).sort((x, y) => y.fromAge - x.fromAge)[0]!;
-      return a + band.foodPerMonth / 30;
-    }, 0);
-  const kg = s.stores.food.reduce((a, l) => a + l.kg, 0);
-  return daily > 0 ? kg / daily : 0;
-}
-
 export function playGame(def: ChapterDefinition, seed: string, strategy: StrategyName, maxMonths: number, presetId?: string): GameRecord {
   const s = createGame(def, { seed, ...(presetId ? { presetId } : {}) });
-  const strat = makeStrategy(strategy, seedToState(`strategy:${seed}`));
+  const strat = makeStrategy(strategy, seedToState(`strategy:${seed}`), seed);
   const rec: GameRecord = {
     seed,
     ending: 'none',
     months: 0,
-    winters: Object.fromEntries(WINTERS.map((w) => [w.name, { reached: false, deaths: 0, hungryPhases: 0, minFoodDays: Infinity }])),
+    preWinterDeaths: 0,
+    winters: Object.fromEntries(
+      Array.from({ length: WINTER_COUNT }, (_, i) => [`winter${i + 1}`, { reached: false, deaths: 0, maxHunger: 0, minFoodDays: Infinity }]),
+    ),
+    startFoodDays: {},
+    cohesion: {},
     picks: {},
     presented: {},
     events: {},
     quietMonths: 0,
   };
+  let winterNo = 0;
+  let inWinter = false;
   for (let m = 0; m < maxMonths && s.step !== 'ended'; m++) {
     if (s.step === 'settlement') applyCommand(def, s, { type: 'nextMonth' });
+    const cal = monthDef(def, s).number;
+    const firstYear = m < 12;
+    const winterNow = WINTER_MONTHS.includes(cal);
+    if (winterNow && !inWinter) winterNo += 1;
+    inWinter = winterNow;
+    const w = winterNow ? rec.winters[`winter${winterNo}`] : undefined;
+    if (firstYear) rec.startFoodDays[cal] = foodDays(def, s);
     for (const c of s.work.candidates) rec.presented[c.policyId] = (rec.presented[c.policyId] ?? 0) + 1;
-    const winter = WINTERS.find((w) => s.month >= w.from && s.month <= w.to);
-    if (winter) rec.winters[winter.name]!.minFoodDays = Math.min(rec.winters[winter.name]!.minFoodDays, foodDaysOf(s, def));
+    if (w) w.minFoodDays = Math.min(w.minFoodDays, foodDays(def, s));
     for (let guard = 0; guard < 50 && (s.step === 'policy' || s.step === 'decision'); guard++) {
       if (s.step === 'decision') {
         const d = s.work.decision!;
@@ -123,13 +173,13 @@ export function playGame(def: ChapterDefinition, seed: string, strategy: Strateg
     const h = s.history[s.history.length - 1]!;
     if (h.quiet) rec.quietMonths++;
     for (const e of s.work.events) rec.events[e] = (rec.events[e] ?? 0) + 1;
-    if (winter) {
-      const w = rec.winters[winter.name]!;
+    if (firstYear) rec.cohesion[cal] = { ...(s.work.cohesionBy ?? {}) };
+    if (w) {
       w.reached = true;
       w.deaths += s.work.deaths.length;
-      w.hungryPhases += h.reports.filter((r) => r.lines.some((l) => l.key === 'line.hunger.1' || l.key === 'line.hunger.2')).length;
-      w.hungryPhases += s.hungerStage > 0 ? 1 : 0;
-    }
+      w.maxHunger = Math.max(w.maxHunger, s.work.maxHunger);
+      w.minFoodDays = Math.min(w.minFoodDays, foodDays(def, s));
+    } else if (winterNo === 0) rec.preWinterDeaths += s.work.deaths.length;
     rec.months = s.month;
   }
   rec.ending = s.ending?.id ?? (population(s) === 0 ? 'extinct?' : 'running');
@@ -142,27 +192,52 @@ const pct = (xs: number[], p: number) => {
   return sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))]!;
 };
 
+/** 첫 해 달 순서 (봄 시작 기준 화면 순서) */
+export const CAL_ORDER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
+
 export function summarize(def: ChapterDefinition, recs: GameRecord[]) {
   const n = recs.length;
   const endings: Record<string, number> = {};
   for (const r of recs) endings[r.ending] = (endings[r.ending] ?? 0) + 1;
   const winters = Object.fromEntries(
-    WINTERS.map((w) => {
-      const reached = recs.filter((r) => r.winters[w.name]!.reached);
-      const deaths = reached.map((r) => r.winters[w.name]!.deaths);
+    Object.keys(recs[0]?.winters ?? {}).map((name) => {
+      const reached = recs.filter((r) => r.winters[name]!.reached);
+      const ws = reached.map((r) => r.winters[name]!);
+      const deaths = ws.map((w) => w.deaths);
       return [
-        w.name,
+        name,
         {
           reached: reached.length / n,
           deaths: { p10: pct(deaths, 0.1), p50: pct(deaths, 0.5), p90: pct(deaths, 0.9) },
-          anyDeath: reached.filter((r) => r.winters[w.name]!.deaths > 0).length / Math.max(1, reached.length),
-          hungry: reached.filter((r) => r.winters[w.name]!.hungryPhases > 0).length / Math.max(1, reached.length),
-          minFoodDaysP50: pct(reached.map((r) => r.winters[w.name]!.minFoodDays), 0.5),
+          anyDeath: ws.filter((w) => w.deaths > 0).length / Math.max(1, ws.length),
+          /** 배급 감축 이상을 겪은 판 */
+          hungry: ws.filter((w) => w.maxHunger >= 1).length / Math.max(1, ws.length),
+          /** 굶주림(2단계)을 겪은 판 */
+          starved: ws.filter((w) => w.maxHunger >= 2).length / Math.max(1, ws.length),
+          minFoodDaysP50: pct(ws.map((w) => w.minFoodDays), 0.5),
         },
       ];
     }),
   );
-  const firstWinterExtinct = recs.filter((r) => r.ending === 'ruin_extinct' && r.months <= 5).length / n;
+  const preWinter = recs.map((r) => r.preWinterDeaths);
+  const startFoodDaysP50 = Object.fromEntries(
+    CAL_ORDER.map((c) => [c, pct(recs.filter((r) => r.startFoodDays[c] !== undefined).map((r) => r.startFoodDays[c]!), 0.5)]),
+  );
+  // 결속 경로: 출처별, 달별 판당 평균 (그 달에 닿은 판 기준)
+  const sources = new Set<string>();
+  for (const r of recs) for (const by of Object.values(r.cohesion)) for (const k of Object.keys(by)) sources.add(k);
+  const cohesionPaths: Record<string, Record<number, number> & { total: number }> = {};
+  for (const src of [...sources].sort()) {
+    const row = { total: 0 } as Record<number, number> & { total: number };
+    for (const c of CAL_ORDER) {
+      const had = recs.filter((r) => r.cohesion[c] !== undefined);
+      const v = had.reduce((a, r) => a + (r.cohesion[c]![src] ?? 0), 0) / Math.max(1, had.length);
+      row[c] = v;
+      row.total += v;
+    }
+    cohesionPaths[src] = row;
+  }
+  const firstWinterExtinct = recs.filter((r) => r.ending === 'ruin_extinct' && r.winters['winter1']?.reached && !r.winters['winter2']?.reached).length / n;
   const presented: Record<string, number> = {};
   const picks: Record<string, number> = {};
   const events: Record<string, number> = {};
@@ -178,8 +253,11 @@ export function summarize(def: ChapterDefinition, recs: GameRecord[]) {
     games: n,
     endings,
     months: { p10: pct(recs.map((r) => r.months), 0.1), p50: pct(recs.map((r) => r.months), 0.5), p90: pct(recs.map((r) => r.months), 0.9) },
+    preWinterDeaths: { p50: pct(preWinter, 0.5), p90: pct(preWinter, 0.9), anyDeath: preWinter.filter((x) => x > 0).length / Math.max(1, n) },
+    startFoodDaysP50,
     firstWinterExtinct,
     winters,
+    cohesionPaths,
     pickRate,
     eventsPerGame: Object.fromEntries(Object.entries(events).map(([k, v]) => [k, v / n])),
     neverFired,

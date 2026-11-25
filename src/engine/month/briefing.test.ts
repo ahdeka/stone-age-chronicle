@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ch1, finishMonth, newGame, pick, tweakDef } from '../../test/fixtures';
+import { ch1, finishMonth, newGame, pick, pickFood, tweakDef } from '../../test/fixtures';
 import { goalProgress } from '../goals/progress';
 import { coldestMonthFirewood, cohesionBand, crewSplit } from '../display';
 import { sumLedger } from './month';
@@ -68,7 +68,7 @@ describe('시대 목표 진행도', () => {
   });
 
   it('정산 때 거처에서 지낸 달 수가 쌓인다', () => {
-    const s = finishMonth(ch1, pick(ch1, newGame('goal'), 'hold_and_ration'));
+    const s = finishMonth(ch1, pickFood(ch1, newGame('goal')));
     expect(s.counters['shelter_months.tent']).toBe(1);
   });
 });

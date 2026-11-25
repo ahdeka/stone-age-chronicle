@@ -124,8 +124,8 @@ export const ch1Policies: PolicyTemplate[] = [
             power: huntPower(0.4),
             difficulty: 6.6,
             outcomes: {
-              triumph: { narrative: 'spring_herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [6, 8] }] },
-              success: { narrative: 'spring_herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [3, 5] }] },
+              triumph: { narrative: 'spring_herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [6, 8] }, { type: 'cohesion', delta: 5 }] },
+              success: { narrative: 'spring_herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [3, 5] }, { type: 'cohesion', delta: 3 }] },
               costly: { narrative: 'spring_herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [3, 4] }] },
               failure: { narrative: 'spring_herd_bad', effects: [{ type: 'catch', animal: 'reindeer', count: [0, 1] }] },
               disaster: { narrative: 'spring_herd_bad', effects: [] },
@@ -301,11 +301,16 @@ export const ch1Policies: PolicyTemplate[] = [
     id: 'firewood_stockpile',
     slot: 'growth',
     category: 'firewood',
-    appearsWhen: [{ type: 'season', in: ['spring', 'summer'] }, { type: 'month', min: 2 }],
+    // 덧집을 다 짓고 장작이 거의 차 있으면 나오지 않는다 (③a: 여름 내내 일손을 장작에 묶는 함정)
+    appearsWhen: [
+      { type: 'season', in: ['spring', 'summer'] },
+      { type: 'month', min: 2 },
+      { type: 'not', of: { type: 'all', of: [{ type: 'facility', id: 'wood_shed' }, { type: 'firewoodFill', min: 0.85 }] } },
+    ],
     relevance: [{ when: [{ type: 'season', in: ['summer'] }], add: 10 }],
     priority: 26,
-    cooldown: 0,
-    firewoodShare: 0.6,
+    cooldown: 2,
+    firewoodShare: 0.4,
     monthMods: [{ stat: 'yield.wood', op: 'mul', value: 1.2 }],
     scene: { bg: '{camp}', subjects: ['sub.firewood'], overlay: '{weather}' },
     steps: { early: [{ kind: 'narrate', narrative: 'stockpile_month', effects: [{ type: 'facility', id: 'wood_shed', level: 1 }] }] },
@@ -383,7 +388,8 @@ export const ch1Policies: PolicyTemplate[] = [
     slot: 'food',
     category: 'gather',
     appearsWhen: [{ type: 'monthOfYear', in: ['fruit', 'reindeer'] }],
-    priority: 34,
+    // 9~10월에는 늘 후보에 든다 (③a)
+    priority: 50,
     cooldown: 0,
     firewoodShare: 0.1,
     monthMods: [
@@ -434,8 +440,8 @@ export const ch1Policies: PolicyTemplate[] = [
             power: huntPower(0.25),
             difficulty: 6.5,
             outcomes: {
-              triumph: { narrative: 'herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [15, 18] }] },
-              success: { narrative: 'herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [11, 14] }] },
+              triumph: { narrative: 'herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [15, 18] }, { type: 'cohesion', delta: 5 }] },
+              success: { narrative: 'herd_good', effects: [{ type: 'catch', animal: 'reindeer', count: [11, 14] }, { type: 'cohesion', delta: 3 }] },
               costly: { narrative: 'herd_costly', effects: [{ type: 'catch', animal: 'reindeer', count: [10, 13] }] },
               failure: { narrative: 'herd_bad', effects: [{ type: 'catch', animal: 'reindeer', count: [3, 6] }] },
               disaster: { narrative: 'herd_bad', effects: [{ type: 'catch', animal: 'reindeer', count: [0, 2] }] },
@@ -685,8 +691,8 @@ export const ch1Policies: PolicyTemplate[] = [
             ],
             difficulty: 5.4,
             outcomes: {
-              triumph: { narrative: 'deer_drive_good', effects: [{ type: 'catch', animal: 'red_deer', count: [7, 9] }] },
-              success: { narrative: 'deer_drive_good', effects: [{ type: 'catch', animal: 'red_deer', count: [4, 6] }] },
+              triumph: { narrative: 'deer_drive_good', effects: [{ type: 'catch', animal: 'red_deer', count: [7, 9] }, { type: 'cohesion', delta: 5 }] },
+              success: { narrative: 'deer_drive_good', effects: [{ type: 'catch', animal: 'red_deer', count: [4, 6] }, { type: 'cohesion', delta: 3 }] },
               costly: { narrative: 'deer_drive_good', effects: [{ type: 'catch', animal: 'red_deer', count: [4, 6] }] },
               failure: { narrative: 'deer_bad', effects: [{ type: 'catch', animal: 'red_deer', count: [0, 2] }] },
               disaster: { narrative: 'deer_bad', effects: [] },
@@ -743,7 +749,8 @@ export const ch1Policies: PolicyTemplate[] = [
     id: 'hold_and_ration',
     slot: 'food',
     category: 'hold',
-    appearsWhen: [],
+    // 식량이 10일치 미만일 때만 (③a). 식량 후보가 하나도 없으면 그래도 들어간다
+    appearsWhen: [{ type: 'foodDays', max: 9.99 }],
     priority: 10,
     cooldown: 0,
     fallback: true,

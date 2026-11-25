@@ -14,6 +14,8 @@ export interface PersonQuery {
   ailing?: boolean;
   /** 기본값 true */
   alive?: boolean;
+  /** 몇 달 전에 죽었는가 (1 = 지난달). alive: false와 함께 쓴다 */
+  diedMonthsAgo?: number;
 }
 
 export type Condition =
@@ -22,6 +24,8 @@ export type Condition =
   | ({ type: 'foodDays' } & NumRange)
   | ({ type: 'firewood' } & NumRange)
   | ({ type: 'firewoodDays' } & NumRange)
+  /** 장작이 쌓아 둘 수 있는 양(firewood.cap)의 몇 할인가 (0~1) */
+  | ({ type: 'firewoodFill' } & NumRange)
   | ({ type: 'goods'; id: Id } & NumRange)
   | ({ type: 'cohesion' } & NumRange)
   | ({ type: 'hungerStage' } & NumRange)
@@ -29,6 +33,8 @@ export type Condition =
   | ({ type: 'population'; band?: AgeBand } & NumRange)
   | ({ type: 'workers' } & NumRange)
   | { type: 'person'; match: PersonQuery; count?: NumRange }
+  /** 몇 달 전(기본 1 = 지난달)에 죽은 사람 수 */
+  | ({ type: 'deaths'; monthsAgo?: number } & NumRange)
   /** 사건에 바인딩된 인물, 또는 'leader'(방침을 이끄는 인물) */
   | { type: 'actor'; slot: string; match?: PersonQuery }
   // 시간과 날씨

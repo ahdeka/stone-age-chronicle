@@ -4,6 +4,10 @@ import type { Condition, Narrative } from '../../../engine';
 
 const v = (id: string, n: number) => Array.from({ length: n }, (_, i) => ({ text: `nar.${id}.${i + 1}` }));
 const inSeason = (s: string): Condition[] => [{ type: 'season', in: [s] }];
+const seoriHere: Condition = { type: 'person', match: { seat: 'elder' } };
+const noSeori: Condition = { type: 'not', of: seoriHere };
+const oneDead: Condition = { type: 'deaths', max: 1 };
+const manyDead: Condition = { type: 'deaths', min: 2 };
 
 export const ch1Narratives: Narrative[] = [
   // ── 봄 ──
@@ -96,4 +100,18 @@ export const ch1Narratives: Narrative[] = [
       { when: [{ type: 'season', in: ['spring', 'summer'] }], text: 'nar.village_work.warm.2' },
     ],
   },
+
+  // ── 애도 (③a): $actor_dead = 지난달 떠난 사람. 서리가 살아 있으면 서리의 옛 노래 ──
+  {
+    id: 'mourning_rite',
+    variants: [
+      { when: [seoriHere, oneDead], text: 'nar.mourning_rite.seori.1' },
+      { when: [seoriHere, oneDead], text: 'nar.mourning_rite.seori.2' },
+      { when: [seoriHere, manyDead], text: 'nar.mourning_rite.seori.many' },
+      { when: [noSeori, oneDead], text: 'nar.mourning_rite.plain.1' },
+      { when: [noSeori, oneDead], text: 'nar.mourning_rite.plain.2' },
+      { when: [noSeori, manyDead], text: 'nar.mourning_rite.plain.many' },
+    ],
+  },
+  { id: 'mourning_postponed', variants: v('mourning_postponed', 2) },
 ];

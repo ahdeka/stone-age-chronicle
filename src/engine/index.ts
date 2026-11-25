@@ -9,7 +9,7 @@ export { evaluate, allTrue, failedConditions, foodDays, firewoodDays, workers, m
 export { getStat, stat, firewoodPerDay, type StatValue } from './stats/stats';
 export { ageYears, band, living, population, countBand, dailyFoodTotal, laborUnits } from './people/people';
 export { totalKg } from './stores/food';
-export { optionStatuses } from './events/events';
+export { eventText, optionStatuses } from './events/events';
 export { tierProbabilities, successChance, triCdf, tierOf } from './outcome/tier';
 export { LEFTOVER_OPTIONS, leftoverAvailable } from './month/month';
 export { serialize, deserialize, SAVE_FORMAT } from './save/save';

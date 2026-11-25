@@ -6,6 +6,7 @@ import { applyCommand } from '../core/reduce';
 import { findPolicy } from '../core/lookup';
 import { firstChoice, playMonth } from '../headless';
 import { previewPlan } from '../policy/plan';
+import { generateCandidates } from '../policy/candidates';
 import { totalKg } from '../stores/food';
 import type { ChapterDefinition, Command, EventDef, GameState, PolicyTemplate } from '../types';
 
@@ -74,9 +75,12 @@ const uid = (s: GameState, id: string) => {
 const plan = (s: GameState, ...ids: string[]): Command => ({ type: 'choosePlan', uids: ids.map((id) => uid(s, id)) });
 
 describe('후보와 칸 규칙', () => {
-  it('식량·발전·큰 일 칸이 따로 나오고, 버티기는 식량 칸에 늘 있다', () => {
+  it('식량·발전·큰 일 칸이 따로 나오고, 식량이 모자라면 버티기가 식량 칸에 있다', () => {
     const def = calm([FOOD, GROW, BIG]);
     const s = newGame('slots', def);
+    expect(s.work.candidates.some((c) => c.policyId === 'hold_and_ration')).toBe(false);
+    s.stores.food = [{ kind: 'dried_meat', kg: 100 }];
+    s.work.candidates = generateCandidates(def, s);
     const slots = s.work.candidates.map((c) => def.content.policies.find((p) => p.id === c.policyId)!.slot);
     expect(slots).toEqual([...slots].sort((a, b) => ['major', 'food', 'growth'].indexOf(a) - ['major', 'food', 'growth'].indexOf(b)));
     expect(slots).toContain('growth');
@@ -89,7 +93,10 @@ describe('후보와 칸 규칙', () => {
     const s = plenty(newGame('rules', def));
     expect(previewPlan(def, s, [uid(s, 't_grow')]).error).toBe('error.planNeedsFood');
     expect(previewPlan(def, s, [uid(s, 't_big'), uid(s, 't_food')]).error).toBe('error.planMajorAlone');
-    expect(previewPlan(def, s, [uid(s, 't_food'), uid(s, 'hold_and_ration')]).error).toBe('error.planNeedsFood');
+    const short = newGame('rules', def);
+    short.stores.food = [{ kind: 'dried_meat', kg: 100 }];
+    short.work.candidates = generateCandidates(def, short);
+    expect(previewPlan(def, short, [uid(short, 't_food'), uid(short, 'hold_and_ration')]).error).toBe('error.planNeedsFood');
     expect(previewPlan(def, s, [uid(s, 't_food'), uid(s, 't_food')]).error).toBe('error.planDuplicate');
     expect(previewPlan(def, s, [uid(s, 't_food'), uid(s, 't_grow')]).error).toBeUndefined();
     expect(previewPlan(def, s, [uid(s, 't_big')]).error).toBeUndefined();

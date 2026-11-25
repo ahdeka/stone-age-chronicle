@@ -7,6 +7,7 @@ import {
   crewSplit,
   currentEntry,
   currentPlace,
+  eventText,
   findEvent,
   findPolicy,
   firewoodDays,
@@ -247,7 +248,7 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
     title: tr.t(`event.${ev.id}.title`),
     chips: keyChips(tr, def, s),
     quotes,
-    intro: { text: tr.t(`event.${ev.id}.text`), scene: resolveSceneSpec(def, s, ev.scene, currentPlace(s) ?? s.campPlace, s.work.weather[1] ?? '') },
+    intro: { text: lineText(tr, eventText(def, s, ev, d.actors)), scene: resolveSceneSpec(def, s, ev.scene, currentPlace(s) ?? s.campPlace, s.work.weather[1] ?? '') },
     lead: eventLead(tr, ev.id),
     choices: optionStatuses(def, s, ev, d.actors).map(({ option, available, hint }) => ({
       id: option.id,

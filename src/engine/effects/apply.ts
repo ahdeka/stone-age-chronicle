@@ -138,7 +138,7 @@ export function killPerson(ctx: RunCtx, p: Person, cause: Id): void {
   p.ailments = [];
   state.work.deaths.push(p.id);
   state.work.notable = true;
-  addCohesion(state, def, -def.balance.cohesion.deathCost);
+  addCohesion(state, def, -def.balance.cohesion.deathCost, `death.${cause}`);
   currentReport(state).lines.push({ key: 'line.death', params: { name: p.name, cause: { key: `cause.${cause}` } }, group: 'people' });
   alert(state, { kind: 'death', personId: p.id, what: cause });
   offerChronicle(state, 'chron.death', def.balance.chronicle.deathImportance, { name: p.name, cause: { key: `cause.${cause}` } });
@@ -157,8 +157,15 @@ export function injurePerson(ctx: RunCtx, p: Person, ailment: Id, severity: 1 | 
 
 // ── 그 밖의 상태 ──
 
-export function addCohesion(state: GameState, def: ChapterDefinition, delta: number): void {
-  state.cohesion = Math.max(0, Math.min(def.balance.cohesion.max, state.cohesion + delta));
+/** 결속을 바꾼다. source는 이번 달 기록(work.cohesionBy)에 남는 출처 (예: 'hunger.2', 'death.hunger', 'event.mourning') */
+export function addCohesion(state: GameState, def: ChapterDefinition, delta: number, source = 'other'): void {
+  const next = Math.max(0, Math.min(def.balance.cohesion.max, state.cohesion + delta));
+  const moved = next - state.cohesion;
+  state.cohesion = next;
+  if (moved !== 0 && state.work) {
+    const by = (state.work.cohesionBy ??= {});
+    by[source] = (by[source] ?? 0) + moved;
+  }
 }
 
 export function setFlag(state: GameState, id: Id, set: boolean): void {
@@ -251,7 +258,7 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
       return;
     }
     case 'cohesion':
-      addCohesion(state, def, e.delta);
+      addCohesion(state, def, e.delta, ctx.source);
       return;
     case 'injure': {
       const p = resolveWho(ctx, e.who);
