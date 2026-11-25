@@ -26,7 +26,7 @@ const MAX_PEOPLE = 3;
 const TIER_ORDER: Tier[] = ['disaster', 'costly', 'failure', 'triumph', 'success'];
 
 const kg = (n: number) => `${Math.round(n).toLocaleString('ko-KR')}kg`;
-const signed = (n: number) => `${n > 0 ? '+' : '−'}${Math.round(Math.abs(n)).toLocaleString('ko-KR')}`;
+const signed = (n: number) => (Math.round(n) === 0 ? '±0' : `${n > 0 ? '+' : '−'}${Math.round(Math.abs(n)).toLocaleString('ko-KR')}`);
 
 /** 이번 달 사람에게 일어난 일: 사람마다 마지막 일 하나 (죽음이 있으면 죽음) */
 export function peopleChanges(reports: readonly PhaseReport[]): Alert[] {
@@ -41,6 +41,9 @@ export function peopleChanges(reports: readonly PhaseReport[]): Alert[] {
   const rank = { death: 0, injury: 1, sick: 1, healed: 2 } as const;
   return [...by.values()].sort((a, b) => rank[a.kind] - rank[b.kind]);
 }
+
+/** 최종 칸의 증감 색: 늘면 초록, 줄면 경고색 */
+const deltaClass = (n: number) => (Math.round(n) > 0 ? r.up : Math.round(n) < 0 ? r.down : r.muted);
 
 export function ResultScreen({ def, state, onNext }: Props) {
   const tr = useT();
@@ -70,6 +73,8 @@ export function ResultScreen({ def, state, onNext }: Props) {
   const woodRows = rows.filter((x) => x.res === 'firewood');
   const woodIn = woodRows.filter((x) => x.delta > 0).reduce((a, x) => a + x.delta, 0);
   const woodOut = woodRows.filter((x) => x.delta < 0).reduce((a, x) => a + x.delta, 0);
+  const woodFrom = settle?.from.firewood ?? state.work.start.firewood;
+  const woodTo = settle?.to?.firewood ?? state.stores.firewood;
 
   // 덕분에: 덕분에 늘어난 몫(장부) + 아낀 양
   const thanks: string[] = [
@@ -117,12 +122,27 @@ export function ResultScreen({ def, state, onNext }: Props) {
       </StatusBar>
 
       <div className={r.body} data-fit="result">
-        <section className={`${r.main} ${u.in}`}>
+        <div className={`${r.top} ${u.in}`}>
           <div className={r.titleRow}>
             <h1 className={`${r.title} ${u.serif}`}>{tr.t('ui.result.title')}</h1>
             {tier && <span className={`${r.tier} ${r[tier]}`}>{tr.t(`tier.${tier}`)}</span>}
           </div>
+          {/* 최종: 맨 위에 크게 (2026-11-25 4차 피드백). 상세 장부는 아래에 작게 */}
+          <div className={r.finals}>
+            <span className={r.finalLabel}>{tr.t('ui.ledger.final')}</span>
+            <div className={r.bigCell}>
+              <b className={r.bigValue}>{tr.t('ui.result.finalFood', { kg: Math.round(foodTo).toLocaleString('ko-KR'), days })}</b>
+              <span className={`${r.bigDelta} ${deltaClass(foodTo - foodFrom)}`}>({signed(foodTo - foodFrom)})</span>
+            </div>
+            <div className={r.bigCell}>
+              <b className={r.bigValue}>{tr.t('ui.result.finalWood', { kg: Math.round(woodTo).toLocaleString('ko-KR') })}</b>
+              <span className={`${r.bigDelta} ${deltaClass(woodTo - woodFrom)}`}>({signed(woodTo - woodFrom)})</span>
+            </div>
+          </div>
+        </div>
 
+        <div className={r.cols}>
+        <section className={`${r.main} ${u.in}`}>
           <ol className={r.recaps}>
             {recaps.map((x) => (
               <li key={x.slot} className={r.recap}>
@@ -191,7 +211,7 @@ export function ResultScreen({ def, state, onNext }: Props) {
           <h2 className={`${r.ledgerTitle} ${r.woodTitle}`}>{tr.t('ui.result.woodLedger')}</h2>
           <div className={r.row}>
             <span className={r.muted}>
-              {tr.t('ui.result.wood', { from: Math.round(settle?.from.firewood ?? state.work.start.firewood) })}
+              {tr.t('ui.result.wood', { from: Math.round(woodFrom) })}
               {woodIn > 0.5 && (
                 <>
                   {' · '}
@@ -205,9 +225,10 @@ export function ResultScreen({ def, state, onNext }: Props) {
                 </>
               )}
             </span>
-            <b>{kg(settle?.to?.firewood ?? state.stores.firewood)}</b>
+            <b>{kg(woodTo)}</b>
           </div>
         </section>
+        </div>
       </div>
 
       <div className={r.foot}>

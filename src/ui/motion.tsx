@@ -10,7 +10,9 @@ export interface Settings {
   speed: Speed;
   /** 게임 설정에서 켠 움직임 줄이기 (운영체제 설정과 별개) */
   reduceMotion: boolean;
-  autoOpen: boolean;
+  /** 월초 상황 화면에서 소식이 끝나면 결정 팝업(전략·월초 사건)을 연다. 기본 끔 (2026-11-25 4차 피드백).
+   *  진행 화면의 결정(중순 사건, 남은 고기)은 이 설정과 상관없이 늘 자동으로 연다. */
+  autoOpenPlan: boolean;
   fontScale: 1 | 2 | 3;
   /** 한 순씩 "계속"을 눌러 넘긴다. 끄면 서술이 끝나고 잠시 쉰 뒤 저절로 다음 순으로 간다 */
   stepByStep: boolean;
@@ -21,7 +23,7 @@ export interface Settings {
 const DEFAULTS: Settings = {
   speed: 'normal',
   reduceMotion: false,
-  autoOpen: true,
+  autoOpenPlan: false,
   fontScale: 1,
   stepByStep: false,
   autoDelay: 'normal',
@@ -34,8 +36,8 @@ function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS;
-    // 없어진 설정(평온한 달 요약 quietSummary)은 버린다
-    const { quietSummary: _gone, ...saved } = JSON.parse(raw) as Partial<Settings> & { quietSummary?: unknown };
+    // 없어진 설정(평온한 달 요약 quietSummary, 예전 자동 열기 autoOpen)은 버린다 — 새 기본값(끔)으로 시작하게
+    const { quietSummary: _gone, autoOpen: _old, ...saved } = JSON.parse(raw) as Partial<Settings> & { quietSummary?: unknown; autoOpen?: unknown };
     return { ...DEFAULTS, ...saved };
   } catch {
     return DEFAULTS;

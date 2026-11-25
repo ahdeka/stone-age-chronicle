@@ -58,7 +58,7 @@ export function SettingsMenu() {
             {tr.t('ui.settings.reduceMotion')}
           </label>
           <label className={c.check}>
-            <input type="checkbox" checked={settings.autoOpen} onChange={(e) => set({ autoOpen: e.target.checked })} />
+            <input type="checkbox" checked={settings.autoOpenPlan} onChange={(e) => set({ autoOpenPlan: e.target.checked })} />
             {tr.t('ui.settings.autoOpen')}
           </label>
           <label className={c.check}>

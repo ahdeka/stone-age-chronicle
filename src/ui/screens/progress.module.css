@@ -1,5 +1,5 @@
-/* 진행 화면 (화면 시안 Progress). 1366×650, 1920×950에서 세로 스크롤 없음:
-   지표 바 · 가운데(남는 높이) · 아래 버튼 줄. 넘치면 서술 칸 안에서만 스크롤한다(글자 크기를 키운 경우). */
+/* 진행 화면 (화면 시안 Progress). 1366×650, 1920×950에서 페이지 세로 스크롤 없음:
+   지표 바 · 가운데(남는 높이) · 아래 버튼 줄. 세 순이 쌓이는 서술 칸 안쪽만 스크롤한다. */
 
 .page {
   height: 100dvh;
@@ -53,64 +53,64 @@
   line-height: 1.5;
 }
 
+/* 서술 칸: 세 순이 차례로 쌓인다. 이 칸 안쪽만 스크롤한다 (2026-11-25 4차 피드백) */
+.storyWrap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+
 .story {
   flex: 1;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+  padding-right: 8px;
+  padding-bottom: 8px;
 }
 
-/* 지난 순: 한 줄로 흐리게 */
-.recap {
+/* 한 순: 소제목 + 문단 + 사람 소식 띠 */
+.phase {
   flex: none;
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  padding: 6px 14px;
-  border-radius: 12px;
-  background: var(--surface);
-  border: 1px solid #2a241d;
-  min-width: 0;
-}
-
-.recapLabel {
-  flex: none;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
-.recapText {
-  font-size: var(--fs-md);
-  line-height: 1.6;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.recapChose {
-  font-family: var(--font-sans);
-  font-size: var(--fs-xs);
-}
-
-/* 지금 순: 전문 */
-.now {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.nowLabel {
+.phaseLabel {
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
   font-size: var(--fs-xs);
+  font-weight: 400;
   letter-spacing: 0.2em;
   color: var(--accent);
+}
+
+/* 위로 올려 읽는 동안 새 글이 붙으면 */
+.newBelow {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 18px;
+  border: 1px solid var(--accent);
+  background: #2a2119;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .tier {
@@ -272,5 +272,8 @@
   }
   .story {
     overflow: visible;
+  }
+  .newBelow {
+    display: none;
   }
 }

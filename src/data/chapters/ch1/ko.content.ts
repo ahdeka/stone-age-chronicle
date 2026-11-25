@@ -14,14 +14,11 @@ export const ch1ContentKo: Record<string, string> = {
 
   // ── 시작 프리셋: 봄 (기본) ──
   'preset.grey_river.chapter': '제1장 · 구석기',
-  'preset.grey_river.intro.1': '빙하기의 끝자락, 북쪽 땅.',
-  'preset.grey_river.intro.2': '잿빛강은 고원에서 흘러내려 넓게 굽이친다.',
-  'preset.grey_river.intro.3': '긴 겨울이 끝났다. 강 굽이의 바위 그늘 아래, 낡은 가죽 천막 {tents:count}채.',
-  'preset.grey_river.intro.4': '{pop}명이 겨울을 넘겼다. 성인 {adults}, 노인 {elders}, 아이 {children}.',
-  'preset.grey_river.intro.5': '고기 자루는 바닥을 드러냈고, 남은 것은 뿌리 몇 바구니와 말린 고기 한 줌이다.',
-  'preset.grey_river.intro.6': '그러나 강 얼음이 갈라지는 소리가 들린다. 물고기가 돌아오고, 철새가 머리 위를 지난다.',
-  'preset.grey_river.intro.7': '남은 식량은 {days:days}. 겨울은 다시 온다.',
-  'preset.grey_river.intro.8': '당신은 {tribe}의 족장이다.',
+  // 인트로 4줄, 8초 안팎 (2026-11-25 4차 피드백)
+  'preset.grey_river.intro.1': '빙하기의 끝자락, 잿빛강 굽이에서 긴 겨울이 끝났다.',
+  'preset.grey_river.intro.2': '낡은 천막 {tents:count}채, {pop}명이 살아남았다.',
+  'preset.grey_river.intro.3': '남은 식량은 {days:days}. 강 얼음이 갈라지고 물고기가 돌아온다.',
+  'preset.grey_river.intro.4': '겨울은 다시 온다. 당신은 {tribe}의 족장이다.',
   'preset.grey_river.meta': '{date} · {pop}명',
   'preset.grey_river.tagline': '얼음이 풀린다. 다음 겨울은 다르게 맞을 수 있을까.',
   'preset.grey_river.chronicle': '얼음이 풀리는 잿빛강 굽이에서, {tribe} {pop}명이 긴 겨울을 넘겼다.',
@@ -42,14 +39,10 @@ export const ch1ContentKo: Record<string, string> = {
   'preset.grey_river.land.danger.value': '늑대 무리, 혹한과 눈보라, 봄에 얼음이 녹으며 나는 홍수, 겨울 식량 부족',
 
   // ── 시작 프리셋: 늦가을 (숨은 테스트용, 시험 플레이 재현) ──
-  'preset.grey_river_autumn.intro.1': '빙하기의 끝자락, 북쪽 땅.',
-  'preset.grey_river_autumn.intro.2': '잿빛강은 고원에서 흘러내려 넓게 굽이친다.',
-  'preset.grey_river_autumn.intro.3': '강 굽이의 바위 그늘 아래, 가죽 천막 {tents:count}채.',
-  'preset.grey_river_autumn.intro.4': '{pop}명. 성인 {adults}, 노인 {elders}, 아이 {children}.',
-  'preset.grey_river_autumn.intro.5': '지난여름은 짧았고, 사냥은 신통치 않았다.',
-  'preset.grey_river_autumn.intro.6': '밤마다 서리가 내린다. 겨울까지 두 달 남짓.',
-  'preset.grey_river_autumn.intro.7': '남은 식량은 {days:days}.',
-  'preset.grey_river_autumn.intro.8': '당신은 {tribe}의 족장이다.',
+  'preset.grey_river_autumn.intro.1': '빙하기의 끝자락, 잿빛강 굽이에 밤마다 서리가 내린다.',
+  'preset.grey_river_autumn.intro.2': '가죽 천막 {tents:count}채, {pop}명. 지난여름 사냥은 신통치 않았다.',
+  'preset.grey_river_autumn.intro.3': '남은 식량은 {days:days}. 겨울까지 두 달 남짓.',
+  'preset.grey_river_autumn.intro.4': '당신은 {tribe}의 족장이다.',
   'preset.grey_river_autumn.meta': '{date} · {pop}명',
   'preset.grey_river_autumn.tagline': '첫 겨울이 다가온다. 무엇을 먼저 지킬 것인가.',
   'preset.grey_river_autumn.chronicle': '서리 내린 잿빛강 굽이에서, {tribe} {pop}명이 첫 겨울을 앞두고 있었다.',

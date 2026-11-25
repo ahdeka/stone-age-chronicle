@@ -75,7 +75,9 @@ const landFacts: LandFact[] = (['terrain', 'climate', 'rain', 'river', 'soil', '
 const land = { title: `${P}.land.title`, subtitle: `${P}.land.subtitle`, intro: `${P}.land.intro`, facts: landFacts };
 const nameSuggestions = ['tribe.suggest.grey_river', 'tribe.suggest.willow_brook', 'tribe.suggest.white_ford', 'tribe.suggest.dawn_fire'];
 const discovered = ['river_bend', 'reindeer_ford', 'east_steppe', 'north_forest', 'south_marsh'];
-const lines = (k: string) => [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${k}.intro.${n}`);
+/** 인트로 줄 키. 2026-11-25 4차 피드백: 인트로를 8초 안팎으로 — 4줄 */
+const INTRO_LINES = 4;
+const lines = (k: string) => Array.from({ length: INTRO_LINES }, (_, i) => `${k}.intro.${i + 1}`);
 
 /** 기본 시작: 긴 겨울을 막 넘긴 봄 (1년차 3월 녹는달). DESIGN.md §10.2 */
 export const ch1SpringPreset: StartPreset = {

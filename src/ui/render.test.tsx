@@ -9,6 +9,7 @@ import { availableOptions, createGame, reduce, type GameState } from '../engine'
 import { createTranslator } from '../i18n';
 import { ch1, choose, finishMonth, newGame, pick, springGame } from '../test/fixtures';
 import { decisionModel, DecisionPopup } from './components/Decision';
+import { PlanBody } from './components/DecisionSheet';
 import { I18nProvider } from './i18n';
 import { MotionProvider } from './motion';
 import { EndingScreen } from './screens/EndingScreen';
@@ -64,9 +65,9 @@ describe('화면', () => {
     expect(t).not.toContain('부족 이름');
     expect(s.tribeName).toBe('');
     const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />);
-    expect(i).toContain('34명. 성인 18, 노인 4, 아이 12.');
+    // 인트로 4줄 (4차 피드백)
+    expect(i).toContain('가죽 천막 다섯 채, 34명.');
     expect(i).toContain('남은 식량은 18일치.');
-    expect(i).toContain('가죽 천막 다섯 채');
     expect(i).toContain('당신은 잿빛강 사람들의 족장이다.');
     expect(i).not.toContain('⟨');
   });
@@ -112,12 +113,27 @@ describe('화면', () => {
     expect(h).toContain('순록 떼를 놓치면 겨울을 못 넘깁니다');
     expect(h).toMatch(/나가는 사람 14명 · 남는 사람 \d+명 · 이끄는 사람 바위/);
     expect(h).toContain('그동안 마을이 비고');
-    // 두 칸: 구역 제목, 일손 막대, 발전하지 않는다, 한 줄 설명
+    // ①단계 (4차 피드백): 단계 표시, 식량 카드, 큰 일 줄, "다음: 발전 고르기". 발전 카드는 ②단계에
     expect(h).toContain('식량 전략');
+    expect(h).toContain('전략 고르기 단계');
+    expect(h).toContain('다음: 발전 고르기');
+    expect(h).not.toContain('발전하지 않는다');
+    expect(h).toContain(tr.t('policy.reindeer_big_hunt.brief'));
+    expect(h).not.toContain('⟨');
+  });
+
+  it('전략 팝업 ②단계: 고른 식량 한 줄, 일손 막대, 발전 카드와 "발전하지 않는다"', () => {
+    const s = springGame('ui-step2');
+    const model = decisionModel(tr, ch1, s)!;
+    const food = model.choices.find((c) => c.group === 'food')!;
+    const picked = [food.id];
+    const growthInfo = new Map(model.choices.filter((c) => c.group === 'growth').map((c) => [c.id, model.plan!.growthMeta(food.id, c.id)]));
+    const h = html(<PlanBody model={model} step={2} picked={picked} labor={model.plan!.labor(picked)} growthInfo={growthInfo} majorPicked={false} onPick={noop} onStep={noop} />);
+    expect(h).toContain(`식량: ${food.title}`);
+    expect(h).toContain('바꾸기');
     expect(h).toContain('발전 전략');
     expect(h).toContain('발전하지 않는다');
-    expect(h).toMatch(/식량 \d+명/);
-    expect(h).toContain(tr.t('policy.reindeer_big_hunt.brief'));
+    expect(h).toMatch(/발전 \d+명/);
     expect(h).not.toContain('⟨');
   });
 
@@ -151,10 +167,17 @@ describe('화면', () => {
     expect(early).toContain('상순 · 1~10일');
     expect(early).toContain('순록 떼 대사냥');
     expect(early).toContain('글 바로 보기');
+    // 세 순은 한 칸에 쌓인다: 하순 화면에도 상순·중순 소제목이 그대로 있다 (4차 피드백)
+    const late = html(<ProgressScreen def={ch1} state={end} index={last - 1} onNext={noop} send={noop} />);
+    expect(late).toContain('상순 · 1~10일');
+    expect(late).toContain('중순 · 11~20일');
+    expect(late).toContain('하순 · 21~30일');
     const result = html(<ResultScreen def={ch1} state={end} onNext={noop} />);
     expect(result).toContain('이달의 결과');
     expect(result).toContain('식량 장부');
     expect(result).toContain('최종');
+    expect(result).toMatch(/식량 [\d,]+kg · \d+일치/);
+    expect(result).toMatch(/장작 [\d,]+kg/);
     expect(result).toContain('다음 달로');
     expect(result).not.toContain('⟨');
     // 자동 진행(기본): 다음 순이 있는 화면에만 일시정지가 있다
@@ -178,7 +201,9 @@ describe('화면', () => {
     const s = springGame('ui-spring');
     const i = html(<IntroScreen def={ch1} state={s} onStart={noop} />);
     expect(i).toContain('긴 겨울이 끝났다');
+    expect(i).toContain('낡은 천막 다섯 채, 34명이 살아남았다.');
     expect(i).toContain('남은 식량은 4일치.');
+    expect(i).toContain('겨울은 다시 온다. 당신은 잿빛강 사람들의 족장이다.');
     expect(i).not.toContain('⟨');
     const h = html(<SituationScreen def={ch1} state={s} send={noop} />);
     expect(h).toContain('얼음이 갈라진다, 물고기가 돌아온다');

@@ -72,7 +72,8 @@ export function GameView({ def, state, onChange, onQuit }: Props) {
     };
     // 정산 보고는 이달의 결과 화면, 그 밖(상순·중순·하순)은 진행 화면
     const result = state.work.reports[index]?.slot === 'settlement';
-    key = result ? screenKey('result', state.month) : screenKey('progress', state.month, index);
+    // 진행 화면은 한 달 동안 한 화면이다 (세 순이 서술 칸에 쌓인다, 4차 피드백)
+    key = result ? screenKey('result', state.month) : screenKey('progress', state.month);
     body = result ? (
       <ResultScreen def={def} state={state} onNext={finish} />
     ) : (

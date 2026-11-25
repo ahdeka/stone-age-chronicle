@@ -10,17 +10,28 @@
     opacity: 1;
   }
 }
-@keyframes sheetIn {
+@keyframes dialogIn {
   from {
     opacity: 0;
-    transform: translateY(40px) scale(0.98);
+    transform: scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
+/* 데스크톱: 화면 가운데(가로·세로) 대화상자 (2026-11-25 4차 피드백). 폭 640px 미만만 아래에서 올라오는 시트 */
 .backdrop {
   position: fixed;
   inset: 0;
@@ -28,29 +39,38 @@
   background: rgba(6, 5, 4, 0.72);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding: 8px 8px 0;
+  padding: 24px;
   animation: backIn calc(0.35s * var(--motion-scale)) ease-out both;
 }
 
 .sheet {
-  width: min(1100px, 100%);
-  max-height: calc(100dvh - 8px);
+  width: min(1180px, 100%);
+  max-height: calc(100dvh - 48px);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  border-radius: 22px 22px 0 0;
+  border-radius: 22px;
   background: var(--sheet);
   border: 1px solid var(--border-strong);
-  border-bottom: none;
-  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
-  animation: sheetIn calc(0.45s * var(--motion-scale)) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: dialogIn calc(0.35s * var(--motion-scale)) cubic-bezier(0.2, 0.8, 0.2, 1) both;
   outline: none;
 }
 
-.wide {
-  width: min(1400px, 100%);
+@media (max-width: 639.98px) {
+  .backdrop {
+    align-items: flex-end;
+    padding: 8px 8px 0;
+  }
+  .sheet {
+    max-height: calc(100dvh - 8px);
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+    animation-name: sheetIn;
+  }
 }
 
 /* ── 머리: 제목 · 칩 · 닫기 한 줄 ── */
@@ -312,6 +332,116 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* 세로 카드 (전략): 위에 장면 그림 100px */
+.tall {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px;
+}
+
+.tall .cardBody {
+  padding: 0 4px 2px;
+}
+
+.pic {
+  flex: none;
+  display: block;
+  position: relative;
+  height: 100px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+.pic svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.picEmpty {
+  background: repeating-linear-gradient(135deg, var(--inset) 0 10px, #1c1915 10px 20px);
+}
+
+/* 단계 표시 "1 식량 · 2 발전" */
+.steps {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+
+.step:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.stepOn {
+  border-color: var(--accent);
+  background: #2a2119;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.stepNum {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--inset);
+  font-size: var(--fs-xs);
+}
+
+.stepOn .stepNum {
+  background: var(--accent);
+  color: #1a140e;
+}
+
+.stepSep {
+  color: var(--text-muted);
+}
+
+/* ②단계 맨 위: 고른 식량 한 줄 + 바꾸기 */
+.foodLine {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  background: var(--inset);
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+.change {
+  min-height: 32px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .cardBody {

@@ -1,5 +1,6 @@
-// 인트로 (화면 시안 Main): 풍경이 서서히 나타남 → 배경 설명 8줄 타이핑(55ms/글자, 줄 사이 650ms)
-// → 지나간 줄은 흐리게 → 부족 이름과 "첫 달을 시작한다". 건너뛰기, 남은 초, 진행 막대, 다시 보기.
+// 인트로 (화면 시안 Main): 풍경이 1.5초에 나타남 → 배경 설명 4줄 타이핑(35ms/글자, 줄 사이 400ms, timing.ts INTRO_TIMING)
+// → 지나간 줄은 흐리게 → 부족 이름과 "첫 달을 시작한다". 시작부터 버튼까지 약 8초 (2026-11-25 4차 피드백).
+// 건너뛰기, 남은 초, 진행 막대, 다시 보기.
 // 문장은 시작 프리셋의 브리핑 데이터에서 온다.
 
 import { useEffect } from 'react';
@@ -10,6 +11,7 @@ import { dateText, tribeDisplayName } from '../format';
 import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
 import { useT } from '../i18n';
 import { useMotion } from '../motion';
+import { INTRO_TIMING } from '../timing';
 import i from './intro.module.css';
 import u from '../ui.module.css';
 
@@ -39,9 +41,10 @@ export function IntroScreen({ def, state, onStart }: Props) {
     date: dateText(tr, def, state),
   };
   const lines = pres.introLines.map((k) => tr.t(k, params));
-  const perChar = 55 * mul;
-  const sched = typeSchedule(lines, { startAt: 1600 * mul, perChar, gap: 650 * mul });
-  const end = sched.end + 400 * mul;
+  const perChar = INTRO_TIMING.perChar * mul;
+  const sched = typeSchedule(lines, { startAt: INTRO_TIMING.startAt * mul, perChar, gap: INTRO_TIMING.lineGap * mul });
+  // typeSchedule은 마지막 줄 뒤에도 줄 사이 시간을 더한다. 그 대신 tail만 쉰다
+  const end = sched.end - INTRO_TIMING.lineGap * mul + INTRO_TIMING.tail * mul;
   const clock = useClock(end, 'intro');
   const typed = typedLines(lines, sched, clock.elapsed, perChar);
   const showTitle = clock.done;

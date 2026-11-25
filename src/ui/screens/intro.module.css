@@ -45,7 +45,7 @@
 .scene {
   position: absolute;
   inset: 0;
-  animation: sceneIn calc(3.2s * var(--motion-scale)) ease-out both;
+  animation: sceneIn calc(1.5s * var(--motion-scale)) ease-out both; /* INTRO_TIMING.startAt과 같다 (4차 피드백) */
   transform-origin: 50% 70%;
 }
 
@@ -150,7 +150,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  animation: fadeUp calc(1.4s * var(--motion-scale)) ease-out both;
+  animation: fadeUp calc(1s * var(--motion-scale)) ease-out both;
 }
 
 @media (max-width: 720px) {
@@ -173,7 +173,7 @@
   font-size: clamp(2.75rem, 8vw, 4.75rem);
   font-weight: 700;
   line-height: 1.1;
-  animation: titleIn calc(2.2s * var(--motion-scale)) ease-out both;
+  animation: titleIn calc(1.4s * var(--motion-scale)) ease-out both;
 }
 
 .tagline {
@@ -191,11 +191,12 @@
 }
 
 .later {
-  animation: fadeUp calc(1.2s * var(--motion-scale)) ease-out calc(1.4s * var(--motion-scale)) both;
+  animation: fadeUp calc(0.8s * var(--motion-scale)) ease-out calc(0.6s * var(--motion-scale)) both;
 }
 
 .later2 {
-  animation: fadeUp calc(1.2s * var(--motion-scale)) ease-out calc(2.2s * var(--motion-scale)) both;
+  /* 버튼: 부족 이름 1초 뒤 (인트로 약 8초, 4차 피드백) */
+  animation: fadeUp calc(0.8s * var(--motion-scale)) ease-out calc(1s * var(--motion-scale)) both;
 }
 
 .progress {

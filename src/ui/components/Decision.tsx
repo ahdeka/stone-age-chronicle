@@ -30,7 +30,7 @@ import { dateText, lineText, weatherSummary } from '../format';
 import { useT } from '../i18n';
 import { eventLead } from '../story';
 
-import { DecisionSheet, EventBody, PlanBody, type Chip, type Quote } from './DecisionSheet';
+import { DecisionSheet, EventBody, PlanBody, PlanSteps, type Chip, type PlanStep, type Quote } from './DecisionSheet';
 import c from './chrome.module.css';
 import u from '../ui.module.css';
 
@@ -279,12 +279,17 @@ interface PopupProps {
   bar?: boolean;
 }
 
-/** 팝업 + 하단 결정 바. 고른 것은 팝업을 닫아도 남는다. 확정해야 다음으로 간다 */
+/** 팝업 + 하단 결정 바. 고른 것과 전략의 단계는 팝업을 닫아도 남는다. 확정해야 다음으로 간다 */
 export function DecisionPopup({ model, open, setOpen, send, bar = true }: PopupProps) {
   const tr = useT();
   const [picked, setPicked] = useState<string[]>(model.plan?.initial ?? []);
-  // 결정이 바뀌면(새 달, 새 사건) 고른 것을 처음으로 되돌린다
-  useEffect(() => setPicked(model.plan?.initial ?? []), [model.key]);
+  // 전략 팝업의 단계: ① 식량(또는 큰 일) → ② 발전 (2026-11-25 4차 피드백)
+  const [step, setStep] = useState<PlanStep>(1);
+  // 결정이 바뀌면(새 달, 새 사건) 고른 것과 단계를 처음으로 되돌린다
+  useEffect(() => {
+    setPicked(model.plan?.initial ?? []);
+    setStep(1);
+  }, [model.key]);
 
   const byId = useMemo(() => new Map(model.choices.map((c) => [c.id, c])), [model]);
   const pickedFood = picked.find((id) => byId.get(id)?.group === 'food');
@@ -315,7 +320,19 @@ export function DecisionPopup({ model, open, setOpen, send, bar = true }: PopupP
     send(model.plan ? model.plan.command(pickedChoices.map((c) => c.id)) : model.command(pickedChoices[0].id));
   }, [ready, error, pickedChoices, model, send, setOpen]);
 
-  // 키보드: 전략은 1~4 식량, 5~8 발전, 0 큰 일 / 그 밖은 1~4. Enter 확정
+  const isPolicy = model.kind === 'policy';
+  const foodPicked = pickedChoices.some((c) => c.group === 'food');
+  // ②단계로 갈 수 있는가: 식량을 골랐고 큰 일이 아니다
+  const canGrowth = foodPicked && !majorPicked;
+  // 전략 ①단계에서 식량을 골랐으면 "다음", 큰 일을 골랐으면 바로 "한 달을 시작한다"
+  const nextStep = !!model.plan && step === 1 && !majorPicked;
+  const goNext = useCallback(() => canGrowth && setStep(2), [canGrowth]);
+  // 큰 일을 고르면 ②단계는 없다
+  useEffect(() => {
+    if (step === 2 && !canGrowth) setStep(1);
+  }, [step, canGrowth]);
+
+  // 키보드: 1~4 고르기(전략은 지금 단계의 카드, ①단계 0은 큰 일). Enter 다음/확정, Backspace 이전 단계
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -327,38 +344,70 @@ export function DecisionPopup({ model, open, setOpen, send, bar = true }: PopupP
           const food = model.choices.filter((c) => c.group === 'food');
           const growth = model.choices.filter((c) => c.group === 'growth');
           const major = model.choices.filter((c) => c.group === 'major');
-          ch = n === 0 ? major[0] : n <= 4 ? food[n - 1] : growth[n - 5];
+          if (step === 1) ch = n === 0 ? major[0] : food[n - 1];
+          else ch = n >= 1 ? growth[n - 1] : undefined;
         } else ch = n >= 1 ? model.choices[n - 1] : undefined;
         if (ch && !ch.disabled && !(ch.group === 'growth' && growthInfo.get(ch.id)?.blocked)) toggle(ch);
-      } else if (e.key === 'Enter' && ready && !(e.target instanceof HTMLButtonElement)) {
+      } else if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
-        confirm();
+        if (nextStep) goNext();
+        else if (ready) confirm();
+      } else if (e.key === 'Backspace' && model.plan && step === 2) {
+        e.preventDefault();
+        setStep(1);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, model, ready, confirm, toggle, growthInfo]);
+  }, [open, model, ready, confirm, toggle, growthInfo, step, nextStep, goNext]);
 
-  const isPolicy = model.kind === 'policy';
   const startLabel = isPolicy ? tr.t('ui.bar.start') : tr.t('ui.bar.confirm');
 
   // 아래 줄: 첫 줄은 고른 것, 둘째 줄은 고른 것의 대가 글 (또는 막힌 이유)
-  const lastPicked = pickedChoices[pickedChoices.length - 1];
-  const costLine = error ?? (lastPicked?.cost ? tr.t(isPolicy ? 'ui.sheet.pickedCost' : 'ui.sheet.optionCost', { cost: lastPicked.cost }) : undefined);
+  // 전략 ①단계는 식량(큰 일)의 대가, ②단계는 발전의 대가
+  const costOf = (() => {
+    if (!model.plan) return pickedChoices[pickedChoices.length - 1];
+    if (step === 1) return pickedChoices.find((c) => c.group === 'food' || c.group === 'major');
+    return pickedChoices.find((c) => c.group === 'growth');
+  })();
+  const shownError = model.plan && step === 1 && !majorPicked ? undefined : error;
+  const costLine = shownError ?? (costOf?.cost ? tr.t(isPolicy ? 'ui.sheet.pickedCost' : 'ui.sheet.optionCost', { cost: costOf.cost }) : undefined);
   const summary = (() => {
     if (!isPolicy) return ready ? `${tr.t('ui.bar.pickedOption')}: ${pickedTitle}` : tr.t('ui.sheet.eventHint');
     if (!ready) return tr.t('ui.sheet.policyHint');
     if (majorPicked) return tr.t('ui.sheet.pickedMajor', { major: pickedChoices[0]!.title });
     const food = pickedChoices.find((c) => c.group === 'food');
+    if (step === 1) return tr.t('ui.sheet.pickedFood', { food: food?.title ?? '' });
     const growth = pickedChoices.find((c) => c.group === 'growth');
     return tr.t('ui.sheet.pickedPlan', { food: food?.title ?? '', growth: growth?.title ?? tr.t('ui.plan.noGrowth') });
   })();
+
+  const footButton = nextStep ? (
+    canGrowth ? (
+      <button type="button" className={u.btnPrimary} onClick={goNext}>
+        {tr.t('ui.plan.next')}
+      </button>
+    ) : (
+      <span className={u.btnDisabled} aria-disabled="true">
+        {tr.t('ui.plan.next')}
+      </span>
+    )
+  ) : ready && !error ? (
+    <button type="button" className={u.btnPrimary} onClick={confirm}>
+      {startLabel}
+    </button>
+  ) : (
+    <span className={u.btnDisabled} aria-disabled="true">
+      {startLabel}
+    </span>
+  );
 
   return (
     <>
       {bar && (
         <div className={c.bar}>
-          {ready ? (
+          {/* 전략은 ②단계까지 보았거나 큰 일을 골랐을 때만 바에서 바로 시작한다 */}
+          {ready && !error && (!model.plan || majorPicked || step === 2) ? (
             <>
               <span className={c.barText}>
                 {tr.t(isPolicy ? 'ui.bar.picked' : 'ui.bar.pickedOption')}: <b style={{ color: 'var(--accent)' }}>{pickedTitle}</b>
@@ -392,33 +441,27 @@ export function DecisionPopup({ model, open, setOpen, send, bar = true }: PopupP
         kicker={model.kicker}
         title={model.title}
         chips={model.chips}
-        wide={isPolicy}
+        steps={model.plan && <PlanSteps step={step} canGrowth={canGrowth} onStep={setStep} />}
         footer={
           <>
             <span className={c.footText}>
               <span className={c.footMain}>{summary}</span>
-              {costLine && <span className={error ? c.footError : c.footSub}>{costLine}</span>}
+              {costLine && <span className={shownError ? c.footError : c.footSub}>{costLine}</span>}
             </span>
-            {ready && !error ? (
-              <button type="button" className={u.btnPrimary} onClick={confirm}>
-                {startLabel}
-              </button>
-            ) : (
-              <span className={u.btnDisabled} aria-disabled="true">
-                {startLabel}
-              </span>
-            )}
+            {footButton}
           </>
         }
       >
         {model.plan ? (
           <PlanBody
             model={model}
+            step={step}
             picked={picked}
             labor={model.plan.labor(picked)}
             growthInfo={growthInfo}
             majorPicked={majorPicked}
             onPick={toggle}
+            onStep={setStep}
           />
         ) : (
           <EventBody model={model} picked={picked} onPick={toggle} />

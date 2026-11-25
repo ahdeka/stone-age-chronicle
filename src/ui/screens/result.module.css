@@ -13,10 +13,65 @@
   width: 100%;
   max-width: 1600px;
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+/* 맨 위: 제목 + 최종 큰 숫자 두 칸 (2026-11-25 4차 피드백) */
+.top {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.finals {
+  display: grid;
+  grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+
+.finalLabel {
+  align-self: center;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.bigCell {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  min-width: 0;
+}
+
+.bigValue {
+  font-size: calc(1.625rem * var(--font-scale));
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.bigDelta {
+  font-size: calc(1.25rem * var(--font-scale));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 그 아래: 회고·덕분에·사람 | 상세 장부 (작게) */
+.cols {
+  flex: 1;
+  min-height: 0;
   display: flex;
   gap: 20px;
-  overflow-y: auto;
 }
 
 .main {
@@ -206,11 +261,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 상세 장부의 최종: 맨 위 큰 칸과 같은 값이라 작은 한 줄 (장부 순서 규칙을 지키려고 남긴다) */
 .final {
   margin-top: 4px;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--border-soft);
-  font-size: calc(1rem * var(--font-scale));
 }
 
 .up {
@@ -258,8 +313,13 @@
     min-height: 100dvh;
   }
   .body {
-    flex-direction: column;
     overflow: visible;
+  }
+  .cols {
+    flex-direction: column;
+  }
+  .finals {
+    grid-template-columns: minmax(0, 1fr);
   }
   .ledger {
     flex: none;

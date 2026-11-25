@@ -26,5 +26,20 @@ export const PROGRESS_TIMING = {
   decideOpen: 1500,
 } as const;
 
+/**
+ * 인트로 시간(ms, 이야기 배율 STORY_SPEED_MUL을 곱하기 전). 2026-11-25 4차 피드백: 시작부터 "첫 달을 시작한다"까지 약 8초.
+ * 풍경 등장 1.5초(intro.module.css의 sceneIn과 같다) → 4줄 타이핑 → 부족 이름 → 버튼(intro.module.css의 .later2 지연 1초).
+ */
+export const INTRO_TIMING = {
+  /** 첫 글까지 (풍경이 다 나타난 뒤) */
+  startAt: 1500,
+  /** 글자당 */
+  perChar: 35,
+  /** 줄 사이 */
+  lineGap: 400,
+  /** 마지막 줄 뒤 부족 이름까지 */
+  tail: 400,
+} as const;
+
 /** 서술이 다 나온 뒤 다음 순으로 저절로 넘어가기까지 쉬는 시간(ms, 진행 화면 배율을 곱하기 전) */
 export const AUTO_DELAY_MS: Record<AutoDelay, number> = { short: 800, normal: 1500, long: 3000 };
