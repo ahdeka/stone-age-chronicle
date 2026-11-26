@@ -12,6 +12,8 @@ import { ch1Policies } from './policies';
 import { ch1AutumnPreset, ch1SpringPreset } from './preset';
 import { ch1Theme } from './theme';
 import { ch1SeasonEvents, ch1SeasonNarratives, ch1SeasonPolicies } from './season';
+import { ch1Tech, ch1TechNarratives, ch1TechPolicies } from './tech';
+import { cellPolicies } from '../../../engine';
 import {
   ch1Ailments,
   ch1Animals,
@@ -44,14 +46,17 @@ export const ch1: ChapterDefinition = {
   traits: ch1Traits,
   knowledge: ch1Knowledge,
   facilities: ch1Facilities,
+  tech: ch1Tech,
   clues: ch1Clues,
   content: {
-    policies: [...ch1Policies, ...ch1SeasonPolicies],
+    policies: [...ch1Policies, ...ch1SeasonPolicies, ...ch1TechPolicies, ...cellPolicies({ tech: ch1Tech, balance: ch1Balance })],
     events: [...ch1Events, ...ch1SeasonEvents],
-    narratives: [...ch1Narratives, ...ch1SeasonNarratives],
+    narratives: [...ch1Narratives, ...ch1SeasonNarratives, ...ch1TechNarratives],
     endings: [
       { id: 'ruin_extinct', kind: 'defeat', priority: 100, check: [{ type: 'population', max: 0 }] },
       { id: 'ruin_split', kind: 'defeat', priority: 90, check: [{ type: 'counter', id: 'low_cohesion_months', min: 3 }] },
+      // 신석기 (§B3.5): 갈래 둘의 끝. 전환 사건과 결말 문장은 R4
+      { id: 'neolithic', kind: 'victory', priority: 80, check: [{ type: 'techBranchesDone', min: ch1Balance.tech.neolithicBranches }] },
       { id: 'survive_time', kind: 'survival', priority: 10, check: [{ type: 'month', min: ch1Balance.monthLimit }] },
     ],
   },

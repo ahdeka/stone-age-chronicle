@@ -100,6 +100,21 @@ export const migrations: Record<number, Migration> = {
       work: { turn: { kind: 'month', months: 1, stage: 0, firstMonth: month }, ...work },
     };
   },
+  /** v6 → v7: 쿨다운이 달에서 턴 단위로. 1년차(턴 = 달)는 그대로, 계절 턴 세이브는 남은 달을 철로 올려 센다.
+   *  칸 상태는 다음 턴 첫머리에 장 정의에서 만든다 (예전 지식의 진척을 흡수) */
+  6: (st) => {
+    const work = (st['work'] ?? {}) as Record<string, unknown>;
+    const turnInfo = (work['turn'] ?? {}) as Record<string, unknown>;
+    if (turnInfo['kind'] !== 'season') return st;
+    const month = typeof st['month'] === 'number' ? st['month'] : 1;
+    const turn = typeof st['turn'] === 'number' ? st['turn'] : month;
+    const cooldowns: Record<string, number> = {};
+    for (const [id, until] of Object.entries((st['cooldowns'] ?? {}) as Record<string, number>)) {
+      const left = until - month;
+      if (left > 0) cooldowns[id] = turn + Math.ceil(left / 3);
+    }
+    return { ...st, cooldowns };
+  },
 };
 
 export function serialize(state: GameState, savedAt: string | null = null): string {

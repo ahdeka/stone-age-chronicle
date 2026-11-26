@@ -124,5 +124,14 @@ export function toFirstSeason(def: ChapterDefinition = ch1, s: GameState = sprin
   }
   if (cur.work.turn.kind !== 'season') throw new Error('no season turn');
   keepAlive(def, cur);
+  return passBriefing(def, cur);
+}
+
+/** 턴 첫머리의 월초 사건(애도 등)이 결정을 기다리면 첫 선택지로 넘긴다 (전략 고르기 단계까지) */
+export function passBriefing(def: ChapterDefinition, s: GameState): GameState {
+  let cur = s;
+  for (let guard = 0; guard < 5 && cur.step === 'decision' && cur.work.decision?.kind === 'event' && cur.work.decision.slot === 'briefing'; guard++) {
+    cur = choose(def, cur, availableOptions(def, cur, cur.work.decision)[0]!);
+  }
   return cur;
 }

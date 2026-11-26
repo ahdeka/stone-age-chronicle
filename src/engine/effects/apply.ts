@@ -21,6 +21,7 @@ import { living, sortForCrew } from '../people/people';
 import { nextFloat, nextInt, weightedIndex } from '../rng/rng';
 import { addLot } from '../stores/food';
 import { currentHaul, currentPlace } from '../policy/current';
+import { addTechProgress } from '../tech/tech';
 
 export interface RunCtx {
   def: ChapterDefinition;
@@ -186,6 +187,7 @@ export function grantKnowledge(ctx: RunCtx, id: Id): void {
   state.work.notable = true;
   currentReport(state).lines.push({ key: 'line.knowledge', params: { knowledge: { key: `knowledge.${id}` } }, group: 'info' });
   offerChronicle(state, 'chron.knowledge', 60, { knowledge: { key: `knowledge.${id}` } });
+  applyEffects(ctx, ctx.def.knowledge.find((k) => k.id === id)?.grantEffects);
 }
 
 export function applyNarrative(ctx: RunCtx, id: Id): void {
@@ -327,6 +329,11 @@ export function applyEffect(ctx: RunCtx, e: Effect): void {
         else delete state.projects[e.id];
       }
       if (e.level) raiseFacility(ctx, e.id, e.level);
+      return;
+    }
+    case 'tech': {
+      if (e.progress) addTechProgress(ctx, e.id, e.progress, 'work', e.by);
+      if (e.gift) addTechProgress(ctx, e.id, e.gift, 'gift', e.by);
       return;
     }
     case 'clue': {

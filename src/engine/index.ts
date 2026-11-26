@@ -21,6 +21,8 @@ export { goalProgress, MEASURES, type GoalProgress, type PathProgress } from './
 export { resolveSceneSpec } from './month/briefing';
 export { sumLedger } from './month/month';
 export { turnAt, turnKindAt, isSeasonTurn } from './month/turn';
+export { cellPolicies, cellPolicyId, CELL_POLICY_PREFIX, canStartCell, continuingCell, ensureTech, giftCap, requiresMet } from './tech/tech';
+export { branchesDone, findCell, isBranchEnd, nextCell, peekCell } from './tech/query';
 export { previewPlan, expectedVillageFood, slotOf, type PlanPreview } from './policy/plan';
 export { currentEntry, currentPlace, planCrew } from './policy/current';
 export { BONUS_PREFIXES } from './month/upkeep';

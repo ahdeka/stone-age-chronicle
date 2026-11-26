@@ -39,6 +39,30 @@ describe('콘텐츠 검증기', () => {
     expect(m.some((x) => x.startsWith('error:') && x.includes('인물 사건은 한가운데'))).toBe(true);
   });
 
+  it('발전 칸: 여는 것 1개 이상, 있는 id, 연 행동이 칸을 조건으로 쓴다 (R1-b)', () => {
+    const def = tweakDef((d) => {
+      const [a, b, c] = d.tech.cells;
+      a!.unlocks = []; // 숫자 보정만 있는 칸
+      b!.unlocks = [{ kind: 'policy', id: 'season_camp_work' }]; // 칸을 조건으로 쓰지 않는 전략
+      c!.unlocks = [{ kind: 'option', event: 'wolves_circle_camp', option: 'nope' }];
+      c!.requires = { all: ['ghost_cell'] };
+      d.content.events[0]!.options[0]!.effects.push({ type: 'tech', id: 'ghost_cell', gift: 0.5 });
+    });
+    const m = msgs(def).filter((x) => x.startsWith('error:'));
+    expect(m.some((x) => x.includes('여는 것이 없다'))).toBe(true);
+    expect(m.some((x) => x.includes('연 전략이 이 칸을 조건으로 쓰지 않는다: season_camp_work'))).toBe(true);
+    expect(m.some((x) => x.includes('없는 선택지: wolves_circle_camp.nope'))).toBe(true);
+    // 앞 칸 조건 하나 + 사건 효과 (사건 효과는 검증기가 두 번 훑는다)
+    expect(m.filter((x) => x.includes('없는 tech id: ghost_cell')).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('1년차 첫 칸이 연 전략이 1년차에 나올 수 없으면 경고 (§B2.2)', () => {
+    const def = tweakDef((d) => {
+      d.content.policies.find((p) => p.id === 'bison_drive')!.turn = 'season';
+    });
+    expect(msgs(def).some((x) => x.startsWith('warn:') && x.includes('1년차 첫 칸이 연 전략이 1년차에 나올 수 없다: bison_drive'))).toBe(true);
+  });
+
   it('없는 id 참조와 없는 동물 상태를 잡는다', () => {
     const def = tweakDef((d) => {
       d.content.policies[0]!.appearsWhen.push({ type: 'animal', id: 'mammoth' }, { type: 'animal', id: 'reindeer', state: ['flying'] });

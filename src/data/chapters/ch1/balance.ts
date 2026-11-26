@@ -15,6 +15,24 @@ export const ch1Balance: ChapterBalance = {
   monthLimit: 60,
   /** 1년차는 한 달 한 턴, 2년차부터 한 철 한 턴 (DESIGN.md §B2) */
   turn: { seasonFromYear: 2, maxSeasonMonths: 3, eventsPerSeason: 1 },
+  /** 발전 나무 (DESIGN.md §B3, §B4). 수치는 시험값 — R5에서 맞춘다 */
+  tech: {
+    monthsPerSeason: 3,
+    giftMaxShare: 0.5,
+    driftRate: 0.5,
+    cellPriority: 1000,
+    cellSlots: { month: 1, season: 3 },
+    neolithicBranches: 2,
+    doneCohesion: 2,
+    // "발전하지 않는다" 철: 발전 인원이 식량에 붙어 마을 수확 +10% (§B4.1)
+    noGrowthMods: [
+      { stat: 'yield.gather', op: 'mul', value: 1.1 },
+      { stat: 'yield.fish', op: 'mul', value: 1.1 },
+      { stat: 'yield.greens', op: 'mul', value: 1.1 },
+      { stat: 'yield.nuts', op: 'mul', value: 1.1 },
+      { stat: 'yield.winter_fish', op: 'mul', value: 1.1 },
+    ],
+  },
   stats: {
     'firewood.burnMul': 1,
     'yield.wood': 1,
@@ -36,6 +54,8 @@ export const ch1Balance: ChapterBalance = {
     'firewood.cap': 700,
     /** 한 사람이 나르는 kg (시험 플레이: 14명이 450kg) */
     'carry.perPerson': 32,
+    /** 짐꾼 몫 배율 (계절 턴의 남은 고기 자동 처리 포함). 발전 칸(천막 보수, 끌개)이 올린다 */
+    'carry.porterMul': 1,
     'spoil.mul': 1,
     /** 배급 상한 (배급 줄이기 방침이 낮춘다) */
     'ration.cap': 1,

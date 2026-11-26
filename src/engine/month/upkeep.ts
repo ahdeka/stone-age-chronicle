@@ -16,7 +16,7 @@ function days(def: ChapterDefinition): number {
 }
 
 /** "덕분에" 줄로 보이는 발전의 출처: 지은 것과 아는 것 (거처는 장작 아낀 양에만) */
-export const BONUS_PREFIXES = ['facility.', 'knowledge.'] as const;
+export const BONUS_PREFIXES = ['facility.', 'knowledge.', 'tech.'] as const;
 const SAVING_PREFIXES = [...BONUS_PREFIXES, 'shelter.'] as const;
 const isBonusSource = (src: string) => BONUS_PREFIXES.some((p) => src.startsWith(p));
 

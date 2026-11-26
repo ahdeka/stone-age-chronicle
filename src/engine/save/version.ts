@@ -5,5 +5,6 @@
  *  3: M2 봄 시작 — 플레이어가 정한 부족 이름(tribeName)
  *  4: M2 전략 두 칸 — work.plan(전략마다 무리·원정지·짐), 시설(facilities)과 공사(projects), 아낀 양
  *  5: 3차 화면 — work.start에 며칠치·결속·일손·아픈 사람·다친 사람 (진행 화면의 "월초 기준", 이달의 결과의 증감)
- *  6: B 방향 R1 — 턴(state.turn, work.turn, 계절 턴), 발전 칸 상태(tech), 인물 줄기(arcs), 턴별 기록(history의 turn·kind·firstMonth) */
-export const SAVE_VERSION = 6;
+ *  6: B 방향 R1 — 턴(state.turn, work.turn, 계절 턴), 발전 칸 상태(tech), 인물 줄기(arcs), 턴별 기록(history의 turn·kind·firstMonth)
+ *  7: R1-b — 쿨다운을 턴 단위로 (달 단위였던 계절 턴 세이브의 값을 바꾼다), 발전 나무 */
+export const SAVE_VERSION = 7;

@@ -1,7 +1,7 @@
 // 장 정의 (DESIGN.md §3.6). 엔진은 특정 장에 의존하지 않고 이 데이터만 읽는다.
 
 import type { AgeBand, Amount, Hint, Id, Sex, Tier } from './common';
-import type { Condition } from './condition';
+import type { Condition, PersonQuery } from './condition';
 import type { Effect, ModifierDef } from './effect';
 import type { EventDef, Narrative, PolicyTemplate, SceneSpec } from './content';
 import type { AnimalState } from './state';
@@ -115,6 +115,8 @@ export interface KnowledgeDef {
   id: Id;
   need: number;
   mods: ModifierDef[];
+  /** 이 지식을 얻는 순간의 효과 (예: 1년차 겨울 준비를 마치면 그 칸에 절반을 선물, §B3.6) */
+  grantEffects?: Effect[];
 }
 
 /** 시설: 지은 것 (지식은 아는 것). 단계가 있고, 단계가 1 이상이면 모디파이어가 걸린다.
@@ -125,6 +127,48 @@ export interface FacilityDef {
   mods: ModifierDef[];
   /** 순마다 저절로 하는 일 (예: 건조대가 날것을 말린다). 마을 살림 전에 적용 */
   perPhase?: Effect[];
+}
+
+/** 발전 칸의 앞 칸 조건 (DESIGN.md §B3.3) */
+export type TechRequire =
+  /** 앞 칸이 모두 켜져야 (빈 목록 = 갈래 첫 칸, 처음부터 열림) */
+  | { all: Id[] }
+  /** 하나라도 켜졌거나 조건 (굴 다지기: 천막 보수 또는 바위굴) */
+  | { any: Id[]; or?: Condition[] }
+  /** 갈래 끝: 같은 갈래 앞 칸 min개 이상 (§B3.5 안 A). 선물을 받아도 이 조건 전에는 열리지 않는다 */
+  | { branchDone: Id; min: number };
+
+/** 칸이 여는 새 행동 (1개 이상 필수, 숫자 보정만 있는 칸은 금지 — §B1) */
+export type TechUnlock = { kind: 'policy'; id: Id } | { kind: 'event'; id: Id } | { kind: 'option'; event: Id; option: Id };
+
+export interface TechCellDef {
+  id: Id;
+  branch: Id;
+  /** 나무 화면의 자리 (1부터). 갈래 끝은 그 갈래의 가장 큰 order */
+  order: number;
+  requires: TechRequire;
+  /** 걸리는 철 수 = 진척 목표 (1년차 한 달 = 1/3철) */
+  seasons: number;
+  /** 필요한 인원과 맡을 인물. 인물이 없으면 fallback, 그것도 없으면 시작 못 한다 */
+  crew: { adults: number; person?: PersonQuery; fallback?: PersonQuery };
+  /** 처음 시작하는 턴에 한 번 */
+  cost?: { goods?: Record<Id, number>; firewoodKg?: number; foodKg?: number };
+  /** 시작할 수 있는 철 (없으면 언제나) */
+  startSeasons?: Id[];
+  unlocks: TechUnlock[];
+  /** 사람·이웃이 채울 수 있는 몫 상한 (칸의 비율, 기본 balance.tech.giftMaxShare) */
+  gift?: { maxShare: number };
+  /** 켜지면 주는 지식·시설 (기존 모디파이어와 "덕분에" 줄을 그대로 쓴다, §B3.3) */
+  grants?: { knowledge?: Id[]; facility?: Id[] };
+  /** 켜진 뒤 걸리는 덧붙는 보정 (새 행동에 덧붙을 때만, §B1) */
+  mods?: ModifierDef[];
+  scene: SceneSpec;
+}
+
+export interface TechTreeDef {
+  /** 갈래 id (화면 순서) */
+  branches: Id[];
+  cells: TechCellDef[];
 }
 
 export interface ClueDef {
@@ -232,6 +276,25 @@ export interface ChapterBalance {
     maxSeasonMonths: number;
     /** 계절 턴 하나에 열리는 결정 사건 수 (한가운데 인물 사건이 중심, §B5.1) */
     eventsPerSeason: number;
+  };
+  /** 발전 나무 (DESIGN.md §B3, §B4.4) */
+  tech: {
+    /** 한 철의 달 수: 칸 진척 = 이번 턴의 달 수 / monthsPerSeason (1년차 한 달 = 1/3철) */
+    monthsPerSeason: number;
+    /** 사람·이웃의 선물 상한 (칸의 비율) */
+    giftMaxShare: number;
+    /** 이어 가던 칸이 저절로 나아가는 속도 (일손 진척의 비율) */
+    driftRate: number;
+    /** 칸 전략의 후보 점수 */
+    cellPriority: number;
+    /** 발전 자리 중 칸이 차지할 수 있는 수 (턴 종류별). 1년차는 칸 1개 + 작은 발전(겨울 준비), 2년차부터 갈래마다 하나 (2026-11-26 결정) */
+    cellSlots: { month: number; season: number };
+    /** 신석기: 끝 칸이 켜진 갈래 수 */
+    neolithicBranches: number;
+    /** 칸이 켜진 턴의 결속 (작은 잔치, §B6.4) */
+    doneCohesion: number;
+    /** 계절 턴에 "발전하지 않는다"를 고르면 (식량만, 큰 일 아님) 걸리는 모디파이어: 발전 인원이 식량에 붙는다 (§B4.1) */
+    noGrowthMods: ModifierDef[];
   };
   daysPerPhase: number;
   /** 기본 스탯. 모디파이어가 여기에 얹힌다 */
@@ -368,6 +431,8 @@ export interface ChapterDefinition {
   traits: TraitDef[];
   knowledge: KnowledgeDef[];
   facilities: FacilityDef[];
+  /** 발전 나무 (DESIGN.md §B3) */
+  tech: TechTreeDef;
   clues: ClueDef[];
   content: {
     policies: PolicyTemplate[];

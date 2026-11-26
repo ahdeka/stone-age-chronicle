@@ -83,7 +83,7 @@ describe('화면', () => {
     let e = structuredClone(s);
     e.cohesion = 1;
     e.counters['low_cohesion_months'] = 2;
-    e = pickFood(ch1, e);
+    e = finishMonth(ch1, pickFood(ch1, e));
     expect(html(<EndingScreen def={ch1} state={e} onQuit={noop} />, s.tribeName)).toContain('새벽불 부족은 서로를 믿지 못해');
   });
 

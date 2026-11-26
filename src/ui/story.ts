@@ -106,6 +106,8 @@ export function rowLabel(tr: Translator, row: LedgerLine, isCrew: (source: strin
   if (s === 'upkeep.food') return tr.t('src.upkeep.food');
   if (s.startsWith('policy.')) return isCrew(s) && row.res === 'food' ? tr.t('row.carried') : tr.t(`${s}.name`);
   if (s.startsWith('event.')) return tr.t(`${s}.title`);
+  // 발전 칸의 시작 비용
+  if (s.startsWith('tech.') && tr.has(s)) return tr.t(s);
   const key = `row.${s}`;
   return tr.has(key) ? tr.t(key) : tr.t('row.other');
 }

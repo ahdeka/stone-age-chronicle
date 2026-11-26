@@ -187,6 +187,7 @@ interface TechCellState {
   - 1년차 발전 칸(전략 팝업 ②단계)은 "열린 갈래 칸 먼저, 남는 자리에 작은 발전" 순으로 최대 3개 + 발전하지 않는다.
   - 작은 발전 카드에는 **"겨울 준비" 이름표**를 붙여 나무 칸과 구분한다.
   - 작은 발전은 나무 칸이 아니어서 "새 행동 1개 이상" 규칙을 받지 않는다(1년차 생존 준비 수단). 나무 화면에는 나오지 않고 "지은 것" 목록에만 나온다.
+  - **(2026-11-26 결정) 1년차 발전 자리 = 칸 1개 + 작은 발전 2개.** 갈래 첫 칸 셋이 처음부터 열려 "칸 먼저"로는 겨울 준비가 자리를 잃기 때문이다. 1년차 칸은 진척이 가장 많은 칸 하나(4월 첫 갈래를 고르면 그 갈래). 2년차부터는 갈래마다 하나, 최대 3개(§B4.2).
 
 ### B4. 한 턴의 선택 (계절 턴)
 
@@ -1795,6 +1796,8 @@ export const manifest: Record<SceneId, SceneAsset> = {
 | 한 턴 진행 순서, 결정 지점, 정산 | `src/engine/month/month.ts` (`startTurn`, `run` → `runMonth` / `runSeason`, `chooseOption`, `monthEnd`, `settle`) |
 | 턴 종류 (달 / 철), 계절 턴의 달 수 | `src/engine/month/turn.ts` (`turnAt`, `isSeasonTurn`) + `balance.turn` |
 | 계절 턴 시험용 데이터 (R4에서 본편으로) | `src/data/chapters/ch1/season.ts` (전략 2개, 인물 사건 1개, 문자열) |
+| 발전 나무 (칸 상태, 진척, 선물, 균형 규칙, 신석기, 칸 전략 만들기) | `src/engine/tech/tech.ts` (`ensureTech`, `addTechProgress`, `settleTech`, `cellPolicies`) + 조회 `tech/query.ts` (`nextCell`, `branchesDone`) |
+| 발전 나무 시험용 데이터 (칸 5개와 칸이 여는 전략, R4에서 12칸) | `src/data/chapters/ch1/tech.ts` |
 | 순마다 마을 일·먹기·장작·부패·건강 | `src/engine/month/upkeep.ts` |
 | 월초 보고(머리글·소식·칩·장면) | `src/engine/month/briefing.ts` + 데이터 `src/data/chapters/ch1/briefing.ts` |
 | 조언자 대사 고르기 | `src/engine/advice/advice.ts` + 데이터 `ch1/advisors.ts` |
@@ -1848,9 +1851,15 @@ export const manifest: Record<SceneId, SceneAsset> = {
 - **죽은 사람을 사건에 묶기**: 인물 슬롯에 `alive: false, diedMonthsAgo: 1`을 쓰면 죽은 사람 중에서 고른다. 조건 `deaths`(지난달 죽은 사람 수), `firewoodFill`(장작 창고가 찬 비율)이 있다.
 - **버티기 방침은 늘 있지 않다** (③a): 식량 10일치 미만일 때만 후보다. 시험에서 "아무 식량 전략이나"가 필요하면 `pickFood`(fixtures)를 쓴다.
 - **`opportunity.` 깃발**은 검증기가 기회비용으로 본다 (공짜 선택지 경고를 피하는 정당한 방법: 고르지 않은 쪽의 이득이 기회비용일 때).
-- **턴과 달 (R1-a)**: `state.month`는 언제나 실제 달이다(나이, 쿨다운, 예약, `phaseNo`). 계절 턴은 단계마다 `month`가 하나씩 오르고, `state.turn`은 턴마다 하나 오른다. **화면의 열쇠(진행 화면, 일시정지, 자동 열림)는 `state.turn`으로** 건다 — `month`로 걸면 계절 턴 한가운데 결정 뒤 진행 화면이 다시 마운트된다. 쿨다운은 달 단위 그대로라 계절 전략의 쿨다운 1~3은 "다음 철부터"다.
+- **턴과 달 (R1-a)**: `state.month`는 언제나 실제 달이다(나이, 쿨다운, 예약, `phaseNo`). 계절 턴은 단계마다 `month`가 하나씩 오르고, `state.turn`은 턴마다 하나 오른다. **화면의 열쇠(진행 화면, 일시정지, 자동 열림)는 `state.turn`으로** 건다 — `month`로 걸면 계절 턴 한가운데 결정 뒤 진행 화면이 다시 마운트된다. 쿨다운은 턴 단위다(아래 "쿨다운은 턴 단위").
 - **계절 전략**: `turn: 'season'`을 단 전략만 계절 턴 후보에 나오고, 1년차에는 나오지 않는다(버티기도 턴 종류별). 걸음 `early/mid/late`는 초입·한가운데·끝자락 달의 첫 순에 한 번 실행된다(한 철 원정은 단계마다 `carry`를 두면 달마다 나른다). 계절 턴에는 마을 소식 사건이 없고 결정 사건은 한 철 `balance.turn.eventsPerSeason`개(한가운데 인물 사건 창 포함). 마을 서술은 단계마다 한 번.
-- **세이브는 버전 6이다**(v3: `tribeName`, v4: 두 칸 전략, v5: `work.start`의 월초 지표, v6: 턴·`tech`·`arcs`). `GameState` 구조를 바꾸면 `SAVE_VERSION`을 올리고 `migrations`에 변환을 넣는다(`src/engine/save/`).
+- **세이브는 버전 7이다**(v3: `tribeName`, v4: 두 칸 전략, v5: `work.start`의 월초 지표, v6: 턴·`tech`·`arcs`, v7: 쿨다운 턴 단위).
+- **쿨다운은 턴 단위 (R1-b, 2026-11-26 확정)**: 뜻은 "N턴 뒤에 다시 나온다"이다. `cooldowns[id] = 고른 턴 + cooldown`, 그 턴부터 다시 후보가 된다. 그래서 **쿨다운 0·1 = 바로 다음 턴에도 나옴, 2 = 한 턴 쉼, 3 = 두 턴 쉼**. 1년차(턴 = 달)는 예전 달 단위와 결과가 같다. 계절 전략을 한 철 쉬게 하려면 2를 쓴다(지금 계절 전략은 모두 0이라 바꿀 값이 없었다).
+- **칸 전략은 장 정의를 만들 때 생긴다**: `cellPolicies({ tech, balance })`가 칸마다 `cell_<칸>` 발전 전략(turn `any`, 마을 안 무리, 조건 `{ type: 'tech', id, next: true }`)을 만든다. 문자열 `policy.cell_<칸>.*`, 칸 이름 `tech.<칸>`(장부·덕분에 줄의 출처 이름), 칸 일 서술 `tech.<칸>.work`. 진척은 턴 정산(`settleTech`)에서 오르고, 비용은 고른 순간(`choosePlan`) 낸다.
+- **발전 자리**: 열린 칸 먼저 `balance.tech.cellSlots[턴 종류]`개(1년차 1, 2년차부터 3), 순서는 진척 많은 칸 → 앞 칸 → 갈래 순. 남는 자리에 작은 발전(1년차 겨울 준비). 칸이 켜지면 같은 칸의 `grants` 지식·시설과 `mods`가 걸린다.
+- **1년차 겨울 준비와 칸 (2026-11-26 결정)**: 끌개 엮기(`make_sled`)와 굴 다지기(`cave_fortify`, 저장 구덩이)는 1년차 작은 발전으로 남고 효과도 R1-a 그대로다. 그 지식을 얻는 순간 `KnowledgeDef.grantEffects`가 끌개 칸 / 굴 다지기 칸에 절반을 선물한다. 두 전략은 달 턴 전용이라 2년차부터는 칸으로만 진행한다.
+- **칸 상태가 비어 있는 세이브**(v6 이전, 또는 칸을 새로 넣은 콘텐츠): 다음 턴 첫머리 `ensureTech`가 만들고, 이미 아는 지식의 `grantEffects` 선물을 새 칸에 준다.
+- **두 턴 모두 나오는 전략**(turn `any`): 걸음(early/mid/late)이 달 턴에서는 순, 계절 턴에서는 달이다. 걸음을 가르려면 조건 `{ type: 'turnKind', in: [...] }`를 `when`에 둔다(들소 몰이: 달 턴은 상순 한 번 몰고 하순에 나름). `GameState` 구조를 바꾸면 `SAVE_VERSION`을 올리고 `migrations`에 변환을 넣는다(`src/engine/save/`).
 - **시험은 PowerShell에서 돌린다.** Git Bash에서 `cd /c/...`로 들어가 `npm test`를 하면 경로 표기가 달라 vitest가 두 번 실려 모든 파일이 `Cannot read properties of undefined (reading 'config')`로 실패한다(코드 문제 아님).
 - **자동 진행**(2026-11-24): 흐름 판단은 `src/ui/flow.ts`(순수 함수, 시험 있음). `useClock`은 실제 흐른 시간 `run`과 화면 진행 `elapsed`(= run + 빨리 보기로 건너뛴 시간)를 따로 센다. 자동 진행은 `run`으로 재므로 빨리 보기·움직임 줄이기에서도 타이핑만큼 읽을 시간이 남는다. 결정을 기다리는 동안은 `stopAtEnd`로 시간이 쌓이지 않는다(결정 뒤 글이 같은 보고에 이어 붙기 때문).
 - **평온한 달 요약은 없앴다**(2026-11-24 3차 피드백). 이달의 결과가 순별 한 줄 회고로 대신한다.

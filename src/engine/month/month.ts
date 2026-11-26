@@ -10,6 +10,7 @@
 
 import type { ChapterDefinition, EventSlot, FoodLot, GameState, Id, LedgerLine, Line, LineGroup, MonthWork, Phase, PhaseReport, PlanEntry, PolicyStep, SceneSpec, TurnInfo } from '../types';
 import { isSeasonTurn, turnAt } from './turn';
+import { ensureTech, payCellCost, settleTech } from '../tech/tech';
 import { PHASES } from '../types';
 import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
 import {
@@ -139,6 +140,8 @@ export function startTurn(def: ChapterDefinition, state: GameState): void {
   state.turn += 1;
   state.work = freshWork(['', '', ''], monthStartOf(def, state), turn);
   worldMonth(def, state);
+  // 발전 나무: 칸 상태를 만들고 맞춘다 (새 칸, 바위굴로 옮겨 열린 칸 등)
+  ensureTech(def, state);
 
   const brief = buildBriefing(def, state);
   state.work.brief = brief;
@@ -194,8 +197,10 @@ export function choosePlan(def: ChapterDefinition, state: GameState, uids: reado
   state.work.plan = preview.entries;
   for (const e of preview.entries) {
     const p = findPolicy(def, e.bound.policyId);
-    if (p.cooldown > 0) state.cooldowns[p.id] = state.month + p.cooldown;
+    if (p.cooldown > 0) state.cooldowns[p.id] = state.turn + p.cooldown;
     if (p.once) state.usedOnce.push(p.id);
+    // 발전 칸: 처음 시작하는 턴에 비용을 낸다
+    if (p.tech) payCellCost(runCtx(def, state, {}, `tech.${p.tech}`, 'growth'), p.tech);
   }
   run(def, state);
   return undefined;
@@ -321,7 +326,8 @@ function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: str
   if (optionId === 'porters') {
     // 마을에서 사람을 불러 나른다: 나를 수 있는 만큼만, 그동안 마을 일이 준다 (DESIGN.md §15.3 S10)
     const n = porterCount(def, state);
-    let cap = n * stat(def, state, 'carry.perPerson') * b.porterTrips;
+    // 짐꾼 몫은 발전 칸(천막 보수의 물가 야영, 끌개)이 늘린다: carry.porterMul
+    let cap = n * stat(def, state, 'carry.perPerson') * b.porterTrips * stat(def, state, 'carry.porterMul');
     let moved = 0;
     for (const lot of haul) {
       const per = carryWeight(def, { kind: lot.kind, kg: 1 });
@@ -336,6 +342,7 @@ function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: str
     pushLine(ctx, 'line.leftover.porters', { n, kg: Math.round(moved) });
     const lost = kg - moved;
     if (lost >= 1) pushLine(ctx, 'line.leftover.abandon', { kg: Math.round(lost) });
+    if (auto && lost > 0) state.work.leftBehind = (state.work.leftBehind ?? 0) + lost;
   } else if (optionId === 'cache') {
     const place = currentPlace(state) ?? state.campPlace;
     state.caches.push({ id: nextUid(state, 'k'), place, lots: haul, month: state.month, scent: 0, checkedMonth: state.month });
@@ -348,6 +355,7 @@ function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: str
     pushLine(ctx, 'line.leftover.dry', { kg: Math.round(dried) });
   } else {
     if (!auto) addCohesion(state, def, b.abandonCohesion, 'leftover.abandon');
+    else state.work.leftBehind = (state.work.leftBehind ?? 0) + kg;
     pushLine(ctx, 'line.leftover.abandon', { kg: Math.round(kg) });
   }
   setHaul(state, []);
@@ -583,6 +591,8 @@ function settle(def: ChapterDefinition, state: GameState): void {
   for (const k of def.knowledge) {
     if (!state.knowledge.has.includes(k.id) && (state.knowledge.progress[k.id] ?? 0) >= k.need) grantKnowledge(ctx, k.id);
   }
+  // 발전 나무: 고른 칸의 진척, 이어 가던 칸, 신석기 (§B3, §B4.4)
+  settleTech({ ...ctx, group: 'growth' });
 
   // 결속이 낮은 달 수 (분열 판정)
   const low = state.cohesion < def.balance.cohesion.lowThreshold;
@@ -593,6 +603,8 @@ function settle(def: ChapterDefinition, state: GameState): void {
   report.savings = w.savings.map((x) => ({ ...x }));
   report.to = { food: totalKg(state.stores.food), firewood: state.stores.firewood };
   const lines = report.lines;
+  // 계절 턴에서 다 메고 오지 못해 두고 온 고기 (이 철의 결과 글 한 줄)
+  if ((w.leftBehind ?? 0) >= 1) lines.push({ key: 'line.season.leftBehind', params: { kg: Math.round(w.leftBehind!) }, group: 'info' });
   lines.push({
     key: 'settle.food',
     params: { from: Math.round(w.start.food), to: Math.round(totalKg(state.stores.food)), days: Math.floor(foodDays(def, state)) },

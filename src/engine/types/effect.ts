@@ -47,6 +47,8 @@ export type Effect =
   /** 시설: level은 단계 증감, progress는 짓고 있는 공사의 달 수 증감 (실패로 공사가 늦어지면 −1) */
   | { type: 'facility'; id: Id; level?: number; progress?: number }
   | { type: 'clue'; id: Id; months?: number; remove?: boolean }
+  /** 발전 칸: progress = 일손 진척(철), gift = 사람·이웃의 선물(칸의 maxShare까지). by = 가져온 사람·이웃 (DESIGN.md §B3.4) */
+  | { type: 'tech'; id: Id; progress?: number; gift?: number; by?: Id }
   /** 은닉물: recover = 남은 것을 짐으로 꺼낸다 / check = 상태만 확인한다 */
   | { type: 'cache'; at: Id; action: 'recover' | 'check' }
   /** 저장: 마을의 날것(from)을 오래 가는 것(to)으로 바꾼다. 먹을 수 있는 양 기준 yield 비율. $preserved를 채운다 */

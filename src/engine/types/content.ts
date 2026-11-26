@@ -85,7 +85,13 @@ export interface PolicyTemplate {
   slot: PolicySlot;
   /** 어느 턴에 나오는 전략인가 (DESIGN.md §B2). 기본 'month'(1년차). 'season' 전략의 단계(early/mid/late)는
    *  초입·한가운데·끝자락의 달이고, 단계마다 그 달 첫 순에 한 번 실행한다 */
-  turn?: 'month' | 'season';
+  turn?: 'month' | 'season' | 'any';
+  /** 발전 칸 전략: 이 칸에 일손을 붙인다 (장 정의의 tech.cells에서 만든다, engine/tech) */
+  tech?: Id;
+  /** 이 전략을 고른 턴에 발전 칸 진척을 더 준다 (철 단위. 겨울 "저장분으로 버틴다" +1철, §B4.5) */
+  techBonus?: number;
+  /** 위험 단서를 조건으로 정한다 (판정이 없는 전략. 처음 맞는 것) */
+  hintWhen?: { when: Condition[]; hint: Hint }[];
   category: Id;
   appearsWhen: Condition[];
   relevance?: { when: Condition[]; add: number }[];
@@ -100,6 +106,8 @@ export interface PolicyTemplate {
   /** 묻어 둔 고기마다 후보를 하나씩 만든다 (원정지 = 은닉물 장소, 가치·거리 순 최대 maxCacheTargets개) */
   bindCache?: boolean;
   leader?: PersonQuery;
+  /** 이끄는 사람이 없거나 다른 자리에 있으면 대신 맡는 사람 (발전 칸의 fallback, §B4.3) */
+  leaderFallback?: PersonQuery;
   /** 마을 일손 중 장작에 쓰는 비율을 고정한다 (없으면 장작 상황에 따라 자동) */
   firewoodShare?: number;
   /** 이번 달 동안 걸리는 모디파이어 (예: 배급 줄이기) */

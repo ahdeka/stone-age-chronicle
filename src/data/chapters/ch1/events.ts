@@ -1,6 +1,7 @@
 // 1장 사건 (레인즈식 중간 사건, 월초 사건). 봄 시작 첫 해 (DESIGN.md §18.1).
 // 연결 지도 C1~C7(시험 플레이)과 준비 → 겨울 연결 P1~P10을 사건의 조건과 효과로 잇는다.
 
+import { fenceOption } from './tech';
 import type { ActivityDef, Condition, Effect, EventDef } from '../../../engine';
 
 const winter: Condition = { type: 'season', in: ['winter'] };
@@ -676,6 +677,7 @@ export const ch1Events: EventDef[] = [
           { type: 'line', key: 'event.wolves_circle_camp.res.watch' },
         ],
       },
+      fenceOption,
       {
         id: 'ignore',
         hint: 'risky',
@@ -709,7 +711,8 @@ export const ch1Events: EventDef[] = [
       {
         id: 'sled',
         hint: 'sure',
-        effects: [{ type: 'goods', id: 'hide', delta: -1 }, { type: 'knowledge', id: 'sled', progress: 1 }, { type: 'flag', id: 'ikki_idea_sled', set: true }],
+        // 1년차 끌개 엮기를 앞당기고(R1-a 그대로), 이끼의 생각이 끌개 칸을 절반까지 채운다 (사람이 가져오는 진척, §B3.4)
+        effects: [{ type: 'goods', id: 'hide', delta: -1 }, { type: 'knowledge', id: 'sled', progress: 1 }, { type: 'tech', id: 'sled', gift: 0.5, by: 'ikki' }, { type: 'flag', id: 'ikki_idea_sled', set: true }],
       },
       {
         id: 'harpoon',

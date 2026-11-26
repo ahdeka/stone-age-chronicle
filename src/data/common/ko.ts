@@ -56,6 +56,9 @@ export const commonKo: Record<string, string> = {
   'ui.result.title.season': '이 철의 결과',
   'ui.result.monthEnd.season': '이 철 끝',
   'ui.next.season': '다음 철로',
+  'ui.result.note': '이달',
+  'ui.result.note.season': '이 철',
+  'line.season.leftBehind': '다 메고 오지 못해 약 {kg}kg을 두고 왔다.',
   'ui.status.basis.season': '철 초 기준',
 
   // ── 위험 단서와 결과 등급 ──

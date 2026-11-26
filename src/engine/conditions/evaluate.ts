@@ -6,6 +6,7 @@ import { ageYears, bandDef, countBand, dailyFoodTotal, laborUnits, living, popul
 import { totalKg } from '../stores/food';
 import { firewoodPerDay, stat } from '../stats/stats';
 import { currentEntry, currentPlace } from '../policy/current';
+import { branchesDone, findCell, nextCell, peekCell } from '../tech/query';
 
 export function inRange(value: number, r: NumRange): boolean {
   if (r.min !== undefined && value < r.min) return false;
@@ -145,6 +146,17 @@ export function evaluate(def: ChapterDefinition, state: GameState, c: Condition,
       );
     case 'facility':
       return inRange(state.facilities[c.id] ?? 0, c.min === undefined && c.max === undefined ? { min: 1 } : c);
+    case 'tech': {
+      const cell = peekCell(state, c.id);
+      if (c.status && !c.status.includes(cell.status)) return false;
+      if (c.minProgress !== undefined && cell.progress < c.minProgress - 1e-9) return false;
+      if (c.next !== undefined && (nextCell(def, state, findCell(def, c.id).branch) === c.id) !== c.next) return false;
+      return true;
+    }
+    case 'techBranchesDone':
+      return inRange(branchesDone(def, state).length, c);
+    case 'turnKind':
+      return c.in.includes(state.work.turn.kind);
     case 'all':
       return c.of.every((x) => evaluate(def, state, x, actors));
     case 'any':

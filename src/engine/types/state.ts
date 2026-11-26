@@ -198,6 +198,8 @@ export interface MonthWork {
   stageSteps?: boolean;
   /** 계절 턴: 지금 단계에서 가장 나빴던 굶주림 단계 (결속 계절 환산, 달별 기록) */
   stageHunger?: number;
+  /** 계절 턴: 다 메고 오지 못해 두고 온 고기 kg (이 철의 결과 글 한 줄) */
+  leftBehind?: number;
   /** 칸별 후보 (큰 일 → 식량 → 발전 순). 칸은 방침 정의의 slot으로 안다 */
   candidates: BoundPolicy[];
   /** 고른 전략: [식량, 발전?] 또는 [큰 일]. plan[0]이 주 전략 (장면, 연대기) */
@@ -355,7 +357,7 @@ export interface GameState {
   modifiers: TempModifier[];
   flags: Record<Id, number>;
   counters: Record<Id, number>;
-  /** 방침·사건 id → 다시 나올 수 있는 달 */
+  /** 방침·사건 id → 다시 나올 수 있는 턴 (쿨다운은 턴 단위: 1년차는 달, 2년차부터 철) */
   cooldowns: Record<Id, number>;
   usedOnce: Id[];
   narrativeRecent: Record<Id, number>;

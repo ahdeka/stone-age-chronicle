@@ -51,6 +51,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     month: ids(def.calendar.months),
     season: new Set(def.seasons),
     yield: ids(def.yields),
+    tech: ids(def.tech.cells),
   };
   const need = (kind: keyof typeof sets, id: string, where: string) => {
     if (!sets[kind].has(id)) err(where, `없는 ${kind} id: ${id}`);
@@ -104,6 +105,8 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         return;
       case 'knowledge':
         return need('knowledge', c.id, where);
+      case 'tech':
+        return need('tech', c.id, where);
       case 'facility':
         return need('facility', c.id, where);
       case 'clue':
@@ -178,6 +181,9 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
         return;
       case 'knowledge':
         return need('knowledge', e.id, where);
+      case 'tech':
+        if (!e.progress && !e.gift) err(where, `칸 효과에 progress나 gift가 없다: ${e.id}`);
+        return need('tech', e.id, where);
       case 'facility':
         need('facility', e.id, where);
         if (!e.level && !e.progress) err(where, `시설 효과에 level이나 progress가 없다: ${e.id}`);
@@ -268,7 +274,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     // 전략 칸 (DESIGN.md §6.4): 버티기는 식량 칸, 발전은 지속 효과를 하나 이상 남긴다
     if (!['food', 'growth', 'major'].includes(p.slot)) err(w, `없는 전략 칸: ${p.slot}`);
     if (p.fallback && p.slot !== 'food') err(w, '버티기 방침은 식량 칸이어야 한다');
-    if (p.slot === 'growth' && !growthLasts(p)) err(w, '발전 전략이 남기는 것이 없다 (시설·지식·단서·깃발·장소·거처·약속·물자·치료 중 하나)');
+    if (p.slot === 'growth' && !p.tech && !growthLasts(p)) err(w, '발전 전략이 남기는 것이 없다 (시설·지식·단서·깃발·장소·거처·약속·물자·치료 중 하나)');
     scene(p.scene, w);
     let hasCarry = false;
     for (const ph of PHASES) {
@@ -308,7 +314,7 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     if (p.crew && JSON.stringify(p.steps).includes('"type":"catch"') && !hasCarry) warn(w, '사냥감을 잡지만 운반 단계가 없다');
   }
   // 턴 종류(달 / 철)마다 식량 버티기가 있어야 그 턴의 식량 칸이 비지 않는다 (DESIGN.md §B2)
-  const turnKinds = new Set(def.content.policies.map((p) => p.turn ?? 'month'));
+  const turnKinds = new Set(def.content.policies.map((p) => p.turn ?? 'month').filter((t) => t !== 'any'));
   turnKinds.add('month');
   for (const kind of turnKinds) {
     if (!def.content.policies.some((p) => p.fallback && (p.turn ?? 'month') === kind)) err('policies', `버티기 방침(fallback)이 없는 턴 종류: ${kind}`);
@@ -361,6 +367,71 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
   // 사건 검사 전에 모든 방침·사건의 예약과 풀을 모아 둔다 (위에서 방침은 끝남; 사건 안의 예약을 먼저 훑는다)
   for (const ev of def.content.events) for (const o of ev.options) effects(o.effects, `event.${ev.id}.${o.id}`);
   for (const ev of def.content.events) checkEvent(ev);
+
+  for (const k of def.knowledge) effects(k.grantEffects, `knowledge.${k.id}`);
+  /** 달 턴에 나오고, 철·달 조건이 1년차 4~2월 중 하나와 맞는가 (맨 위 조건만 본다) */
+  const firstYearReachable = (p: (typeof def.content.policies)[number]): boolean => {
+    if ((p.turn ?? 'month') === 'season') return false;
+    const start = def.presets.find((x) => !x.hidden) ?? def.presets[0];
+    const n = def.calendar.months.length;
+    const months = Array.from({ length: n - 1 }, (_, i) => def.calendar.months[((start?.startMonthIndex ?? 0) + 1 + i) % n]!);
+    return months.some((m) =>
+      p.appearsWhen.every((c) => {
+        if (c.type === 'season') return c.in.includes(m.season);
+        if (c.type === 'monthOfYear') return c.in.includes(m.id);
+        if (c.type === 'turnKind') return c.in.includes('month');
+        return true;
+      }),
+    );
+  };
+  // ── 발전 나무 (DESIGN.md §B3, §B1: 칸은 새 행동을 반드시 연다) ──
+  dupCheck('tech', def.tech.cells);
+  const branches = new Set(def.tech.branches);
+  for (const cell of def.tech.cells) {
+    const w = `tech.${cell.id}`;
+    str(`tech.${cell.id}`, w);
+    str(`tech.${cell.id}.work`, w);
+    if (!branches.has(cell.branch)) err(w, `없는 갈래: ${cell.branch}`);
+    if (!(cell.seasons > 0)) err(w, `철 수는 0보다 커야 한다: ${cell.seasons}`);
+    const r = cell.requires;
+    if ('all' in r) for (const id of r.all) need('tech', id, w);
+    else if ('any' in r) {
+      for (const id of r.any) need('tech', id, w);
+      conds(r.or, w);
+    } else if (!branches.has(r.branchDone)) err(w, `없는 갈래: ${r.branchDone}`);
+    else if (r.branchDone !== cell.branch) err(w, '갈래 끝 조건은 같은 갈래를 가리켜야 한다');
+    for (const k of cell.grants?.knowledge ?? []) need('knowledge', k, w);
+    for (const f of cell.grants?.facility ?? []) need('facility', f, w);
+    for (const g of Object.keys(cell.cost?.goods ?? {})) need('goods', g, w);
+    for (const s of cell.startSeasons ?? []) need('season', s, w);
+    for (const m of cell.mods ?? []) {
+      if (def.balance.stats[m.stat] === undefined) err(w, `없는 스탯: ${m.stat}`);
+      conds(m.when, w);
+    }
+    scene(cell.scene, w);
+    // 숫자 보정만 있는 칸은 금지: 여는 것이 1개 이상, 있는 id, 그리고 그 행동이 이 칸의 켜짐을 조건으로 쓴다
+    if (cell.unlocks.length === 0) err(w, '여는 것이 없다 (숫자 보정만 있는 칸은 금지, §B1)');
+    const usesCell = (cs: readonly Condition[] | undefined) => JSON.stringify(cs ?? []).includes(`"type":"tech","id":"${cell.id}"`);
+    for (const u of cell.unlocks) {
+      if (u.kind === 'policy') {
+        const p = def.content.policies.find((x) => x.id === u.id);
+        if (!p) err(w, `없는 policy id: ${u.id}`);
+        else if (!usesCell(p.appearsWhen)) err(w, `연 전략이 이 칸을 조건으로 쓰지 않는다: ${u.id}`);
+        // 1년차에 켤 수 있는 첫 칸(앞 칸 없음)이 연 전략은 1년차 남은 달(4~2월)에 쓰여야 한다 (§B2.2)
+        else if ('all' in cell.requires && cell.requires.all.length === 0 && !firstYearReachable(p)) warn(w, `1년차 첫 칸이 연 전략이 1년차에 나올 수 없다: ${u.id}`);
+      } else {
+        const ev = def.content.events.find((x) => x.id === (u.kind === 'event' ? u.id : u.event));
+        if (!ev) err(w, `없는 event id: ${u.kind === 'event' ? u.id : u.event}`);
+        else if (u.kind === 'event' && !usesCell(ev.when)) err(w, `연 사건이 이 칸을 조건으로 쓰지 않는다: ${u.id}`);
+        else if (u.kind === 'option') {
+          const o = ev.options.find((x) => x.id === u.option);
+          if (!o) err(w, `없는 선택지: ${u.event}.${u.option}`);
+          else if (!usesCell(o.requires)) err(w, `연 선택지가 이 칸을 조건으로 쓰지 않는다: ${u.event}.${u.option}`);
+        }
+      }
+    }
+  }
+  for (const b of def.tech.branches) if (!def.tech.cells.some((c) => c.branch === b)) warn(`tech.${b}`, '칸이 없는 갈래');
 
   // ── 서술 ──
   need('narrative', def.hooks.villageNarrative, 'hooks');

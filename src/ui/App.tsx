@@ -30,7 +30,9 @@ export function App() {
   const tables = useMemo(() => [commonStrings.ko, entry.strings.ko], [entry]);
   // 부족 이름은 모든 문자열의 {tribe}로 들어간다. 추천 이름 키에는 {tribe}가 없어서 기본 번역기로 읽는다.
   const tribe = tribeDisplayName(createTranslator(tables), def, state ?? saved);
-  const startPreset = def.presets.find((p) => !p.hidden) ?? def.presets[0]!;
+  // 개발 모드에서만 주소의 ?preset=<id>로 숨은 프리셋(시험 플레이 재현용 늦가을 시작 등)을 고를 수 있다
+  const devPreset = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('preset') : null;
+  const startPreset = def.presets.find((p) => p.id === devPreset) ?? def.presets.find((p) => !p.hidden) ?? def.presets[0]!;
 
   const update = (next: GameState) => {
     setState(next);

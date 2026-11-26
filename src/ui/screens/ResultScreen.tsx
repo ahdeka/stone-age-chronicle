@@ -54,6 +54,8 @@ export function ResultScreen({ def, state, onNext }: Props) {
   const season = state.work.turn.kind === 'season';
   const settle = reports.find((x) => x.slot === 'settlement');
   const recaps = reports.map((x) => recapOf(tr, def, state, x)).filter((x): x is NonNullable<typeof x> => !!x);
+  // 정산 줄 중 글로 보일 것 (두고 온 고기, 발전 칸의 진척·켜짐): settle.* 표 줄은 빼고
+  const notes = (settle?.lines ?? []).filter((l) => l.key.startsWith('line.'));
   const tiers = reports.map((x) => x.tier).filter((t): t is Tier => !!t);
   const tier = TIER_ORDER.find((t) => tiers.includes(t));
   const isCrew = crewSourceTest(def, state);
@@ -163,6 +165,12 @@ export function ResultScreen({ def, state, onNext }: Props) {
                   {x.text}
                   {x.chose && <span className={r.chose}> · {tr.t('ui.result.chose', { option: x.chose })}</span>}
                 </span>
+              </li>
+            ))}
+            {notes.map((l, i) => (
+              <li key={`note-${i}`} className={r.recap}>
+                <span className={r.recapLabel}>{tr.t(season ? 'ui.result.note.season' : 'ui.result.note')}</span>
+                <span className={`${r.recapText} ${u.serif}`}>{lineText(tr, l)}</span>
               </li>
             ))}
           </ol>

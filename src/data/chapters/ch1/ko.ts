@@ -4,6 +4,7 @@
 
 import { ch1ContentKo } from './ko.content';
 import { ch1SeasonKo } from './season';
+import { ch1TechKo } from './tech';
 
 const names: Record<string, string> = {
   maru: '마루', bawi: '바위', seori: '서리', noeul: '노을', ikki: '이끼',
@@ -17,6 +18,7 @@ const names: Record<string, string> = {
 export const ch1Ko: Record<string, string> = {
   ...ch1ContentKo,
   ...ch1SeasonKo,
+  ...ch1TechKo,
   // 시작 화면의 추천 부족 이름 (첫 번째가 기본값)
   'tribe.suggest.grey_river': '잿빛강 사람들',
   'tribe.suggest.willow_brook': '버들내 사람들',
@@ -68,6 +70,8 @@ export const ch1Ko: Record<string, string> = {
   'ending.ruin_extinct.chron': '{tribe}의 마지막 불이 꺼졌다.',
   'ending.ruin_split.title': '흩어진 사람들',
   'ending.ruin_split.chron': '{tribe:은} 서로를 믿지 못해 뿔뿔이 흩어졌다.',
+  'ending.neolithic.title': '새 시대의 문턱',
+  'ending.neolithic.chron': '{tribe:은} 두 갈래의 끝에 닿아 새 시대의 문턱에 섰다.',
   'ending.survive_time.title': '살아남은 사람들',
   'ending.survive_time.chron': '{tribe:은} 여러 해를 견뎌 냈다.',
   'chron.death': '{name}, {cause} 끝에 세상을 떠났다.',

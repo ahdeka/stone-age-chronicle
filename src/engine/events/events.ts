@@ -10,7 +10,7 @@ import { nextInt, weightedIndex } from '../rng/rng';
 
 export function eventOnCooldown(state: GameState, ev: EventDef): boolean {
   if (ev.once && state.usedOnce.includes(ev.id)) return true;
-  return (state.cooldowns[ev.id] ?? 0) > state.month;
+  return (state.cooldowns[ev.id] ?? 0) > state.turn;
 }
 
 /** 인물 슬롯을 묶는다. 묶을 수 없는 슬롯이 있으면 undefined */
@@ -98,7 +98,7 @@ export function briefingEventIds(def: ChapterDefinition): Id[] {
 }
 
 export function markUsed(state: GameState, ev: EventDef): void {
-  if (ev.cooldown > 0) state.cooldowns[ev.id] = state.month + ev.cooldown;
+  if (ev.cooldown > 0) state.cooldowns[ev.id] = state.turn + ev.cooldown;
   if (ev.once && !state.usedOnce.includes(ev.id)) state.usedOnce.push(ev.id);
 }
 

@@ -219,12 +219,15 @@ export const ch1Knowledge: KnowledgeDef[] = [
   {
     id: 'sled',
     need: 2,
+    // 1년차 끌개 엮기를 마치면 끌개 칸에 절반 (§B3.6)
+    grantEffects: [{ type: 'tech', id: 'sled', gift: 0.5 }],
     mods: [
       { stat: 'carry.perPerson', op: 'mul', value: 1.4, when: [{ type: 'season', in: ['spring', 'summer', 'autumn'] }] },
       { stat: 'carry.perPerson', op: 'mul', value: 1.8, when: [{ type: 'season', in: ['winter'] }] },
     ],
   },
-  { id: 'storage_pit', need: 3, mods: [{ stat: 'cache.raid', op: 'mul', value: 0.3 }, { stat: 'spoil.mul', op: 'mul', value: 0.85 }] },
+  // 1년차 굴 다지기(저장 구덩이)를 마치면 굴 다지기 칸에 절반 (§B3.6)
+  { id: 'storage_pit', need: 3, grantEffects: [{ type: 'tech', id: 'cave_fortify', gift: 0.5 }], mods: [{ stat: 'cache.raid', op: 'mul', value: 0.3 }, { stat: 'spoil.mul', op: 'mul', value: 0.85 }] },
   { id: 'ice_fishing', need: 2, mods: [{ stat: 'yield.fish', op: 'add', value: 1, when: [{ type: 'season', in: ['winter'] }] }] },
   { id: 'fur_clothes', need: 3, mods: [{ stat: 'firewood.burnMul', op: 'mul', value: 0.8 }] },
 ];

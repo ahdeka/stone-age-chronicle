@@ -59,6 +59,12 @@ export type Condition =
   /** 은닉물. known: 상태를 최근에 확인했는가 */
   | { type: 'cache'; at?: Id; known?: boolean; has?: boolean }
   | { type: 'policy'; id?: Id; category?: Id }
+  /** 발전 칸 (DESIGN.md §B3.3). next: 그 갈래에서 지금 고를 칸인가 (진척이 가장 많은 열린 칸, 같으면 앞 칸) */
+  | { type: 'tech'; id: Id; status?: ('locked' | 'open' | 'active' | 'done')[]; minProgress?: number; next?: boolean }
+  /** 신석기에 닿았는가 (끝 칸이 켜진 갈래 수, balance.tech.neolithicBranches) */
+  | ({ type: 'techBranchesDone' } & NumRange)
+  /** 지금 턴 종류 (달 / 철). 두 턴에 다 나오는 전략(turn 'any')이 걸음을 가를 때 */
+  | { type: 'turnKind'; in: ('month' | 'season')[] }
   // 논리
   | { type: 'all'; of: Condition[] }
   | { type: 'any'; of: Condition[] }

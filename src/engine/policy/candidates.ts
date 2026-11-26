@@ -1,7 +1,9 @@
 // 방침 후보 생성 (DESIGN.md §6, 두 칸은 §6.4)
 // 조건 통과 → 원정대 구성 → 상황 점수 → 칸별로: 식량(버티기 보장) / 발전 / 큰 일
 
-import type { ActivityDef, BoundPolicy, ChapterDefinition, GameState, Hint, Id, Person, PolicySlot, PolicyTemplate } from '../types';
+import type { ActivityDef, BoundPolicy, ChapterDefinition, GameState, Hint, Id, Person, PersonQuery, PolicySlot, PolicyTemplate } from '../types';
+import { canStartCell } from '../tech/tech';
+import { findCell, peekCell } from '../tech/query';
 import { PHASES } from '../types';
 import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
 import { nextUid } from '../core/lookup';
@@ -19,7 +21,8 @@ export interface CrewOpts {
 /** 원정대와 이끄는 사람을 정한다. 난수를 쓰지 않는다. 인원이 모자라면 undefined */
 export function formCrew(def: ChapterDefinition, state: GameState, p: PolicyTemplate, opts: CrewOpts = {}): { crew: Person[]; leader?: Person } | undefined {
   const free = (x: Person) => !opts.taken?.has(x.id);
-  const leaderPick = p.leader ? living(state).find((x) => free(x) && !cannotWork(def, x) && matchPerson(def, state, x, p.leader!)) : undefined;
+  const findLeader = (q: PersonQuery | undefined) => (q ? living(state).find((x) => free(x) && !cannotWork(def, x) && matchPerson(def, state, x, q)) : undefined);
+  const leaderPick = findLeader(p.leader) ?? findLeader(p.leaderFallback);
   if (p.leader && !leaderPick) return undefined;
   if (!p.crew) return leaderPick ? { crew: [], leader: leaderPick } : { crew: [] };
 
@@ -49,6 +52,7 @@ const HINT_RANK: Record<Hint, number> = { sure: 0, fair: 1, risky: 2, unknown: 3
 
 /** 방침의 위험 단서 = 그 안의 활동 중 가장 나쁜 것 */
 export function policyHint(def: ChapterDefinition, state: GameState, p: PolicyTemplate, ctx: ActCtx): Hint {
+  for (const h of p.hintWhen ?? []) if (allTrue(def, state, h.when, ctx.actors)) return h.hint;
   let worst: Hint = 'sure';
   for (const a of activities(p)) {
     const h = hintFor(def, state, a, ctx);
@@ -59,15 +63,17 @@ export function policyHint(def: ChapterDefinition, state: GameState, p: PolicyTe
 
 /** 이 전략이 지금 턴 종류(달 / 철)에 나오는가 */
 export function fitsTurn(state: GameState, p: PolicyTemplate): boolean {
-  return (p.turn ?? 'month') === state.work.turn.kind;
+  const t = p.turn ?? 'month';
+  return t === 'any' || t === state.work.turn.kind;
 }
 
 export function isAvailable(def: ChapterDefinition, state: GameState, p: PolicyTemplate): boolean {
   if (!fitsTurn(state, p)) return false;
+  if (p.tech && !canStartCell(def, state, p.tech)) return false;
   if (p.once && state.usedOnce.includes(p.id)) return false;
   // 다 지은 시설을 또 짓지 않는다
   if (p.builds && (state.facilities[p.builds.facility] ?? 0) >= facilityMax(def, p.builds.facility)) return false;
-  if ((state.cooldowns[p.id] ?? 0) > state.month) return false;
+  if ((state.cooldowns[p.id] ?? 0) > state.turn) return false;
   return allTrue(def, state, p.appearsWhen);
 }
 
@@ -131,11 +137,11 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
   scored.sort((x, y) => y.bound.score - x.bound.score);
 
   const urgent = foodDays(def, state) < b.urgentFoodDays;
-  const take = (slot: PolicySlot, n: number) => {
+  const take = (slot: PolicySlot, n: number, keep: (s: (typeof scored)[number]) => boolean = () => true) => {
     const picked: typeof scored = [];
     const perCat: Record<string, number> = {};
     for (const s of scored) {
-      if (s.p.slot !== slot || !s.offered) continue;
+      if (s.p.slot !== slot || !s.offered || !keep(s)) continue;
       if (picked.length >= n) break;
       if ((perCat[s.p.category] ?? 0) >= b.maxPerCategory) continue;
       picked.push(s);
@@ -154,7 +160,22 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
       food.push(fb);
     }
   }
-  const growth = take('growth', urgent ? b.urgentGrowthSlots : b.growthSlots);
+  // 발전: 열린 칸 먼저(턴 종류별 칸 자리 수까지, 진척이 많은 칸 → 앞 칸 → 갈래 순), 남는 자리에 작은 발전 (§B3.6, §B4.2)
+  const growthN = urgent ? b.urgentGrowthSlots : b.growthSlots;
+  const cellRank = (s: (typeof scored)[number]) => {
+    const cell = findCell(def, s.p.tech!);
+    return [-peekCell(state, cell.id).progress, cell.order, def.tech.branches.indexOf(cell.branch)];
+  };
+  const cells = scored
+    .filter((s) => s.p.slot === 'growth' && s.offered && s.p.tech)
+    .sort((x, y) => {
+      const a = cellRank(x);
+      const c = cellRank(y);
+      return a[0]! - c[0]! || a[1]! - c[1]! || a[2]! - c[2]!;
+    })
+    .slice(0, Math.min(growthN, def.balance.tech.cellSlots[state.work.turn.kind]));
+  const small = take('growth', growthN, (s) => !s.p.tech).slice(0, growthN - cells.length);
+  const growth = [...cells, ...small];
   const major = take('major', 1);
   // 화면 순서: 큰 일(맨 위 한 줄) → 식량 → 발전
   return [...major, ...food, ...growth].map((s) => s.bound);

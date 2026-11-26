@@ -37,6 +37,11 @@ function collect(def: ChapterDefinition, state: GameState): SourcedMod[] {
   for (const [id, level] of Object.entries(state.facilities)) if (level > 0) push(`facility.${id}`, byId(def.facilities, id, 'facility').mods);
   for (const c of state.clues) push(`clue.${c.id}`, byId(def.clues, c.id, 'clue').mods);
   for (const e of state.work.plan) push(`policy.${e.bound.policyId}`, findPolicy(def, e.bound.policyId).monthMods);
+  // 켜진 발전 칸의 덧붙는 보정 (§B1: 새 행동에 덧붙을 때만)
+  for (const cell of def.tech.cells) if (state.tech[cell.id]?.status === 'done') push(`tech.${cell.id}`, cell.mods);
+  // 계절 턴의 "발전하지 않는다": 발전 인원이 식량에 붙는다 (식량 전략만 고른 턴, §B4.1)
+  const plan = state.work.plan;
+  if (state.work.turn.kind === 'season' && plan.length > 0 && plan.every((e) => e.slot === 'food')) push('tech.none', def.balance.tech.noGrowthMods);
   for (const t of state.modifiers) out.push({ source: t.source, mod: t.mod });
   return out;
 }

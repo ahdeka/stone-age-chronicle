@@ -41,12 +41,12 @@ describe('턴 종류', () => {
     expect(calendarDate(ch1, s).number).toBe(3);
   });
 
-  it('후보는 턴 종류에 맞는 전략만: 1년차에 계절 전략 없음, 계절 턴에 달 전략 없음', () => {
+  it('후보는 턴 종류에 맞는 전략만: 1년차에 계절 전략 없음, 계절 턴에 달 전략 없음 (any는 둘 다)', () => {
     const y1 = springGame('cands');
-    expect(y1.work.candidates.every((c) => (findPolicy(ch1, c.policyId).turn ?? 'month') === 'month')).toBe(true);
+    expect(y1.work.candidates.every((c) => ['month', 'any'].includes(findPolicy(ch1, c.policyId).turn ?? 'month'))).toBe(true);
     const y2 = toFirstSeason();
     expect(y2.work.candidates.length).toBeGreaterThan(0);
-    expect(y2.work.candidates.every((c) => findPolicy(ch1, c.policyId).turn === 'season')).toBe(true);
+    expect(y2.work.candidates.every((c) => ['season', 'any'].includes(findPolicy(ch1, c.policyId).turn ?? 'month'))).toBe(true);
   });
 });
 
@@ -100,6 +100,7 @@ describe('계절 턴 하나', () => {
     const def = tweakDef((d) => {
       d.balance.stats['carry.perPerson'] = 1;
       d.content.events = d.content.events.filter((e) => e.scope !== 'person');
+      d.content.policies.find((p) => p.id === 'season_forest_hunt')!.priority = 999;
     });
     const s0 = toFirstSeason(def);
     const s = pickSeason(def, s0, 'season_forest_hunt');
@@ -166,8 +167,28 @@ describe('계절 턴의 결정론과 저장', () => {
     expect(m.tech).toEqual({});
     expect(m.arcs).toEqual({});
     expect(m.history.map((h) => h.turn)).toEqual(m.history.map((h) => h.month));
-    expect(m).toEqual(s);
+    // 칸 상태는 비어 있다가 다음 턴 첫머리에 장 정의에서 만든다
+    expect({ ...m, tech: s.tech }).toEqual(s);
     const y2 = toFirstSeason(ch1, m);
     expect(y2.work.turn.kind).toBe('season');
+  });
+});
+
+describe('세이브 v6 → v7 (R1-b)', () => {
+  it('계절 턴 세이브의 달 단위 쿨다운은 턴 단위로, 1년차 세이브는 그대로', () => {
+    const y2 = toFirstSeason();
+    const v6 = structuredClone(y2) as unknown as Record<string, unknown>;
+    v6['saveVersion'] = 6;
+    // R1-a에서는 쿨다운이 달이었다: 지금 달 + 4 → 남은 4달 = 2철
+    v6['cooldowns'] = { season_forest_hunt: y2.month + 4, gone: y2.month - 1 };
+    const file = JSON.stringify({ format: SAVE_FORMAT, generation: 'monthly', saveVersion: 6, chapterId: 'ch1', savedAt: null, state: v6 });
+    const r = deserialize(file);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.cooldowns).toEqual({ season_forest_hunt: y2.turn + 2 });
+    const y1 = springGame('mig7');
+    const v6a = { ...(structuredClone(y1) as unknown as Record<string, unknown>), saveVersion: 6, cooldowns: { x: 5 } };
+    const r1 = deserialize(JSON.stringify({ format: SAVE_FORMAT, generation: 'monthly', saveVersion: 6, chapterId: 'ch1', savedAt: null, state: v6a }));
+    expect(r1.ok && r1.state.cooldowns).toEqual({ x: 5 });
   });
 });
