@@ -11,6 +11,7 @@ import { ch1Narratives } from './narratives';
 import { ch1Policies } from './policies';
 import { ch1AutumnPreset, ch1SpringPreset } from './preset';
 import { ch1Theme } from './theme';
+import { ch1SeasonEvents, ch1SeasonNarratives, ch1SeasonPolicies } from './season';
 import {
   ch1Ailments,
   ch1Animals,
@@ -45,9 +46,9 @@ export const ch1: ChapterDefinition = {
   facilities: ch1Facilities,
   clues: ch1Clues,
   content: {
-    policies: ch1Policies,
-    events: ch1Events,
-    narratives: ch1Narratives,
+    policies: [...ch1Policies, ...ch1SeasonPolicies],
+    events: [...ch1Events, ...ch1SeasonEvents],
+    narratives: [...ch1Narratives, ...ch1SeasonNarratives],
     endings: [
       { id: 'ruin_extinct', kind: 'defeat', priority: 100, check: [{ type: 'population', max: 0 }] },
       { id: 'ruin_split', kind: 'defeat', priority: 90, check: [{ type: 'counter', id: 'low_cohesion_months', min: 3 }] },

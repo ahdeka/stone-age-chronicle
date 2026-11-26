@@ -226,6 +226,13 @@ export interface EraGoalDef {
 
 export interface ChapterBalance {
   monthLimit: number;
+  /** 턴 (DESIGN.md §B2): 이 년차부터 한 철 한 턴. 철 턴의 달 수는 같은 철이 이어지는 달 수(최대 maxSeasonMonths) */
+  turn: {
+    seasonFromYear: number;
+    maxSeasonMonths: number;
+    /** 계절 턴 하나에 열리는 결정 사건 수 (한가운데 인물 사건이 중심, §B5.1) */
+    eventsPerSeason: number;
+  };
   daysPerPhase: number;
   /** 기본 스탯. 모디파이어가 여기에 얹힌다 */
   stats: Record<string, number>;

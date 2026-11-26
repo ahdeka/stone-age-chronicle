@@ -28,6 +28,17 @@ describe('콘텐츠 검증기', () => {
     expect(m('preset.p.land.river.value', '{n:num}')[0]).toContain('우리말 수');
   });
 
+  it('턴 종류마다 버티기 방침, 인물 사건은 한가운데 (R1-a)', () => {
+    const def = tweakDef((d) => {
+      for (const p of d.content.policies) if (p.turn === 'season') delete p.fallback;
+      const ev = d.content.events.find((e) => e.scope === 'person')!;
+      ev.slots = ['early'];
+    });
+    const m = msgs(def);
+    expect(m.some((x) => x.startsWith('error:') && x.includes('버티기 방침(fallback)이 없는 턴 종류: season'))).toBe(true);
+    expect(m.some((x) => x.startsWith('error:') && x.includes('인물 사건은 한가운데'))).toBe(true);
+  });
+
   it('없는 id 참조와 없는 동물 상태를 잡는다', () => {
     const def = tweakDef((d) => {
       d.content.policies[0]!.appearsWhen.push({ type: 'animal', id: 'mammoth' }, { type: 'animal', id: 'reindeer', state: ['flying'] });

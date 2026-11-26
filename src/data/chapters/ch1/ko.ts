@@ -3,6 +3,7 @@
 // 조사는 {이름:은} 서식으로, 부족 이름은 {tribe}로만 넣는다.
 
 import { ch1ContentKo } from './ko.content';
+import { ch1SeasonKo } from './season';
 
 const names: Record<string, string> = {
   maru: '마루', bawi: '바위', seori: '서리', noeul: '노을', ikki: '이끼',
@@ -15,6 +16,7 @@ const names: Record<string, string> = {
 
 export const ch1Ko: Record<string, string> = {
   ...ch1ContentKo,
+  ...ch1SeasonKo,
   // 시작 화면의 추천 부족 이름 (첫 번째가 기본값)
   'tribe.suggest.grey_river': '잿빛강 사람들',
   'tribe.suggest.willow_brook': '버들내 사람들',

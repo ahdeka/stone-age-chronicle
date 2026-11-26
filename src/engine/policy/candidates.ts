@@ -57,7 +57,13 @@ export function policyHint(def: ChapterDefinition, state: GameState, p: PolicyTe
   return worst;
 }
 
+/** 이 전략이 지금 턴 종류(달 / 철)에 나오는가 */
+export function fitsTurn(state: GameState, p: PolicyTemplate): boolean {
+  return (p.turn ?? 'month') === state.work.turn.kind;
+}
+
 export function isAvailable(def: ChapterDefinition, state: GameState, p: PolicyTemplate): boolean {
+  if (!fitsTurn(state, p)) return false;
   if (p.once && state.usedOnce.includes(p.id)) return false;
   // 다 지은 시설을 또 짓지 않는다
   if (p.builds && (state.facilities[p.builds.facility] ?? 0) >= facilityMax(def, p.builds.facility)) return false;
@@ -87,6 +93,8 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
   const scored: { p: PolicyTemplate; bound: BoundPolicy; offered: boolean }[] = [];
   const savedPlace = state.work.probePlace;
   for (const p of def.content.policies) {
+    // 다른 턴 종류의 전략은 버티기 방침이라도 넣지 않는다
+    if (!fitsTurn(state, p)) continue;
     // 버티기 방침은 등장 조건이 안 맞아도 계산해 둔다: 식량 후보가 하나도 없을 때 넣는다
     const offered = isAvailable(def, state, p);
     if (!offered && !p.fallback) continue;

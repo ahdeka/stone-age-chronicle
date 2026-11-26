@@ -58,7 +58,7 @@ export function StatusBar({ def, state, mode, children }: Props) {
         </div>
         {children}
         <div className={s.stats}>
-          {mode === 'start' && <span className={s.basis}>{tr.t('ui.status.basis')}</span>}
+          {mode === 'start' && <span className={s.basis}>{tr.t(state.work.turn.kind === 'season' ? 'ui.status.basis.season' : 'ui.status.basis')}</span>}
           <span className={s.stat}>
             <b>{tr.t('ui.top.people', { n: v.population })}</b>
             {full && <span className={s.muted}>{tr.t('ui.top.bands', { a: countBand(def, state, 'adult'), e: countBand(def, state, 'elder'), c: countBand(def, state, 'child') })}</span>}
@@ -93,11 +93,12 @@ export function StatusBar({ def, state, mode, children }: Props) {
 export const STEPS = ['policy', 'early', 'mid', 'late', 'settlement'] as const;
 export type StepId = (typeof STEPS)[number];
 
-export function StepTrail({ now }: { now: StepId }) {
+/** season: 계절 턴의 단계 이름 (초입·한가운데·끝자락) */
+export function StepTrail({ now, season = false }: { now: StepId; season?: boolean }) {
   const tr = useT();
   const at = STEPS.indexOf(now);
   return (
-    <ol className={s.steps} aria-label={tr.t('ui.steps')}>
+    <ol className={s.steps} aria-label={tr.t(season ? 'ui.steps.season' : 'ui.steps')}>
       {STEPS.map((st, i) => (
         <li key={st} className={s.stepItem}>
           {i > 0 && (
@@ -106,7 +107,7 @@ export function StepTrail({ now }: { now: StepId }) {
             </span>
           )}
           <span className={`${s.step} ${i < at ? s.done : ''} ${i === at ? s.now : ''}`} aria-current={i === at ? 'step' : undefined}>
-            {tr.t(`ui.step.${st}`)}
+            {tr.t(season ? `ui.stage.${st}` : `ui.step.${st}`)}
             {i < at && ' ✓'}
           </span>
         </li>

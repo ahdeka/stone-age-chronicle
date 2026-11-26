@@ -307,7 +307,12 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     if (p.crew && !hasCarry && JSON.stringify(p.steps).includes('"haul":true')) warn(w, '짐을 만들지만 운반 단계가 없다');
     if (p.crew && JSON.stringify(p.steps).includes('"type":"catch"') && !hasCarry) warn(w, '사냥감을 잡지만 운반 단계가 없다');
   }
-  if (!def.content.policies.some((p) => p.fallback)) err('policies', '버티기 방침(fallback)이 하나도 없다');
+  // 턴 종류(달 / 철)마다 식량 버티기가 있어야 그 턴의 식량 칸이 비지 않는다 (DESIGN.md §B2)
+  const turnKinds = new Set(def.content.policies.map((p) => p.turn ?? 'month'));
+  turnKinds.add('month');
+  for (const kind of turnKinds) {
+    if (!def.content.policies.some((p) => p.fallback && (p.turn ?? 'month') === kind)) err('policies', `버티기 방침(fallback)이 없는 턴 종류: ${kind}`);
+  }
 
   // ── 사건 ──
   const checkEvent = (ev: EventDef) => {
@@ -350,6 +355,8 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     }
     if (ev.scope === 'policy' && !pooledEvents.has(ev.id)) warn(w, '어느 방침의 사건 창에도 들어 있지 않다 (도달 불가)');
     if (ev.scope === 'scheduled' && !scheduledEvents.has(ev.id)) warn(w, '어디서도 예약하지 않는다 (도달 불가)');
+    if (ev.scope === 'person' && !ev.slots.includes('mid')) err(w, '인물 사건은 한가운데(mid)에 열린다 (DESIGN.md §B5.1)');
+    if (ev.scope === 'person' && !def.content.policies.some((p) => p.turn === 'season')) warn(w, '계절 전략이 없어 인물 사건 창이 열리지 않는다 (도달 불가)');
   };
   // 사건 검사 전에 모든 방침·사건의 예약과 풀을 모아 둔다 (위에서 방침은 끝남; 사건 안의 예약을 먼저 훑는다)
   for (const ev of def.content.events) for (const o of ev.options) effects(o.effects, `event.${ev.id}.${o.id}`);

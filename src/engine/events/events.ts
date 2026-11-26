@@ -101,3 +101,8 @@ export function markUsed(state: GameState, ev: EventDef): void {
   if (ev.cooldown > 0) state.cooldowns[ev.id] = state.month + ev.cooldown;
   if (ev.once && !state.usedOnce.includes(ev.id)) state.usedOnce.push(ev.id);
 }
+
+/** 계절 턴 한가운데의 인물 사건 (scope 'person', DESIGN.md §B5.1) */
+export function personEventIds(def: ChapterDefinition): Id[] {
+  return def.content.events.filter((e) => e.scope === 'person').map((e) => e.id);
+}

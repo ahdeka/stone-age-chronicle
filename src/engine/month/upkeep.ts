@@ -142,6 +142,8 @@ export function chores(ctx: RunCtx): void {
   state.work.vars['wood'] = Math.round(h.wood);
   state.work.vars['gathered'] = Math.round(food);
   state.work.vars['villagers'] = villageWorkers(def, state).length;
+  // 계절 턴은 단계(달)마다 마을 서술 한 번 (첫 순에만)
+  if (state.work.turn.kind === 'season' && state.work.phasesDone > 0) return;
   if (state.work.vars['villagers'] === 0) push(state, { key: 'line.village.empty', group: 'village' });
   else applyNarrative({ ...ctx, group: 'village', source: 'village' }, def.hooks.villageNarrative);
 }
@@ -173,6 +175,7 @@ export function consume(ctx: RunCtx): void {
   }
   state.hungerStage = stage;
   state.work.maxHunger = Math.max(state.work.maxHunger, stage);
+  state.work.stageHunger = Math.max(state.work.stageHunger ?? 0, stage);
   for (const p of people) {
     if (stage === 0) p.hungerDays = Math.max(0, p.hungerDays - r.recoverPerPhase);
     else p.hungerDays += d * (1 - ratio);

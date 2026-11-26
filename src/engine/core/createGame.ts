@@ -4,7 +4,7 @@ import type { ChapterDefinition, GameState, Person, PlaceState } from '../types'
 import { byId, monthDef } from './lookup';
 import { seedToState, nextInt } from '../rng/rng';
 import { SAVE_VERSION } from '../save/version';
-import { freshWork, startMonth } from '../month/month';
+import { freshWork, startTurn } from '../month/month';
 import { addLot } from '../stores/food';
 import { population } from '../people/people';
 import { EMPTY_START } from '../display';
@@ -67,6 +67,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     rng,
     tribeName: cleanTribeName(opts.tribeName),
     month: 0,
+    turn: 0,
     startMonthIndex: preset.startMonthIndex,
     step: 'policy',
     campPlace: preset.campPlace,
@@ -81,6 +82,8 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     knowledge: { has: [...preset.knowledge], progress: {} },
     facilities: {},
     projects: {},
+    tech: {},
+    arcs: {},
     clues: [],
     caches: [],
     scheduled: [],
@@ -95,7 +98,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     chronicle: [],
     seq: 0,
   };
-  startMonth(def, state);
+  startTurn(def, state);
   // 연대기의 첫 문장 (기록자 시점)
   state.chronicle.push({ month: 1, monthId: monthDef(def, state).id, key: preset.presentation.chronicleOpening, params: { pop: population(state) } });
   return state;

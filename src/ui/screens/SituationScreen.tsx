@@ -35,19 +35,19 @@ export function SituationScreen({ def, state, send }: Props) {
   const sched = useMemo(() => typeSchedule(news, { startAt: 700 * mul, perChar: 32 * mul, gap: 500 * mul }), [news, mul]);
   // 소식 타이핑은 소식 글(바로 위의 머리글로 잰다)이 화면에 보일 때 시작한다
   const newsRef = useRef<HTMLHeadingElement>(null);
-  const newsSeen = useInView(newsRef, state.month);
-  const clock = useClock(sched.end, `brief-${state.month}`, { hold: !newsSeen });
+  const newsSeen = useInView(newsRef, state.turn);
+  const clock = useClock(sched.end, `brief-${state.turn}`, { hold: !newsSeen });
   const typed = typedLines(news, sched, clock.elapsed, 32 * mul);
 
   const model = decisionModel(tr, def, state);
   const [open, setOpen] = useState(false);
   const [autoDone, setAutoDone] = useState<number | null>(null);
   useEffect(() => {
-    if (clock.done && settings.autoOpenPlan && autoDone !== state.month && model) {
+    if (clock.done && settings.autoOpenPlan && autoDone !== state.turn && model) {
       setOpen(true);
-      setAutoDone(state.month);
+      setAutoDone(state.turn);
     }
-  }, [clock.done, settings.autoOpenPlan, autoDone, state.month, model]);
+  }, [clock.done, settings.autoOpenPlan, autoDone, state.turn, model]);
 
   return (
     <div className={v.page}>

@@ -83,6 +83,9 @@ export interface PolicyTemplate {
   id: Id;
   /** 전략 칸 */
   slot: PolicySlot;
+  /** 어느 턴에 나오는 전략인가 (DESIGN.md §B2). 기본 'month'(1년차). 'season' 전략의 단계(early/mid/late)는
+   *  초입·한가운데·끝자락의 달이고, 단계마다 그 달 첫 순에 한 번 실행한다 */
+  turn?: 'month' | 'season';
   category: Id;
   appearsWhen: Condition[];
   relevance?: { when: Condition[]; add: number }[];
@@ -124,8 +127,9 @@ export type EventSlot = Phase | 'briefing';
 export interface EventDef {
   id: Id;
   /** policy: 방침의 eventWindow pool로만 / village: 어느 방침이든 마을 소식으로 / scheduled: 예약으로만
-   *  / briefing: 월초에 조건이 맞으면 나온다 (예약 사건이 없을 때. 예: 애도) */
-  scope: 'policy' | 'village' | 'scheduled' | 'briefing';
+   *  / briefing: 월초에 조건이 맞으면 나온다 (예약 사건이 없을 때. 예: 애도)
+   *  / person: 계절 턴 한가운데의 인물 사건 창 (DESIGN.md §B5.1. 고르는 순서는 R3) */
+  scope: 'policy' | 'village' | 'scheduled' | 'briefing' | 'person';
   slots: EventSlot[];
   when: Condition[];
   weight: number;

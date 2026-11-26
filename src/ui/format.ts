@@ -4,9 +4,25 @@ import { calendarDate, type ChapterDefinition, type GameState, type Label, type 
 import type { Translator } from '../i18n';
 
 /** 화면 날짜 "1년차 · 봄 · 3월" (CLAUDE.md "시간") */
-export function dateText(tr: Translator, def: ChapterDefinition, state: GameState, month = state.month): string {
-  const d = calendarDate(def, state, month);
+export function dateText(tr: Translator, def: ChapterDefinition, state: GameState, month?: number): string {
+  // 계절 턴의 지금 날짜는 철까지만: "2년차 · 봄" (DESIGN.md §B2.3)
+  if (month === undefined && state.work.turn.kind === 'season') {
+    const d = calendarDate(def, state, state.work.turn.firstMonth);
+    return tr.t('ui.date.season', { year: d.year, season: tr.t(`season.${d.season}`) });
+  }
+  const d = calendarDate(def, state, month ?? state.month);
   return tr.t('ui.date', { year: d.year, season: tr.t(`season.${d.season}`), num: d.number });
+}
+
+/** 진행 단계 이름: 1년차는 상순·중순·하순, 계절 턴은 초입·한가운데·끝자락 (StepTrail, 이달의 결과의 회고) */
+export function stepLabel(tr: Translator, state: GameState, step: string): string {
+  return tr.t(state.work.turn.kind === 'season' ? `ui.stage.${step}` : `ui.step.${step}`);
+}
+
+/** 진행 화면의 순 소제목: "상순 · 1~10일" / 계절 턴 "초입 · 3월" */
+export function phaseHead(tr: Translator, def: ChapterDefinition, state: GameState, slot: string, month?: number): string {
+  if (month !== undefined) return tr.t(`ui.stage.${slot}.month`, { num: calendarDate(def, state, month).number });
+  return tr.t(`ui.phase.${slot}.days`);
 }
 
 /** 연대기 같은 좁은 자리의 날짜 "1년차 3월" */

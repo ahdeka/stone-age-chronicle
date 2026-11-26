@@ -26,7 +26,7 @@ function must(err: string | undefined): void {
   if (err) throw new Error(`headless: ${err}`);
 }
 
-/** 이번 달을 정산까지 진행한다 (제자리 변경) */
+/** 이번 턴(달 또는 철)을 정산까지 진행한다 (제자리 변경) */
 export function playMonth(def: ChapterDefinition, s: GameState, strat: Strategy): void {
   for (let guard = 0; guard < 50; guard++) {
     if (s.step === 'settlement' || s.step === 'ended') return;
@@ -41,7 +41,7 @@ export function playMonth(def: ChapterDefinition, s: GameState, strat: Strategy)
   throw new Error('headless: month did not finish');
 }
 
-/** n달을 진행한다 (제자리 변경). 정산 상태에서 시작해도 된다 */
+/** n턴을 진행한다 (1년차는 달, 2년차부터 철. 제자리 변경). 정산 상태에서 시작해도 된다 */
 export function playMonths(def: ChapterDefinition, s: GameState, strat: Strategy, n: number): void {
   for (let i = 0; i < n && s.step !== 'ended'; i++) {
     if (s.step === 'settlement') must(applyCommand(def, s, { type: 'nextMonth' }));
@@ -70,3 +70,8 @@ export const firstChoice: Strategy = {
   },
   pickOption: (_def, _s, _d, opts) => opts[0]!,
 };
+
+/** 턴 하나를 정산까지 (달 턴이면 한 달, 계절 턴이면 한 철). playMonth와 같다 */
+export const playTurn = playMonth;
+/** n턴을 진행한다 (제자리 변경). 정산 상태에서 시작해도 된다 */
+export const playTurns = playMonths;

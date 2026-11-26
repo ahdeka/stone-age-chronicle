@@ -83,6 +83,23 @@ export const migrations: Record<number, Migration> = {
       },
     };
   },
+  /** v5 → v6: 턴. v5 세이브는 모두 1년차(달 턴)라 턴 번호 = 달. 칸·줄기 상태는 비워 둔다(칸은 장 정의에서 계산한다).
+   *  짓다 만 공사(projects)는 그대로 둔다 — 칸 진척으로 바꾸는 것은 발전 나무(R1-b)가 맡는다 */
+  5: (st) => {
+    const month = typeof st['month'] === 'number' ? st['month'] : 1;
+    const work = (st['work'] ?? {}) as Record<string, unknown>;
+    const history = Array.isArray(st['history'])
+      ? (st['history'] as Record<string, unknown>[]).map((h) => ({ turn: h['month'], kind: 'month', firstMonth: h['month'], ...h }))
+      : [];
+    return {
+      tech: {},
+      arcs: {},
+      ...st,
+      turn: month,
+      history,
+      work: { turn: { kind: 'month', months: 1, stage: 0, firstMonth: month }, ...work },
+    };
+  },
 };
 
 export function serialize(state: GameState, savedAt: string | null = null): string {

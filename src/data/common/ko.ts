@@ -42,6 +42,21 @@ export const commonKo: Record<string, string> = {
   'ui.scene': '장면: {layers}',
   'ui.date': '{year}년차 · {season} · {num}월',
   'ui.date.short': '{year}년차 {num}월',
+  // 계절 턴 (2년차부터, DESIGN.md §B2.3)
+  'ui.date.season': '{year}년차 · {season}',
+  'ui.stage.policy': '전략',
+  'ui.stage.early': '초입',
+  'ui.stage.mid': '한가운데',
+  'ui.stage.late': '끝자락',
+  'ui.stage.settlement': '이 철의 결과',
+  'ui.stage.early.month': '초입 · {num}월',
+  'ui.stage.mid.month': '한가운데 · {num}월',
+  'ui.stage.late.month': '끝자락 · {num}월',
+  'ui.steps.season': '이번 철 진행 단계',
+  'ui.result.title.season': '이 철의 결과',
+  'ui.result.monthEnd.season': '이 철 끝',
+  'ui.next.season': '다음 철로',
+  'ui.status.basis.season': '철 초 기준',
 
   // ── 위험 단서와 결과 등급 ──
   'hint.sure': '거의 확실하다',

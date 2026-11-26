@@ -8,7 +8,8 @@
 //
 // "계속" 버튼은 엔진 명령이 아니다. 화면이 work.reports를 하나씩 보여 줄 뿐이다.
 
-import type { ChapterDefinition, EventSlot, FoodLot, GameState, Id, LedgerLine, LineGroup, MonthWork, Phase, PhaseReport, PlanEntry, PolicyStep, SceneSpec } from '../types';
+import type { ChapterDefinition, EventSlot, FoodLot, GameState, Id, LedgerLine, Line, LineGroup, MonthWork, Phase, PhaseReport, PlanEntry, PolicyStep, SceneSpec, TurnInfo } from '../types';
+import { isSeasonTurn, turnAt } from './turn';
 import { PHASES } from '../types';
 import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
 import {
@@ -27,7 +28,7 @@ import { previewPlan } from '../policy/plan';
 import { findEvent, findPlace, findPolicy, monthDef, nextUid } from '../core/lookup';
 import { buildAdvice } from '../advice/advice';
 import { buildBriefing, resolveSceneSpec } from './briefing';
-import { briefingEventIds, markUsed, optionStatuses, pickEvent, villageEventIds } from '../events/events';
+import { briefingEventIds, markUsed, optionStatuses, personEventIds, pickEvent, villageEventIds } from '../events/events';
 import { runActivity } from '../outcome/activity';
 import { band, laborUnits, living, population } from '../people/people';
 import { generateCandidates } from '../policy/candidates';
@@ -39,8 +40,9 @@ import { upkeep } from './upkeep';
 import { monthStartOf } from '../display';
 import { checkEndings } from './endings';
 
-export function freshWork(weather: [Id, Id, Id], start: MonthWork['start']): MonthWork {
+export function freshWork(weather: [Id, Id, Id], start: MonthWork['start'], turn: TurnInfo = { kind: 'month', months: 1, stage: 0, firstMonth: 0 }): MonthWork {
   return {
+    turn,
     candidates: [],
     plan: [],
     planIndex: 0,
@@ -108,32 +110,50 @@ export function runCtx(def: ChapterDefinition, state: GameState, extraActors: Re
 
 // ── 월초 ──
 
-export function startMonth(def: ChapterDefinition, state: GameState): void {
-  const prevBands = new Map(living(state).map((p) => [p.id, band(def, state, p)]));
-  state.month += 1;
-  state.work = freshWork(['', '', ''], monthStartOf(def, state));
+/** 달이 바뀔 때 세계가 움직인다: 날씨, 임시 효과, 짐승, 땅의 회복, 묻은 것 */
+function worldMonth(def: ChapterDefinition, state: GameState): void {
   state.work.weather = rollWeather(def, state);
   expireTemporary(state);
   updateAnimals(def, state);
   recoverPlaces(def, state);
   updateCaches(def, state);
+}
+
+const bandsOf = (def: ChapterDefinition, state: GameState) => new Map(living(state).map((p) => [p.id, band(def, state, p)]));
+
+/** 나이 구간이 바뀐 사람의 줄 ("이제 어른이 되었다") */
+function grewLines(def: ChapterDefinition, state: GameState, prev: Map<Id, string>): Line[] {
+  const out: Line[] = [];
+  for (const p of living(state)) {
+    const b = band(def, state, p);
+    if (prev.get(p.id) !== b) out.push({ key: `line.grew.${b}`, params: { name: p.name }, group: 'people' });
+  }
+  return out;
+}
+
+/** 새 턴을 연다: 첫 달의 월초 보고, 전략 후보, 조언, 월초 사건 (달 턴과 계절 턴 공통) */
+export function startTurn(def: ChapterDefinition, state: GameState): void {
+  const prevBands = bandsOf(def, state);
+  const turn = turnAt(def, state, state.month + 1);
+  state.month += 1;
+  state.turn += 1;
+  state.work = freshWork(['', '', ''], monthStartOf(def, state), turn);
+  worldMonth(def, state);
 
   const brief = buildBriefing(def, state);
   state.work.brief = brief;
   openReport(state, 'briefing', brief.scene, { lines: [brief.headline, ...brief.news] });
-  for (const p of living(state)) {
-    const b = band(def, state, p);
-    if (prevBands.get(p.id) !== b) currentReport(state).lines.push({ key: `line.grew.${b}`, params: { name: p.name }, group: 'people' });
-  }
+  currentReport(state).lines.push(...grewLines(def, state, prevBands));
   // 거처와 겨울의 기록 (시대 목표 측정용)
   state.work.candidates = generateCandidates(def, state);
   state.work.advice = buildAdvice(def, state);
   state.step = 'policy';
 
-  // 기억: 기한이 된 예약 사건
+  // 기억: 기한이 된 예약 사건. 계절 턴은 지난 철의 둘째·셋째 달에 기한이 끝난 것도 본다 (그 달에는 월초 보고가 없었다)
+  const lookBehind = turn.kind === 'season' ? def.balance.turn.maxSeasonMonths - 1 : 0;
   const due = state.scheduled.filter((x) => x.from <= state.month);
   for (const x of due) {
-    if (x.to < state.month) {
+    if (x.to < state.month - lookBehind) {
       state.scheduled = state.scheduled.filter((y) => y.uid !== x.uid);
       continue;
     }
@@ -182,10 +202,16 @@ export function choosePlan(def: ChapterDefinition, state: GameState, uids: reado
 }
 
 /** 진행 장면: 주 전략의 장면과 곳 */
-function resolveScene(def: ChapterDefinition, state: GameState, phase: Phase): SceneSpec {
+function resolveScene(def: ChapterDefinition, state: GameState, weather: Id): SceneSpec {
   const main = state.work.plan[0];
   const p = main ? findPolicy(def, main.bound.policyId) : undefined;
-  return resolveSceneSpec(def, state, p?.scene ?? def.scenes.briefing, main?.place ?? state.campPlace, state.work.weather[PHASES.indexOf(phase)] ?? '');
+  return resolveSceneSpec(def, state, p?.scene ?? def.scenes.briefing, main?.place ?? state.campPlace, weather);
+}
+
+/** 이번 턴에 더 열 수 있는 결정 사건 수가 남았는가 */
+function eventRoom(def: ChapterDefinition, state: GameState): boolean {
+  const max = isSeasonTurn(state) ? def.balance.turn.eventsPerSeason : def.balance.events.maxPerMonth;
+  return state.work.events.length < max;
 }
 
 /** 단계 하나를 실행한다. 결정 지점이면 true (멈춤) */
@@ -200,7 +226,7 @@ function execStep(def: ChapterDefinition, state: GameState, step: PolicyStep, ph
       runActivity(ctx, step.activity);
       return false;
     case 'eventWindow': {
-      if (state.work.events.length >= def.balance.events.maxPerMonth) return false;
+      if (!eventRoom(def, state)) return false;
       // 한 순에 사건 하나: 식량 칸이 먼저 굴리고, 안 나왔으면 발전 칸
       if (state.work.lastEventPhase === state.work.phasesDone && def.balance.events.maxPerPhase <= 1) return false;
       if (!chance(state.rng, step.chance)) return false;
@@ -248,6 +274,11 @@ export function carry(def: ChapterDefinition, state: GameState): boolean {
     setHaul(state, []);
     return false;
   }
+  // 계절 턴: 남은 고기는 묻지 않고 끝자락에서 처리한다 (DESIGN.md §B5.1. 1년차의 처리 팝업은 1년차 전용)
+  if (isSeasonTurn(state)) {
+    resolveLeftover(def, state, AUTO_LEFTOVER.find((o) => leftoverAvailable(def, state, o)) ?? 'abandon', true);
+    return false;
+  }
   w.decision = { uid: nextUid(state, 'd'), kind: 'leftover', kg: left };
   pushLine(ctx, 'line.carry.left', {});
   state.step = 'decision';
@@ -262,6 +293,8 @@ function setHaul(state: GameState, lots: FoodLot[]): void {
 }
 
 export const LEFTOVER_OPTIONS = ['porters', 'cache', 'dry', 'abandon'] as const;
+/** 계절 턴에서 남은 고기를 저절로 처리하는 순서: 말린다 → 짐꾼을 부른다 → 두고 온다 (묻기는 고르는 사람이 있을 때만) */
+const AUTO_LEFTOVER = ['dry', 'porters', 'abandon'] as const;
 
 /** 짐꾼으로 부를 수 있는 마을 사람 수 (원정대 밖의 일할 수 있는 사람) */
 function porterCount(def: ChapterDefinition, state: GameState): number {
@@ -279,7 +312,8 @@ export function leftoverAvailable(def: ChapterDefinition, state: GameState, id: 
   return (LEFTOVER_OPTIONS as readonly string[]).includes(id);
 }
 
-function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: string): void {
+/** auto: 계절 턴의 저절로 처리 (고른 사람이 없으니 두고 와도 결속이 떨어지지 않는다) */
+function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: string, auto = false): void {
   const ctx = runCtx(def, state);
   const b = def.balance.carry;
   const haul = currentHaul(state);
@@ -313,7 +347,7 @@ function resolveLeftover(def: ChapterDefinition, state: GameState, optionId: str
     ledger(state, 'food', dried, 'leftover.dry');
     pushLine(ctx, 'line.leftover.dry', { kg: Math.round(dried) });
   } else {
-    addCohesion(state, def, b.abandonCohesion, 'leftover.abandon');
+    if (!auto) addCohesion(state, def, b.abandonCohesion, 'leftover.abandon');
     pushLine(ctx, 'line.leftover.abandon', { kg: Math.round(kg) });
   }
   setHaul(state, []);
@@ -360,35 +394,123 @@ function staysHome(def: ChapterDefinition, e: PlanEntry): boolean {
   return !p.crew || !!p.crew.atHome;
 }
 
+/** 전략마다 이 단계의 걸음을 실행한다 (식량 또는 큰 일 → 발전). 결정 지점이면 true (멈춤, 다시 부르면 이어서) */
+function runPlanSteps(def: ChapterDefinition, state: GameState, phase: Phase): boolean {
+  const w = state.work;
+  while (w.planIndex < w.plan.length) {
+    w.active = w.planIndex;
+    const steps = findPolicy(def, w.plan[w.planIndex]!.bound.policyId).steps[phase] ?? [];
+    while (w.stepIndex < steps.length) {
+      const step = steps[w.stepIndex]!;
+      w.stepIndex += 1;
+      if (!allTrue(def, state, step.when, runCtx(def, state).actors)) continue;
+      if (execStep(def, state, step, phase)) return true;
+    }
+    w.planIndex += 1;
+    w.stepIndex = 0;
+  }
+  delete w.active;
+  return false;
+}
+
+/** 진행 장면이 벌어지는 곳: 원정이면 원정지, 아니면 거처 */
+function reportPlace(def: ChapterDefinition, state: GameState): Id {
+  const main = state.work.plan[0];
+  return main && !staysHome(def, main) ? (main.place ?? state.campPlace) : state.campPlace;
+}
+
+/** 하순(계절 턴은 끝자락의 마지막 순): 운반하지 않은 짐은 그대로 들고 온다 (원정이 아닌 전략, 전략 밖의 짐) */
+function bringHomeAll(def: ChapterDefinition, state: GameState): void {
+  const w = state.work;
+  for (const e of w.plan) {
+    if (!staysHome(def, e) || e.haul.length === 0) continue;
+    bringHome(state, e.haul, `policy.${e.bound.policyId}`);
+    e.haul = [];
+  }
+  if (w.haul.length > 0) {
+    bringHome(state, w.haul, runCtx(def, state).source);
+    w.haul = [];
+  }
+}
+
 /** 다음 결정 지점이나 정산까지 진행한다 */
 export function run(def: ChapterDefinition, state: GameState): void {
   state.step = 'policy';
+  if (isSeasonTurn(state)) runSeason(def, state);
+  else runMonth(def, state);
+}
+
+/** 계절 턴 (DESIGN.md §B2.3): 단계 = 달. 단계마다 그 달 첫 순에 전략의 걸음을 실행하고 순 셋의 살림을 돈다.
+ *  둘째·셋째 달의 월초 처리(날씨, 짐승, 나이)는 보고 화면 없이 조용히 돈다. 인물 사건 창은 한가운데에만 */
+function runSeason(def: ChapterDefinition, state: GameState): void {
   const w = state.work;
-  const main = w.plan[0];
+  const t = w.turn;
+  while (t.stage < t.months) {
+    const phase = PHASES[t.stage] ?? 'late';
+    const last = t.stage === t.months - 1;
+    if (w.reports.length < 2 + t.stage) {
+      // 둘째·셋째 달: 조용한 월초
+      const grew = t.stage > 0 ? silentMonth(def, state) : [];
+      openReport(state, phase, resolveScene(def, state, w.weather[0] ?? ''), { weather: w.weather[0] ?? '', place: reportPlace(def, state), month: state.month });
+      currentReport(state).lines.push(...grew);
+      w.planIndex = 0;
+      w.stepIndex = 0;
+      w.stageSteps = false;
+      w.stageHunger = 0;
+    }
+    if (!w.stageSteps) {
+      if (runPlanSteps(def, state, phase)) return;
+      w.stageSteps = true;
+    }
+    // 한가운데: 인물 사건 창 (철마다 하나. 고르는 순서는 R3, §B5.1)
+    if (phase === 'mid' && !w.villageChecked) {
+      w.villageChecked = true;
+      if (eventRoom(def, state)) {
+        const picked = pickEvent(def, state, 'mid', personEventIds(def), runCtx(def, state).actors as Record<string, Id>);
+        if (picked) {
+          openEvent(def, state, picked.event.id, 'mid', picked.actors);
+          return;
+        }
+      }
+    }
+    while (w.phasesDone < 3) {
+      if (last && w.phasesDone === 2) bringHomeAll(def, state);
+      upkeep(runCtx(def, state));
+      w.phasesDone += 1;
+      if (population(state) === 0) break;
+    }
+    closeReport(state);
+    monthEnd(def, state, w.stageHunger ?? 0);
+    if (population(state) === 0) break;
+    if (last) break;
+    t.stage += 1;
+    w.phasesDone = 0;
+  }
+  settle(def, state);
+}
+
+/** 계절 턴의 둘째·셋째 달을 연다 (보고 화면 없음). 나이 구간이 바뀐 사람의 줄을 돌려준다 */
+function silentMonth(def: ChapterDefinition, state: GameState): Line[] {
+  const prev = bandsOf(def, state);
+  state.month += 1;
+  worldMonth(def, state);
+  return grewLines(def, state, prev);
+}
+
+/** 달 턴 (1년차): 상순 → 중순 → 하순 */
+function runMonth(def: ChapterDefinition, state: GameState): void {
+  const w = state.work;
   while (w.phasesDone < 3) {
     const phase = PHASES[w.phasesDone]!;
     if (w.reports.length < 2 + w.phasesDone) {
-      openReport(state, phase, resolveScene(def, state, phase), {
+      openReport(state, phase, resolveScene(def, state, w.weather[w.phasesDone] ?? ''), {
         weather: w.weather[w.phasesDone] ?? '',
-        place: main && !staysHome(def, main) ? (main.place ?? state.campPlace) : state.campPlace,
+        place: reportPlace(def, state),
       });
       w.planIndex = 0;
       w.stepIndex = 0;
     }
-    // 전략마다 이 순의 단계 (식량 또는 큰 일 → 발전)
-    while (w.planIndex < w.plan.length) {
-      w.active = w.planIndex;
-      const steps = findPolicy(def, w.plan[w.planIndex]!.bound.policyId).steps[phase] ?? [];
-      while (w.stepIndex < steps.length) {
-        const step = steps[w.stepIndex]!;
-        w.stepIndex += 1;
-        if (!allTrue(def, state, step.when, runCtx(def, state).actors)) continue;
-        if (execStep(def, state, step, phase)) return;
-      }
-      w.planIndex += 1;
-      w.stepIndex = 0;
-    }
-    delete w.active;
+    if (runPlanSteps(def, state, phase)) return;
     // 마을 소식 (방침과 무관한 사건) — 중순에 한 번 판정
     if (phase === 'mid' && !w.villageChecked) {
       w.villageChecked = true;
@@ -401,23 +523,13 @@ export function run(def: ChapterDefinition, state: GameState): void {
         }
       }
     }
-    // 하순 끝: 운반하지 않은 짐은 그대로 들고 온다 (원정이 아닌 전략, 전략 밖의 짐)
-    if (phase === 'late') {
-      for (const e of w.plan) {
-        if (!staysHome(def, e) || e.haul.length === 0) continue;
-        bringHome(state, e.haul, `policy.${e.bound.policyId}`);
-        e.haul = [];
-      }
-      if (w.haul.length > 0) {
-        bringHome(state, w.haul, runCtx(def, state).source);
-        w.haul = [];
-      }
-    }
+    if (phase === 'late') bringHomeAll(def, state);
     upkeep(runCtx(def, state));
     closeReport(state);
     w.phasesDone += 1;
     if (population(state) === 0) break;
   }
+  monthEnd(def, state, w.maxHunger);
   settle(def, state);
 }
 
@@ -427,6 +539,18 @@ function bringHome(state: GameState, lots: FoodLot[], source: string): void {
 }
 
 // ── 정산 ──
+
+/** 달마다의 기록 (계절 턴은 단계마다): 거처에서 지낸 달, 굶주림 없이 지낸 겨울 달 (시대 목표 측정용).
+ *  maxHunger는 그 달에 겪은 가장 깊은 굶주림 단계 */
+function monthEnd(def: ChapterDefinition, state: GameState, maxHunger: number): void {
+  const shelterKey = `shelter_months.${state.shelter.kind}`;
+  state.counters[shelterKey] = (state.counters[shelterKey] ?? 0) + 1;
+  if (monthDef(def, state).season === 'winter') {
+    const streak = maxHunger === 0 ? (state.counters['winter_fed_streak'] ?? 0) + 1 : 0;
+    state.counters['winter_fed_streak'] = streak;
+    if (streak >= 3 && state.flags['winter_fed_full'] === undefined) state.flags['winter_fed_full'] = state.month;
+  } else state.counters['winter_fed_streak'] = 0;
+}
 
 function settle(def: ChapterDefinition, state: GameState): void {
   const w = state.work;
@@ -464,15 +588,6 @@ function settle(def: ChapterDefinition, state: GameState): void {
   const low = state.cohesion < def.balance.cohesion.lowThreshold;
   state.counters['low_cohesion_months'] = low ? (state.counters['low_cohesion_months'] ?? 0) + 1 : 0;
 
-  // 시대 목표 측정용 기록: 거처에서 지낸 달, 굶주림 없이 지낸 겨울 달
-  const shelterKey = `shelter_months.${state.shelter.kind}`;
-  state.counters[shelterKey] = (state.counters[shelterKey] ?? 0) + 1;
-  if (monthDef(def, state).season === 'winter') {
-    const streak = w.maxHunger === 0 ? (state.counters['winter_fed_streak'] ?? 0) + 1 : 0;
-    state.counters['winter_fed_streak'] = streak;
-    if (streak >= 3 && state.flags['winter_fed_full'] === undefined) state.flags['winter_fed_full'] = state.month;
-  } else state.counters['winter_fed_streak'] = 0;
-
   // 정산표: 이번 달 장부를 출처별로 합친다 (원정지의 짐은 빼고)
   report.rows = sumLedger(w.ledger.filter((l) => l.res !== 'haul'));
   report.savings = w.savings.map((x) => ({ ...x }));
@@ -491,10 +606,14 @@ function settle(def: ChapterDefinition, state: GameState): void {
   const entry = w.chronicle ?? (policy ? { key: 'chron.policy', importance: 0, params: { policy: { key: `policy.${policy.id}.name` } } } : undefined);
   if (entry) state.chronicle.push({ month: state.month, monthId: m.id, key: entry.key, ...(entry.params ? { params: entry.params } : {}) });
 
-  const quiet = !w.notable && w.events.length === 0 && w.deaths.length === 0 && w.tiers.every((t) => t === 'success' || t === 'triumph');
+  // 평온한 달 판정은 1년차만 (§B8: 계절 턴에는 인물 사건이 늘 있다)
+  const quiet = !isSeasonTurn(state) && !w.notable && w.events.length === 0 && w.deaths.length === 0 && w.tiers.every((t) => t === 'success' || t === 'triumph');
   state.history.push({
     month: state.month,
     monthId: m.id,
+    turn: state.turn,
+    kind: w.turn.kind,
+    firstMonth: w.turn.firstMonth,
     policyIds: policies.map((p) => p.id),
     reports: w.reports,
     ledger: w.ledger,
@@ -528,9 +647,10 @@ export function sumLedger(lines: readonly LedgerLine[]): LedgerLine[] {
   return out;
 }
 
+/** 정산을 다 봤다 → 다음 턴 (달 턴이면 다음 달, 계절 턴이면 다음 철) */
 export function nextMonth(def: ChapterDefinition, state: GameState): string | undefined {
   if (state.step !== 'settlement') return 'error.wrongStep';
-  startMonth(def, state);
+  startTurn(def, state);
   return undefined;
 }
 

@@ -138,6 +138,8 @@ export interface Alert {
 
 export interface PhaseReport {
   slot: EventSlot | 'settlement';
+  /** 계절 턴의 단계 보고만: 이 단계가 벌어진 달 (게임 달 번호). 화면 소제목 "초입 · 3월" */
+  month?: number;
   weather?: Id;
   /** 이 단계가 벌어진 곳 */
   place?: Id;
@@ -175,7 +177,27 @@ export type Decision =
   | { uid: Id; kind: 'event'; eventId: Id; slot: EventSlot; actors: Record<string, Id> }
   | { uid: Id; kind: 'leftover'; kg: number };
 
+/** 턴 종류 (DESIGN.md §B2): 1년차는 한 달 한 턴, 2년차부터 한 철 한 턴 */
+export type TurnKind = 'month' | 'season';
+
+/** 지금 턴. 달 턴은 단계 하나(그 달), 계절 턴은 단계 = 달 (초입 → 한가운데 → 끝자락) */
+export interface TurnInfo {
+  kind: TurnKind;
+  /** 이 턴의 달 수 (달 턴 1, 계절 턴 보통 3) */
+  months: number;
+  /** 지금 단계 (0부터). 계절 턴에서 단계마다 한 달이 지난다 */
+  stage: number;
+  /** 이 턴의 첫 달 (게임 달 번호) */
+  firstMonth: number;
+}
+
 export interface MonthWork {
+  /** 지금 턴 (세이브 v6) */
+  turn: TurnInfo;
+  /** 계절 턴: 지금 단계의 전략 단계를 다 실행했는가 */
+  stageSteps?: boolean;
+  /** 계절 턴: 지금 단계에서 가장 나빴던 굶주림 단계 (결속 계절 환산, 달별 기록) */
+  stageHunger?: number;
   /** 칸별 후보 (큰 일 → 식량 → 발전 순). 칸은 방침 정의의 slot으로 안다 */
   candidates: BoundPolicy[];
   /** 고른 전략: [식량, 발전?] 또는 [큰 일]. plan[0]이 주 전략 (장면, 연대기) */
@@ -211,7 +233,7 @@ export interface MonthWork {
   cohesionBy?: Record<string, number>;
   /** 직전 활동의 결과 맥락 ($caught, $meat 등) */
   vars: Record<string, number>;
-  /** 마을 사건 판정을 이번 달에 했는가 */
+  /** 마을 사건 판정을 이번 달에 했는가 (계절 턴: 한가운데 인물 사건 창을 열어 보았는가) */
   villageChecked: boolean;
   /** 월초 현황 (정산표의 시작 값, 진행 화면의 "월초 기준" 지표, 이달의 결과의 증감) */
   start: MonthStart;
@@ -238,8 +260,14 @@ export interface MonthStart {
 }
 
 export interface MonthReport {
+  /** 턴의 마지막 달 (달 턴이면 그 달) */
   month: number;
   monthId: Id;
+  /** 턴 번호와 종류 (세이브 v6) */
+  turn: number;
+  kind: TurnKind;
+  /** 턴의 첫 달 */
+  firstMonth: number;
   /** 고른 전략 id (plan 순서) */
   policyIds: Id[];
   reports: PhaseReport[];
@@ -256,6 +284,37 @@ export interface ChronicleEntry {
 
 export type Step = 'policy' | 'decision' | 'settlement' | 'ended';
 
+/** 발전 칸 상태: 잠김 / 열림 / 진행 중 / 켜짐 (DESIGN.md §B3.3) */
+export type CellStatus = 'locked' | 'open' | 'active' | 'done';
+
+export interface TechLogEntry {
+  /** work = 일손, gift = 사람·이웃의 선물, drift = 균형 규칙의 저절로 진행, winter = 저장분으로 버틴 겨울 */
+  kind: 'work' | 'gift' | 'drift' | 'winter';
+  by?: Id;
+  amount: number;
+  month: number;
+}
+
+export interface TechCellState {
+  status: CellStatus;
+  /** 철 단위 (0.5 = 절반) */
+  progress: number;
+  /** 사람·이웃이 채운 몫 (칸의 maxShare까지) */
+  gifted: number;
+  /** 마지막으로 진척이 생긴 달 → "이어 가던 칸" */
+  lastProgress?: number;
+  costPaid?: boolean;
+  doneMonth?: number;
+  log: TechLogEntry[];
+}
+
+export interface ArcState {
+  stage: Id;
+  since: number;
+  history: { stage: Id; option: Id; month: number }[];
+  ended?: boolean;
+}
+
 export interface GameState {
   saveVersion: number;
   chapterId: Id;
@@ -264,8 +323,10 @@ export interface GameState {
   rng: RngState;
   /** 플레이어가 정한 부족 이름. 빈 문자열이면 프리셋의 기본 이름(nameSuggestions[0])을 쓴다 */
   tribeName: string;
-  /** 1부터 증가 */
+  /** 1부터 증가 (실제 달. 계절 턴에서도 단계마다 한 달씩 오른다) */
   month: number;
+  /** 턴 번호, 1부터 (세이브 v6). 1년차는 달과 같이 오르고, 2년차부터 철마다 오른다 */
+  turn: number;
   startMonthIndex: number;
   step: Step;
   campPlace: Id;
@@ -284,6 +345,10 @@ export interface GameState {
   facilities: Record<Id, number>;
   /** 짓고 있는 공사: 시설 id → 지난 달 수 */
   projects: Record<Id, number>;
+  /** 발전 나무의 칸 상태 (DESIGN.md §B3.3, 세이브 v6). 없는 칸은 장 정의에서 계산한다 */
+  tech: Record<Id, TechCellState>;
+  /** 인물 이야기 줄기 (DESIGN.md §B5.2, 세이브 v6). R3에서 채운다 */
+  arcs: Record<Id, ArcState>;
   clues: { id: Id; until?: number }[];
   caches: Cache[];
   scheduled: Scheduled[];

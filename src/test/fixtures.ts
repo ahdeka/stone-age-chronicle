@@ -1,7 +1,7 @@
 // 테스트 공용 도구
 
 import { ch1 as realCh1 } from '../data/chapters/ch1/chapter';
-import { applyCommand, availableOptions, createGame, findPolicy, type ChapterDefinition, type Command, type GameState, type PolicyTemplate } from '../engine';
+import { applyCommand, availableOptions, createGame, findPolicy, firstChoice, playTurn, type ChapterDefinition, type Command, type GameState, type PolicyTemplate } from '../engine';
 
 export const ch1 = realCh1;
 
@@ -98,5 +98,31 @@ export function finishMonth(def: ChapterDefinition, s: GameState, prefer: string
     const id = prefer.find((p) => opts.includes(p)) ?? opts[0]!;
     cur = choose(def, cur, id);
   }
+  return cur;
+}
+
+/** 턴마다 식량·장작·결속을 넉넉히 채워 준다 (멸족·분열 없이 원하는 턴까지 가기 위한 시험용) */
+export function keepAlive(def: ChapterDefinition, s: GameState): void {
+  for (const debug of [
+    { op: 'setFood', kind: 'dried_meat', kg: 4000 },
+    { op: 'setFirewood', kg: 600 },
+    { op: 'setCohesion', value: 55 },
+  ] as const) {
+    const err = applyCommand(def, s, { type: 'debug', debug });
+    if (err) throw new Error(err);
+  }
+}
+
+/** 첫 계절 턴(2년차 봄)의 전략 고르기까지 진행한다. 1년차는 첫 번째 후보만 고른다 */
+export function toFirstSeason(def: ChapterDefinition = ch1, s: GameState = springGame('season', def)): GameState {
+  const cur = structuredClone(s);
+  for (let guard = 0; guard < 30 && cur.work.turn.kind !== 'season'; guard++) {
+    keepAlive(def, cur);
+    playTurn(def, cur, firstChoice);
+    if (cur.step === 'ended') throw new Error(`ended before season: ${cur.ending?.id}`);
+    applyCommand(def, cur, { type: 'nextMonth' });
+  }
+  if (cur.work.turn.kind !== 'season') throw new Error('no season turn');
+  keepAlive(def, cur);
   return cur;
 }

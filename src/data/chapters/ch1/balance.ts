@@ -13,6 +13,8 @@ export const ch1AgeBands: AgeBandDef[] = [
 export const ch1Balance: ChapterBalance = {
   ...commonBalance,
   monthLimit: 60,
+  /** 1년차는 한 달 한 턴, 2년차부터 한 철 한 턴 (DESIGN.md §B2) */
+  turn: { seasonFromYear: 2, maxSeasonMonths: 3, eventsPerSeason: 1 },
   stats: {
     'firewood.burnMul': 1,
     'yield.wood': 1,

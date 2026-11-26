@@ -25,12 +25,12 @@ function situationTime(s: GameState): boolean {
 
 export function GameView({ def, state, onChange, onQuit }: Props) {
   // 진행 화면에서 보고 있는 보고 번호. 불러온 직후에는 마지막 보고부터
-  const [view, setView] = useState<{ month: number; index: number } | null>(null);
+  const [view, setView] = useState<{ turn: number; index: number } | null>(null);
   const [showEnding, setShowEnding] = useState(false);
-  // 자동 진행 일시정지: 한 달 동안 유지하고 새 달에는 풀린다
-  const [pausedMonth, setPausedMonth] = useState<number | null>(null);
-  const paused = pausedMonth === state.month;
-  const setPaused = useCallback((p: boolean) => setPausedMonth(p ? state.month : null), [state.month]);
+  // 자동 진행 일시정지: 한 턴 동안 유지하고 새 턴에는 풀린다 (계절 턴은 턴 안에서 달이 바뀐다)
+  const [pausedTurn, setPausedTurn] = useState<number | null>(null);
+  const paused = pausedTurn === state.turn;
+  const setPaused = useCallback((p: boolean) => setPausedTurn(p ? state.turn : null), [state.turn]);
 
   const send = useCallback(
     (cmd: Command) => {
@@ -39,7 +39,7 @@ export function GameView({ def, state, onChange, onQuit }: Props) {
         console.warn(r.error);
         return;
       }
-      if (cmd.type === 'choosePlan') setView({ month: r.state.month, index: 1 });
+      if (cmd.type === 'choosePlan') setView({ turn: r.state.turn, index: 1 });
       if (cmd.type === 'nextMonth') setView(null);
       onChange(r.state);
     },
@@ -47,33 +47,33 @@ export function GameView({ def, state, onChange, onQuit }: Props) {
   );
 
   useEffect(() => {
-    if (view && view.month !== state.month) setView(null);
-  }, [state.month, view]);
+    if (view && view.turn !== state.turn) setView(null);
+  }, [state.turn, view]);
 
   let body;
   let key: string;
   if (showEnding && state.step === 'ended') {
-    key = screenKey('ending', state.month);
+    key = screenKey('ending', state.turn);
     body = <EndingScreen def={def} state={state} onQuit={onQuit} />;
   } else if (situationTime(state)) {
-    key = screenKey('situation', state.month);
+    key = screenKey('situation', state.turn);
     body = <SituationScreen def={def} state={state} send={send} />;
   }
   else {
     const last = state.work.reports.length - 1;
-    const index = view && view.month === state.month ? Math.min(view.index, last) : last;
+    const index = view && view.turn === state.turn ? Math.min(view.index, last) : last;
     const finish = () => {
       if (state.step === 'settlement') send({ type: 'nextMonth' });
       else if (state.step === 'ended') setShowEnding(true);
     };
     const onNext = () => {
-      if (index < last) setView({ month: state.month, index: index + 1 });
+      if (index < last) setView({ turn: state.turn, index: index + 1 });
       else finish();
     };
     // 정산 보고는 이달의 결과 화면, 그 밖(상순·중순·하순)은 진행 화면
     const result = state.work.reports[index]?.slot === 'settlement';
-    // 진행 화면은 한 달 동안 한 화면이다 (세 순이 서술 칸에 쌓인다, 4차 피드백)
-    key = result ? screenKey('result', state.month) : screenKey('progress', state.month);
+    // 진행 화면은 한 턴 동안 한 화면이다 (세 순 또는 세 단계가 서술 칸에 쌓인다, 4차 피드백)
+    key = result ? screenKey('result', state.turn) : screenKey('progress', state.turn);
     body = result ? (
       <ResultScreen def={def} state={state} onNext={finish} />
     ) : (

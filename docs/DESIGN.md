@@ -1792,7 +1792,9 @@ export const manifest: Record<SceneId, SceneAsset> = {
 ### 22.2 코드 지도
 | 하고 싶은 일 | 볼 곳 |
 |---|---|
-| 한 달 진행 순서, 결정 지점, 정산 | `src/engine/month/month.ts` (`startMonth`, `run`, `chooseOption`, `settle`) |
+| 한 턴 진행 순서, 결정 지점, 정산 | `src/engine/month/month.ts` (`startTurn`, `run` → `runMonth` / `runSeason`, `chooseOption`, `monthEnd`, `settle`) |
+| 턴 종류 (달 / 철), 계절 턴의 달 수 | `src/engine/month/turn.ts` (`turnAt`, `isSeasonTurn`) + `balance.turn` |
+| 계절 턴 시험용 데이터 (R4에서 본편으로) | `src/data/chapters/ch1/season.ts` (전략 2개, 인물 사건 1개, 문자열) |
 | 순마다 마을 일·먹기·장작·부패·건강 | `src/engine/month/upkeep.ts` |
 | 월초 보고(머리글·소식·칩·장면) | `src/engine/month/briefing.ts` + 데이터 `src/data/chapters/ch1/briefing.ts` |
 | 조언자 대사 고르기 | `src/engine/advice/advice.ts` + 데이터 `ch1/advisors.ts` |
@@ -1846,7 +1848,9 @@ export const manifest: Record<SceneId, SceneAsset> = {
 - **죽은 사람을 사건에 묶기**: 인물 슬롯에 `alive: false, diedMonthsAgo: 1`을 쓰면 죽은 사람 중에서 고른다. 조건 `deaths`(지난달 죽은 사람 수), `firewoodFill`(장작 창고가 찬 비율)이 있다.
 - **버티기 방침은 늘 있지 않다** (③a): 식량 10일치 미만일 때만 후보다. 시험에서 "아무 식량 전략이나"가 필요하면 `pickFood`(fixtures)를 쓴다.
 - **`opportunity.` 깃발**은 검증기가 기회비용으로 본다 (공짜 선택지 경고를 피하는 정당한 방법: 고르지 않은 쪽의 이득이 기회비용일 때).
-- **세이브는 버전 5다**(v3: `tribeName`, v4: 두 칸 전략, v5: `work.start`의 월초 지표). `GameState` 구조를 바꾸면 `SAVE_VERSION`을 올리고 `migrations`에 변환을 넣는다(`src/engine/save/`).
+- **턴과 달 (R1-a)**: `state.month`는 언제나 실제 달이다(나이, 쿨다운, 예약, `phaseNo`). 계절 턴은 단계마다 `month`가 하나씩 오르고, `state.turn`은 턴마다 하나 오른다. **화면의 열쇠(진행 화면, 일시정지, 자동 열림)는 `state.turn`으로** 건다 — `month`로 걸면 계절 턴 한가운데 결정 뒤 진행 화면이 다시 마운트된다. 쿨다운은 달 단위 그대로라 계절 전략의 쿨다운 1~3은 "다음 철부터"다.
+- **계절 전략**: `turn: 'season'`을 단 전략만 계절 턴 후보에 나오고, 1년차에는 나오지 않는다(버티기도 턴 종류별). 걸음 `early/mid/late`는 초입·한가운데·끝자락 달의 첫 순에 한 번 실행된다(한 철 원정은 단계마다 `carry`를 두면 달마다 나른다). 계절 턴에는 마을 소식 사건이 없고 결정 사건은 한 철 `balance.turn.eventsPerSeason`개(한가운데 인물 사건 창 포함). 마을 서술은 단계마다 한 번.
+- **세이브는 버전 6이다**(v3: `tribeName`, v4: 두 칸 전략, v5: `work.start`의 월초 지표, v6: 턴·`tech`·`arcs`). `GameState` 구조를 바꾸면 `SAVE_VERSION`을 올리고 `migrations`에 변환을 넣는다(`src/engine/save/`).
 - **시험은 PowerShell에서 돌린다.** Git Bash에서 `cd /c/...`로 들어가 `npm test`를 하면 경로 표기가 달라 vitest가 두 번 실려 모든 파일이 `Cannot read properties of undefined (reading 'config')`로 실패한다(코드 문제 아님).
 - **자동 진행**(2026-11-24): 흐름 판단은 `src/ui/flow.ts`(순수 함수, 시험 있음). `useClock`은 실제 흐른 시간 `run`과 화면 진행 `elapsed`(= run + 빨리 보기로 건너뛴 시간)를 따로 센다. 자동 진행은 `run`으로 재므로 빨리 보기·움직임 줄이기에서도 타이핑만큼 읽을 시간이 남는다. 결정을 기다리는 동안은 `stopAtEnd`로 시간이 쌓이지 않는다(결정 뒤 글이 같은 보고에 이어 붙기 때문).
 - **평온한 달 요약은 없앴다**(2026-11-24 3차 피드백). 이달의 결과가 순별 한 줄 회고로 대신한다.

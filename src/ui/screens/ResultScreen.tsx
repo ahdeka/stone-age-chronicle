@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import { foodDays, population, totalKg, type Alert, type ChapterDefinition, type GameState, type LedgerLine, type PhaseReport, type Tier } from '../../engine';
 import { StatusBar, StepTrail } from '../components/StatusBar';
-import { lineText, resName } from '../format';
+import { lineText, resName, stepLabel } from '../format';
 import { useT } from '../i18n';
 import { crewSourceTest, foldRows, orderRows, recapOf, rowLabel } from '../story';
 import { memoryItems } from './SituationScreen';
@@ -51,6 +51,7 @@ const deltaClass = (n: number) => (Math.round(n) > 0 ? r.up : Math.round(n) < 0 
 export function ResultScreen({ def, state, onNext }: Props) {
   const tr = useT();
   const reports = state.work.reports;
+  const season = state.work.turn.kind === 'season';
   const settle = reports.find((x) => x.slot === 'settlement');
   const recaps = reports.map((x) => recapOf(tr, def, state, x)).filter((x): x is NonNullable<typeof x> => !!x);
   const tiers = reports.map((x) => x.tier).filter((t): t is Tier => !!t);
@@ -143,12 +144,12 @@ export function ResultScreen({ def, state, onNext }: Props) {
   return (
     <div className={r.page}>
       <StatusBar def={def} state={state} mode="result">
-        <StepTrail now="settlement" />
+        <StepTrail now="settlement" season={season} />
       </StatusBar>
 
       <div className={r.body} data-fit="result">
         <div className={`${r.titleRow} ${u.in}`}>
-          <h1 className={`${r.title} ${u.serif}`}>{tr.t('ui.result.title')}</h1>
+          <h1 className={`${r.title} ${u.serif}`}>{tr.t(season ? 'ui.result.title.season' : 'ui.result.title')}</h1>
           {tier && <span className={`${r.tier} ${r[tier]}`}>{tr.t(`tier.${tier}`)}</span>}
         </div>
 
@@ -157,7 +158,7 @@ export function ResultScreen({ def, state, onNext }: Props) {
           <ol className={r.recaps}>
             {recaps.map((x) => (
               <li key={x.slot} className={r.recap}>
-                <span className={r.recapLabel}>{tr.t(`ui.step.${x.slot}`)}</span>
+                <span className={r.recapLabel}>{stepLabel(tr, state, x.slot)}</span>
                 <span className={`${r.recapText} ${u.serif}`}>
                   {x.text}
                   {x.chose && <span className={r.chose}> · {tr.t('ui.result.chose', { option: x.chose })}</span>}
@@ -235,7 +236,7 @@ export function ResultScreen({ def, state, onNext }: Props) {
 
           {/* 이달 말: 최종 자원을 한 상자에 (식량·장작, 이달 바뀐 물자와 인구) */}
           <div className={r.monthEnd} data-fit="month-end">
-            <span className={r.endTitle}>{tr.t('ui.result.monthEnd')}</span>
+            <span className={r.endTitle}>{tr.t(season ? 'ui.result.monthEnd.season' : 'ui.result.monthEnd')}</span>
             {endRow('food', tr.t('res.food'), kg(foodTo), tr.t('ui.top.foodDays', { days }), foodTo - foodFrom)}
             {endRow('firewood', tr.t('res.firewood'), kg(woodTo), undefined, woodTo - woodFrom)}
             {goodsEnd.length === 1 && goodsEnd.map(([id, d]) => endRow(id, resName(tr, id), unit(id, state.stores.goods[id] ?? 0), undefined, d))}
@@ -268,7 +269,7 @@ export function ResultScreen({ def, state, onNext }: Props) {
           )}
         </span>
         <button type="button" className={`${u.btnPrimary} ${r.next}`} onClick={onNext} autoFocus>
-          {tr.t(ended ? 'ui.next.ending' : 'ui.next.month')}
+          {tr.t(ended ? 'ui.next.ending' : season ? 'ui.next.season' : 'ui.next.month')}
         </button>
       </div>
     </div>

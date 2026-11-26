@@ -16,6 +16,7 @@ import { decisionModel, DecisionPopup } from '../components/Decision';
 import { SceneView } from '../components/SceneView';
 import { StatusBar } from '../components/StatusBar';
 import { autoAdvanceDue, canPause, progressAction } from '../flow';
+import { phaseHead } from '../format';
 import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
 import { useInView } from '../hooks/useInView';
 import { useT } from '../i18n';
@@ -86,7 +87,7 @@ export function ProgressScreen({ def, state, index, onNext, send, paused = false
       reports
         .slice(0, index + 1)
         .filter(isPhase)
-        .map((r) => ({ report: r, head: tr.t(`ui.phase.${r.slot}.days`), paras: paragraphs(tr, def, state, r.lines) })),
+        .map((r) => ({ report: r, head: phaseHead(tr, def, state, r.slot, r.month), paras: paragraphs(tr, def, state, r.lines) })),
     [reports, index, tr, def, state],
   );
   const current = report && isPhase(report) ? phases[phases.length - 1] : undefined;
@@ -101,10 +102,10 @@ export function ProgressScreen({ def, state, index, onNext, send, paused = false
 
   // 자동 진행: 서술이 보일 때 타이핑을 시작하고, 끝나면 잠시 쉰 뒤 다음 순으로
   // (결정과 하순 끝 — 이달의 결과 앞 — 에서는 멈춘다)
-  const key = `${state.month}-${index}`;
+  const key = `${state.turn}-${index}`;
   const storyRef = useRef<HTMLElement>(null);
   // 서술 칸은 한 달 내내 같은 칸이라 한 번 보이면 된다 (순마다 다시 재지 않는다)
-  const inView = useInView(storyRef, state.month);
+  const inView = useInView(storyRef, state.turn);
   const auto = !settings.stepByStep;
   const hasNext = !!nextReport && isPhase(nextReport);
   const toResult = !model && (!nextReport || nextReport.slot === 'settlement');

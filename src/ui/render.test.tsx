@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { chapters, commonStrings } from '../data/registry';
 import { availableOptions, createGame, reduce, type GameState } from '../engine';
 import { createTranslator } from '../i18n';
-import { ch1, choose, finishMonth, newGame, pick, pickFood, springGame } from '../test/fixtures';
+import { ch1, choose, finishMonth, newGame, pick, pickFood, springGame, toFirstSeason } from '../test/fixtures';
 import { decisionModel, DecisionPopup } from './components/Decision';
 import { orderChips, PlanBody } from './components/DecisionSheet';
 import { I18nProvider } from './i18n';
@@ -299,6 +299,27 @@ describe('화면', () => {
       { res: 'food', source: 'spoil', delta: 0.2 },
     ];
     expect(orderRows(rows).map((r) => r.delta)).toEqual([150, 28, -285, -3]);
+  });
+
+  it('계절 턴 최소 표시 (R1-a): 소제목 "초입 · 3월", 한가운데 결정 팝업, 이 철의 결과', () => {
+    const s0 = toFirstSeason();
+    expect(html(<SituationScreen def={ch1} state={s0} send={noop} />)).toContain('2년차 · 봄');
+    const mid = pick(ch1, s0, 'season_camp_work');
+    expect(mid.step).toBe('decision');
+    expect(sheet(mid)).toContain('불가의 긴 밤');
+    const midHtml = html(<ProgressScreen def={ch1} state={mid} index={2} onNext={noop} send={noop} />);
+    expect(midHtml).toContain('초입 · 3월');
+    expect(midHtml).toContain('한가운데 · 4월');
+    expect(midHtml).toContain('철 초 기준');
+    const end = choose(ch1, mid, 'big_fire');
+    const late = html(<ProgressScreen def={ch1} state={end} index={3} onNext={noop} send={noop} />);
+    expect(late).toContain('끝자락 · 5월');
+    expect(late).not.toContain('상순');
+    const result = html(<ResultScreen def={ch1} state={end} onNext={noop} />);
+    expect(result).toContain('이 철의 결과');
+    expect(result).toContain('이 철 끝');
+    expect(result).toContain('다음 철로');
+    expect(result).not.toContain('⟨');
   });
 
   it('결말 화면', () => {
