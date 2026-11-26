@@ -1,10 +1,13 @@
 // 밸런스 시뮬레이터 (DESIGN.md §10.8). 헤드리스로 자동 플레이하고 지표를 모은다.
 // ③a(2026-11-25): 겨울 구간은 달력 기준(11~2월, §10.7), sure는 "거의 확실하다" 중 기대 식량이 가장 큰 전략,
 // 결속 경로별 집계(work.cohesionBy), 겨울 전(봄~가을) 사망과 월초 식량 며칠치.
+// R1-c(2026-11-26): 턴 단위로 돈다(1년차 달 12턴 + 2년차부터 철). 해별 지표: 사망, 배급 감축·굶주림 순 비율,
+// 해 끝 켜진 칸 수와 결속, 신석기. 목표치는 R5에서 정한다(DESIGN.md §B7).
 
 import {
   applyCommand,
   availableOptions,
+  calendarDate,
   candidatesBySlot,
   firstChoice,
   planWith,
@@ -61,11 +64,12 @@ export function makeStrategy(name: StrategyName, rng: RngState, seed = ''): Stra
   }
   if (name === 'sure') {
     // 식량 칸: "거의 확실하다"인 식량·큰 일 중 기대 식량이 가장 큰 것 (없으면 마지막 식량 후보)
-    // 발전 칸: "거의 확실하다"인 첫 번째 (전과 같다). 사건 선택지도 '거의 확실하다' 중 첫 번째
+    // 발전 칸: "거의 확실하다" 중 점수가 가장 높은 것. 사건 선택지는 '거의 확실하다' 중 첫 번째
     return {
       pickPlan: (def, s) => {
         const by = candidatesBySlot(def, s);
-        const growth = by.growth.find((c) => c.hint === 'sure')?.uid;
+        // 발전: "거의 확실하다" 중 점수(가산 포함)가 가장 높은 것 — 칸을 고정으로 먼저 고르지 않는다
+        const growth = by.growth.filter((c) => c.hint === 'sure').sort((a, b) => b.score - a.score)[0]?.uid;
         const plans = [...by.food, ...by.major]
           .filter((c) => c.hint === 'sure')
           .map((c: BoundPolicy) => (by.major.includes(c) ? [c.uid] : planWith(def, s, c.uid, growth)));
@@ -107,10 +111,27 @@ export interface WinterRecord {
   minFoodDays: number;
 }
 
+/** 해(년차)마다의 기록. 1년차는 달 턴, 2년차부터 철 턴 */
+export interface YearRecord {
+  turns: number;
+  deaths: number;
+  /** 배급 단계별 순 수 [다 먹음, 감축, 굶주림] */
+  rationPhases: [number, number, number];
+  /** 해가 끝날 때(또는 마지막 턴) 켜진 칸 수와 결속 */
+  cellsDone: number;
+  cohesionEnd: number;
+}
+
 export interface GameRecord {
   seed: string;
   ending: string;
+  /** 마지막 턴이 끝난 달 (state.month) */
   months: number;
+  /** 진행한 턴 수 */
+  turns: number;
+  years: Record<number, YearRecord>;
+  /** 신석기 깃발이 선 턴 (없으면 undefined) */
+  neolithicTurn?: number;
   /** 첫 겨울 전(봄 시작이면 3~10월) 사망 */
   preWinterDeaths: number;
   winters: Record<string, WinterRecord>;
@@ -124,13 +145,16 @@ export interface GameRecord {
   quietMonths: number;
 }
 
-export function playGame(def: ChapterDefinition, seed: string, strategy: StrategyName, maxMonths: number, presetId?: string): GameRecord {
+/** 턴 maxTurns개를 진행한다 (1년차 한 달 = 1턴, 2년차부터 한 철 = 1턴). 결말이 나면 멈춘다 */
+export function playGame(def: ChapterDefinition, seed: string, strategy: StrategyName, maxTurns: number, presetId?: string): GameRecord {
   const s = createGame(def, { seed, ...(presetId ? { presetId } : {}) });
   const strat = makeStrategy(strategy, seedToState(`strategy:${seed}`), seed);
   const rec: GameRecord = {
     seed,
     ending: 'none',
     months: 0,
+    turns: 0,
+    years: {},
     preWinterDeaths: 0,
     winters: Object.fromEntries(
       Array.from({ length: WINTER_COUNT }, (_, i) => [`winter${i + 1}`, { reached: false, deaths: 0, maxHunger: 0, minFoodDays: Infinity }]),
@@ -144,10 +168,11 @@ export function playGame(def: ChapterDefinition, seed: string, strategy: Strateg
   };
   let winterNo = 0;
   let inWinter = false;
-  for (let m = 0; m < maxMonths && s.step !== 'ended'; m++) {
+  for (let t = 0; t < maxTurns && s.step !== 'ended'; t++) {
     if (s.step === 'settlement') applyCommand(def, s, { type: 'nextMonth' });
     const cal = monthDef(def, s).number;
-    const firstYear = m < 12;
+    const year = calendarDate(def, s).year;
+    const firstYear = year === 1;
     const winterNow = WINTER_MONTHS.includes(cal);
     if (winterNow && !inWinter) winterNo += 1;
     inWinter = winterNow;
@@ -180,7 +205,16 @@ export function playGame(def: ChapterDefinition, seed: string, strategy: Strateg
       w.maxHunger = Math.max(w.maxHunger, s.work.maxHunger);
       w.minFoodDays = Math.min(w.minFoodDays, foodDays(def, s));
     } else if (winterNo === 0) rec.preWinterDeaths += s.work.deaths.length;
+    const y = (rec.years[year] ??= { turns: 0, deaths: 0, rationPhases: [0, 0, 0], cellsDone: 0, cohesionEnd: 0 });
+    y.turns += 1;
+    y.deaths += s.work.deaths.length;
+    const rp = s.work.rationPhases ?? [0, 0, 0];
+    for (const i of [0, 1, 2] as const) y.rationPhases[i] += rp[i];
+    y.cellsDone = Object.values(s.tech).filter((c) => c.status === 'done').length;
+    y.cohesionEnd = s.cohesion;
+    if (rec.neolithicTurn === undefined && s.flags['neolithic'] !== undefined) rec.neolithicTurn = s.turn;
     rec.months = s.month;
+    rec.turns = s.turn;
   }
   rec.ending = s.ending?.id ?? (population(s) === 0 ? 'extinct?' : 'running');
   return rec;
@@ -249,9 +283,34 @@ export function summarize(def: ChapterDefinition, recs: GameRecord[]) {
   const pickRate = Object.fromEntries(Object.keys(presented).map((k) => [k, (picks[k] ?? 0) / presented[k]!]));
   const neverFired = def.content.events.map((e) => e.id).filter((id) => !events[id]);
   const totalMonths = recs.reduce((a, r) => a + r.months, 0);
+  // 해별: 그 해에 닿은 판 기준
+  const yearIds = [...new Set(recs.flatMap((r) => Object.keys(r.years).map(Number)))].sort((a, b) => a - b);
+  const years = Object.fromEntries(
+    yearIds.map((yr) => {
+      const ys = recs.map((r) => r.years[yr]).filter((y): y is YearRecord => y !== undefined);
+      const phases = ys.reduce((a, y) => a + y.rationPhases[0] + y.rationPhases[1] + y.rationPhases[2], 0);
+      return [
+        yr,
+        {
+          reached: ys.length / n,
+          turnsP50: pct(ys.map((y) => y.turns), 0.5),
+          deaths: { p50: pct(ys.map((y) => y.deaths), 0.5), p90: pct(ys.map((y) => y.deaths), 0.9) },
+          /** 순 중 배급 감축(1단계) · 굶주림(2단계) 비율 */
+          reducedRate: ys.reduce((a, y) => a + y.rationPhases[1], 0) / Math.max(1, phases),
+          starveRate: ys.reduce((a, y) => a + y.rationPhases[2], 0) / Math.max(1, phases),
+          cellsDone: { p10: pct(ys.map((y) => y.cellsDone), 0.1), p50: pct(ys.map((y) => y.cellsDone), 0.5), p90: pct(ys.map((y) => y.cellsDone), 0.9) },
+          cohesionEndP50: pct(ys.map((y) => y.cohesionEnd), 0.5),
+        },
+      ];
+    }),
+  );
+  const neo = recs.filter((r) => r.neolithicTurn !== undefined).map((r) => r.neolithicTurn!);
   return {
     games: n,
     endings,
+    turns: { p10: pct(recs.map((r) => r.turns), 0.1), p50: pct(recs.map((r) => r.turns), 0.5), p90: pct(recs.map((r) => r.turns), 0.9) },
+    years,
+    neolithic: { rate: neo.length / Math.max(1, n), turnP50: pct(neo, 0.5) },
     months: { p10: pct(recs.map((r) => r.months), 0.1), p50: pct(recs.map((r) => r.months), 0.5), p90: pct(recs.map((r) => r.months), 0.9) },
     preWinterDeaths: { p50: pct(preWinter, 0.5), p90: pct(preWinter, 0.9), anyDeath: preWinter.filter((x) => x > 0).length / Math.max(1, n) },
     startFoodDaysP50,

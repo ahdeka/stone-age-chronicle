@@ -251,6 +251,8 @@ describe('예전 지식의 흡수, 쿨다운, 운반', () => {
   it('쿨다운은 턴 단위: N턴 뒤에 다시 나온다 (계절 턴에서 2 = 한 철 쉼, 1 = 바로 다음 철)', () => {
     const def = tweakDef((d) => {
       d.content.policies.find((p) => p.id === 'season_forest_hunt')!.cooldown = 2;
+      // 쿨다운만 본다: 사냥에서 바위가 죽어도 후보가 사라지지 않게 이끄는 사람 조건을 뺀다
+      delete d.content.policies.find((p) => p.id === 'season_forest_hunt')!.leader;
       d.content.events = d.content.events.filter((e) => e.scope !== 'person');
     });
     let s = freshSeason(def);

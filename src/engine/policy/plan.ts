@@ -2,16 +2,18 @@
 // 무리는 큰 일 → 발전 → 식량 순으로 뽑는다. 앞에서 뽑힌 사람은 뒤에서 뽑지 않고,
 // 마을에 남길 인원(keepHome)은 두 칸을 합쳐서 지킨다. 상태를 바꾸지 않는다(잠깐 바꾼 것은 되돌린다).
 
-import type { BoundPolicy, ChapterDefinition, GameState, Id, PlanEntry, PolicySlot, PolicyTemplate } from '../types';
+import type { BoundPolicy, ChapterDefinition, GameState, Id, Person, PlanEntry, PolicySlot, PolicyTemplate } from '../types';
 import { PHASES } from '../types';
 import { findPolicy } from '../core/lookup';
-import { laborUnits, living } from '../people/people';
-import { formCrew, policyHint } from './candidates';
+import { band, laborUnits, living } from '../people/people';
+import { crewSpecFor, formCrew, pickLeader, policyHint } from './candidates';
 import { villageHarvest } from '../month/upkeep';
 
 export interface PlanPreview {
   /** 고를 수 없는 조합이면 오류 키 */
   error?: string;
+  /** 오류 문구의 변수: planCrew {n: 일할 수 있는 성인}, planPerson {person: 사람 id, policy: 그 사람이 맡은 전략 id} */
+  errorParams?: Record<string, string | number>;
   /** 무리를 다시 뽑고 위험 단서를 다시 계산한 전략 (plan 순서: 식량, 발전 / 큰 일) */
   entries: PlanEntry[];
   /** 사람 수: 일할 수 있는 사람 전체, 식량 쪽(원정 + 마을), 발전 무리, 마을에 남는 사람 */
@@ -43,6 +45,35 @@ function headcount(def: ChapterDefinition, state: GameState): number {
   return living(state).filter((p) => laborUnits(def, state, p) > 0).length;
 }
 
+/** 일할 수 있는 성인 (§B4.3): 무리에 붙일 수 있는 성인 — 다치거나 아프지 않고, 족장이 아닌 사람(족장은 무리에 뽑지 않는다,
+ *  crew.includeChief). 노인은 들지 않는다(마을 일에 0.5로 보탠다). 줄기로 떠난 사람은 R3에서 뺀다 */
+export function workingAdults(def: ChapterDefinition, state: GameState): number {
+  return living(state).filter((p) => !p.isChief && band(def, state, p) === 'adult' && laborUnits(def, state, p) > 0).length;
+}
+
+/** 무리를 못 뽑은 까닭: 두 전략의 최소 인원 합이 일할 수 있는 성인보다 많으면 planCrew("일할 사람이 n명뿐이다"),
+ *  아니면 마을에 남길 사람이 모자란 것(planLabor) */
+function crewError(def: ChapterDefinition, state: GameState, picked: readonly { p: PolicyTemplate }[]): string {
+  const need = picked.reduce((a, { p }) => a + (crewSpecFor(def, state, p)?.min ?? 0), 0);
+  return need > workingAdults(def, state) ? 'error.planCrew' : 'error.planLabor';
+}
+
+/** 이끌 사람이 다른 전략에 가 있으면 그 사람 id와 전략 id (화면의 이유 한 줄: "{name:은} 이미 {policy:을} 맡았다") */
+function personConflict(
+  def: ChapterDefinition,
+  state: GameState,
+  p: PolicyTemplate,
+  picked: readonly { c: BoundPolicy; p: PolicyTemplate }[],
+  leaders: ReadonlyMap<Id, Person>,
+): Record<string, string> | undefined {
+  for (const { c, p: other } of picked) {
+    if (other === p) continue;
+    const l = leaders.get(c.uid);
+    if (l && pickLeader(def, state, p) === l) return { person: l.id, policy: other.id };
+  }
+  return undefined;
+}
+
 export function previewPlan(def: ChapterDefinition, state: GameState, uids: readonly Id[]): PlanPreview {
   const total = headcount(def, state);
   const empty: PlanPreview = { entries: [], labor: { total, food: total, growth: 0, village: total }, growthFoodCostKg: 0 };
@@ -56,15 +87,34 @@ export function previewPlan(def: ChapterDefinition, state: GameState, uids: read
   const slotErr = checkSlots(picked.map((x) => x.p.slot));
   if (slotErr) return { ...empty, error: slotErr };
 
-  // 무리 뽑기: 큰 일 → 발전 → 식량
+  // 이끄는 사람 먼저: 큰 일 → 식량 → 발전 (§B4.3 이름 있는 인물은 한 턴에 한 자리).
+  // 식량 전략을 이끄는 사람이 칸에 필요한 인물이면 칸은 fallback이 맡고, fallback도 없으면 함께 고를 수 없다
+  const leaders = new Map<Id, Person>();
+  const leaderTaken = new Set<Id>();
+  for (const { c, p } of picked.slice().sort((a, b) => PLAN_ORDER[a.p.slot] - PLAN_ORDER[b.p.slot])) {
+    const l = pickLeader(def, state, p, leaderTaken);
+    if (p.leader && !l) {
+      const busy = personConflict(def, state, p, picked, leaders);
+      return busy ? { ...empty, error: 'error.planPerson', errorParams: busy } : { ...empty, error: 'error.planLabor' };
+    }
+    if (l) {
+      leaders.set(c.uid, l);
+      leaderTaken.add(l.id);
+    }
+  }
+
+  // 무리 뽑기: 큰 일 → 발전 → 식량 (발전 칸의 인원은 정해져 있고, 식량 무리는 남는 사람으로)
   const taken = new Set<Id>();
   let awayUnits = 0;
   const entries: PlanEntry[] = [];
   const savedProbe = state.work.probePlace;
   try {
     for (const { c, p } of picked.slice().sort((a, b) => ORDER[a.p.slot] - ORDER[b.p.slot])) {
-      const formed = formCrew(def, state, p, { taken, awayUnits });
-      if (!formed) return { ...empty, error: 'error.planLabor' };
+      const own = leaders.get(c.uid);
+      // 다른 전략을 이끄는 사람은 이 무리에 뽑지 않는다
+      const busy = new Set([...taken, ...[...leaderTaken].filter((id) => id !== own?.id)]);
+      const formed = formCrew(def, state, p, { taken: busy, awayUnits, leader: own ?? null });
+      if (!formed) return { ...empty, error: crewError(def, state, picked), errorParams: { n: workingAdults(def, state) } };
       for (const x of formed.crew) {
         taken.add(x.id);
         awayUnits += laborUnits(def, state, x);

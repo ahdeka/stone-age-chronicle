@@ -6,7 +6,7 @@ import { canStartCell } from '../tech/tech';
 import { findCell, peekCell } from '../tech/query';
 import { PHASES } from '../types';
 import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
-import { nextUid } from '../core/lookup';
+import { monthDef, nextUid } from '../core/lookup';
 import { cannotWork, laborUnits, living, sortForCrew } from '../people/people';
 import { nextFloat } from '../rng/rng';
 import { hintFor, type ActCtx } from '../outcome/tier';
@@ -16,17 +16,34 @@ export interface CrewOpts {
   taken?: ReadonlySet<Id>;
   /** 이미 마을 일에서 빠진 일손 (다른 전략의 무리) */
   awayUnits?: number;
+  /** 이끄는 사람을 미리 정했다 (두 칸 전략: previewPlan이 식량 → 발전 순으로 먼저 정한다). null = 없음 */
+  leader?: Person | null;
+}
+
+/** 이끄는 사람: 맞는 사람이 없거나 다른 자리에 있으면 fallback. 난수를 쓰지 않는다 */
+export function pickLeader(def: ChapterDefinition, state: GameState, p: PolicyTemplate, taken?: ReadonlySet<Id>): Person | undefined {
+  const find = (q: PersonQuery | undefined) => (q ? living(state).find((x) => !taken?.has(x.id) && !cannotWork(def, x) && matchPerson(def, state, x, q)) : undefined);
+  return find(p.leader) ?? find(p.leaderFallback);
+}
+
+/** 이 턴에 쓰는 무리 규격. 1년차(달 턴)의 칸 무리는 작다: 칸 인원 × monthCrew.share, 내림, 최소 monthCrew.min
+ *  (장인 + 1명 수준, 2026-11-26). 진척 속도는 그대로다. 계절 턴과 칸이 아닌 전략은 정의 그대로 */
+export function crewSpecFor(def: ChapterDefinition, state: GameState, p: PolicyTemplate): PolicyTemplate['crew'] {
+  const spec = p.crew;
+  if (!spec || !p.tech || state.work.turn.kind !== 'month') return spec;
+  const m = def.balance.tech.monthCrew;
+  const n = Math.max(m.min, Math.floor(spec.min * m.share));
+  return { ...spec, min: n, max: n };
 }
 
 /** 원정대와 이끄는 사람을 정한다. 난수를 쓰지 않는다. 인원이 모자라면 undefined */
 export function formCrew(def: ChapterDefinition, state: GameState, p: PolicyTemplate, opts: CrewOpts = {}): { crew: Person[]; leader?: Person } | undefined {
   const free = (x: Person) => !opts.taken?.has(x.id);
-  const findLeader = (q: PersonQuery | undefined) => (q ? living(state).find((x) => free(x) && !cannotWork(def, x) && matchPerson(def, state, x, q)) : undefined);
-  const leaderPick = findLeader(p.leader) ?? findLeader(p.leaderFallback);
+  const leaderPick = opts.leader !== undefined ? (opts.leader ?? undefined) : pickLeader(def, state, p, opts.taken);
   if (p.leader && !leaderPick) return undefined;
   if (!p.crew) return leaderPick ? { crew: [], leader: leaderPick } : { crew: [] };
 
-  const spec = p.crew;
+  const spec = crewSpecFor(def, state, p)!;
   const pool = living(state).filter(
     (x) => free(x) && laborUnits(def, state, x) > 0 && (spec.includeChief || !x.isChief) && (spec.band ? matchPerson(def, state, x, { band: spec.band }) : matchPerson(def, state, x, { band: ['adult'] })),
   );
@@ -115,6 +132,11 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
       let score = p.priority + (nextFloat(state.rng) * 2 - 1) * b.jitter;
       for (const r of p.relevance ?? []) if (allTrue(def, state, r.when, actors)) score += r.add;
       if (p.builds && (state.projects[p.builds.facility] ?? 0) > 0) score += b.projectBonus;
+      // 칸의 이어 가기: 부족이 직접 일한 칸만 (선물·저절로 나아간 몫만 있는 칸은 아니다. 1년차 칸의 가산은 이것뿐)
+      if (p.tech && peekCell(state, p.tech).status === 'active' && peekCell(state, p.tech).log.some((l) => l.kind === 'work')) score += b.projectBonus;
+      // 1년차 겨울 준비: 가을·겨울에 가산 (칸이 늘 이기지 않게)
+      const prep = def.balance.tech.prepBonus;
+      if (p.prep === 'winter' && state.work.turn.kind === 'month' && prep.seasons.includes(monthDef(def, state).season)) score += prep.add;
       if (place) {
         if (savedPlace === undefined) delete state.work.probePlace;
         else state.work.probePlace = savedPlace;
@@ -166,8 +188,11 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
     const cell = findCell(def, s.p.tech!);
     return [-peekCell(state, cell.id).progress, cell.order, def.tech.branches.indexOf(cell.branch)];
   };
+  // 1년차: 부족이 새로 시작하는 칸은 하나 (2026-11-26). 부족이 일한 칸이 하나라도 있으면(진행 중이든 마쳤든)
+  // 그 뒤로는 진행 중인 칸만 후보다 — 선물로 진척이 생긴 칸은 이어 갈 수 있다
+  const started = state.work.turn.kind === 'month' && def.tech.cells.some((c) => peekCell(state, c.id).log.some((l) => l.kind === 'work'));
   const cells = scored
-    .filter((s) => s.p.slot === 'growth' && s.offered && s.p.tech)
+    .filter((s) => s.p.slot === 'growth' && s.offered && s.p.tech && (!started || peekCell(state, s.p.tech).status === 'active'))
     .sort((x, y) => {
       const a = cellRank(x);
       const c = cellRank(y);
@@ -175,7 +200,8 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
     })
     .slice(0, Math.min(growthN, def.balance.tech.cellSlots[state.work.turn.kind]));
   const small = take('growth', growthN, (s) => !s.p.tech).slice(0, growthN - cells.length);
-  const growth = [...cells, ...small];
+  // 화면과 자동 플레이 모두 점수 순 (칸이 고정으로 먼저 오지 않는다)
+  const growth = [...cells, ...small].sort((x, y) => y.bound.score - x.bound.score);
   const major = take('major', 1);
   // 화면 순서: 큰 일(맨 위 한 줄) → 식량 → 발전
   return [...major, ...food, ...growth].map((s) => s.bound);

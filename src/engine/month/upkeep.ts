@@ -176,15 +176,30 @@ export function consume(ctx: RunCtx): void {
   state.hungerStage = stage;
   state.work.maxHunger = Math.max(state.work.maxHunger, stage);
   state.work.stageHunger = Math.max(state.work.stageHunger ?? 0, stage);
+  const rp = (state.work.rationPhases ??= [0, 0, 0]);
+  rp[stage] += 1;
   for (const p of people) {
     if (stage === 0) p.hungerDays = Math.max(0, p.hungerDays - r.recoverPerPhase);
     else p.hungerDays += d * (1 - ratio);
   }
+  // 계절 턴은 순마다가 아니라 단계 끝에 한 번 판정한다 (stageCohesion, §B6.4 안 A)
+  if (state.work.turn.kind === 'season') return;
   addCohesion(state, def, r.cohesionPerPhase[stage] ?? 0, `hunger.${stage}`);
   // 배급이 다 찬 순: 결속이 평소까지 돌아온다
-  if (stage === 0 && state.cohesion < r.recoverCohesion.upTo) {
-    addCohesion(state, def, Math.min(r.recoverCohesion.perPhase, r.recoverCohesion.upTo - state.cohesion), 'ration.recover');
-  }
+  if (stage === 0) recoverCohesion(def, state, r.recoverCohesion.perPhase);
+}
+
+function recoverCohesion(def: ChapterDefinition, state: GameState, amount: number): void {
+  const upTo = def.balance.ration.recoverCohesion.upTo;
+  if (state.cohesion < upTo) addCohesion(state, def, Math.min(amount, upTo - state.cohesion), 'ration.recover');
+}
+
+/** 계절 턴 단계(달) 끝의 결속 (§B6.4 안 A): 그 단계 세 순 중 가장 나쁜 배급 상태로 한 번.
+ *  감축 −2, 굶주림 −5, 다 먹은 단계 +2 (평소 값까지). 출처 이름은 달 턴과 같다 */
+export function stageCohesion(def: ChapterDefinition, state: GameState, worst: number): void {
+  const sc = def.balance.ration.stageCohesion;
+  if (worst <= 0) recoverCohesion(def, state, sc.recover);
+  else addCohesion(state, def, sc.perStage[Math.min(2, worst)] ?? 0, `hunger.${Math.min(2, worst)}`);
 }
 
 export function burnFirewood(ctx: RunCtx): void {

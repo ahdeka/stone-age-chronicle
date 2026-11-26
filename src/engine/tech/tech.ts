@@ -222,7 +222,9 @@ export function cellPolicies(def: Pick<ChapterDefinition, 'tech' | 'balance'>): 
     turn: 'any',
     category: `branch.${cell.branch}`,
     appearsWhen: [{ type: 'tech', id: cell.id, next: true }],
-    priority: def.balance.tech.cellPriority,
+    priority: def.balance.tech.cellPriority.month,
+    // 계절 턴 높이. 이어 가기(+projectBonus)는 후보 점수에서 준다: 부족이 직접 일한 칸만 (generateCandidates)
+    relevance: [{ when: [{ type: 'turnKind', in: ['season'] }], add: def.balance.tech.cellPriority.season - def.balance.tech.cellPriority.month }],
     cooldown: 0,
     tech: cell.id,
     crew: { min: cell.crew.adults, max: cell.crew.adults, keepHome: 0, atHome: true },

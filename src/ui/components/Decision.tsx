@@ -20,6 +20,7 @@ import {
   totalKg,
   type BoundPolicy,
   type ChapterDefinition,
+  type PlanPreview,
   type Command,
   type GameState,
   type Hint,
@@ -104,8 +105,18 @@ function kicker(tr: Translator, def: ChapterDefinition, s: GameState, slot?: str
   return slot && slot !== 'briefing' ? tr.t('ui.kicker.slot', { date, slot: tr.t(`ui.step.${slot}`) }) : tr.t('ui.kicker', { date });
 }
 
-function planError(tr: Translator, err: string | undefined): string | undefined {
-  return err ? tr.t(tr.has(`ui.plan.${err}`) ? `ui.plan.${err}` : 'ui.plan.error') : undefined;
+/** 함께 고를 수 없는 까닭 한 줄 (일할 사람 수, 이미 다른 전략을 맡은 사람) */
+function planError(tr: Translator, s: GameState, pv: PlanPreview): string | undefined {
+  const err = pv.error;
+  if (!err) return undefined;
+  const x = pv.errorParams ?? {};
+  const person = typeof x['person'] === 'string' ? s.people[x['person']] : undefined;
+  const params = {
+    ...(typeof x['n'] === 'number' ? { n: x['n'] } : {}),
+    ...(person ? { name: tr.label(person.name) } : {}),
+    ...(typeof x['policy'] === 'string' ? { policy: tr.t(`policy.${x['policy']}.name`) } : {}),
+  };
+  return tr.t(tr.has(`ui.plan.${err}`) ? `ui.plan.${err}` : 'ui.plan.error', params);
 }
 
 /** 카드의 대가 한 줄: 사람 수 (원정이면 나가는 사람·남는 사람, 이끄는 사람) */
@@ -180,7 +191,7 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
     command: (uid) => ({ type: 'choosePlan', uids: [uid] }),
     plan: {
       command: (ids) => ({ type: 'choosePlan', uids: real(ids) }),
-      check: (ids) => planError(tr, previewPlan(def, s, real(ids)).error),
+      check: (ids) => planError(tr, s, previewPlan(def, s, real(ids))),
       labor: (ids) => {
         const pv = previewPlan(def, s, real(ids));
         return { total: pv.labor.total, food: pv.labor.food, growth: pv.labor.growth };
@@ -191,7 +202,7 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
         const food = foodId && slotOf(foodId) === 'food' ? foodId : firstFood;
         if (!food) return { meta: base };
         const pv = previewPlan(def, s, [food, growthId]);
-        if (pv.error) return { meta: base, blocked: planError(tr, pv.error) };
+        if (pv.error) return { meta: base, blocked: planError(tr, s, pv) };
         const kg = Math.round(pv.growthFoodCostKg / 10) * 10;
         return { meta: [base, kg > 0 ? tr.t('ui.plan.cost', { kg }) : tr.t('ui.plan.noCost')].filter(Boolean).join(' · ') };
       },

@@ -178,6 +178,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 그물 짜기 (이끼): 그물이 늘면 물고기 떼를 더 잡는다
     id: 'net_making',
+    prep: 'winter',
     slot: 'growth',
     category: 'craft',
     appearsWhen: [artisanReady, { type: 'goods', id: 'net', max: 2 }, warm],
@@ -286,6 +287,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 굴 다지기 (P4): 가시 울타리와 저장 구덩이 → 저장 구덩이 지식, 영구 거처 목표
     id: 'cave_fortify',
+    prep: 'winter',
     slot: 'growth',
     category: 'shelter',
     appearsWhen: [{ type: 'shelter', in: ['rock_cave'] }, { type: 'knowledge', id: 'storage_pit', has: false }],
@@ -299,6 +301,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 장작 비축 (P2): 덧집을 지어 장작을 더 쌓아 둔다
     id: 'firewood_stockpile',
+    prep: 'winter',
     slot: 'growth',
     category: 'firewood',
     // 덧집을 다 짓고 장작이 거의 차 있으면 나오지 않는다 (③a: 여름 내내 일손을 장작에 묶는 함정)
@@ -318,6 +321,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 가죽 손질과 겨울옷 (P5)
     id: 'tan_hides',
+    prep: 'winter',
     slot: 'growth',
     category: 'craft',
     appearsWhen: [{ type: 'goods', id: 'hide', min: 6 }, { type: 'knowledge', id: 'fur_clothes', has: false }],
@@ -490,6 +494,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 끌개 엮기 (P7): 장인이 끌개를 엮는다 → 운반 한계가 오른다
     id: 'make_sled',
+    prep: 'winter',
     slot: 'growth',
     category: 'craft',
     appearsWhen: [artisanReady, { type: 'knowledge', id: 'sled', has: false }, { type: 'season', in: ['summer', 'autumn', 'winter'] }],
@@ -521,6 +526,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 얼음 낚시 도구 (P8): 뼈 작살과 얼음 깨는 돌망치 → 겨울 식량원
     id: 'ice_tools',
+    prep: 'winter',
     slot: 'growth',
     category: 'craft',
     appearsWhen: [artisanReady, { type: 'knowledge', id: 'ice_fishing', has: false }, { type: 'season', in: ['autumn', 'winter'] }],
@@ -554,6 +560,7 @@ export const ch1Policies: PolicyTemplate[] = [
   },
   {
     id: 'winter_prep',
+    prep: 'winter',
     slot: 'growth',
     category: 'firewood',
     appearsWhen: [{ type: 'season', in: ['autumn', 'winter'] }],
@@ -708,6 +715,7 @@ export const ch1Policies: PolicyTemplate[] = [
   {
     // 아픈 사람 간호 (C5): 노을이 돌본다. 버드나무 껍질이 있으면 확실하다
     id: 'nurse_sick',
+    prep: 'winter',
     slot: 'growth',
     category: 'care',
     appearsWhen: [healerReady, { type: 'person', match: { ailing: true } }],

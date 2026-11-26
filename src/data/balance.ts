@@ -24,7 +24,7 @@ export const commonBalance = {
     projectBonus: 30,
   },
   events: { villageChancePerMonth: 0.35, maxPerMonth: 2, maxPerPhase: 1 },
-  cohesion: { max: 100, deathCost: 4, lowThreshold: 10 },
+  cohesion: { max: 100, deathCost: 4, lowThreshold: 10, lowWeight: { month: 1, season: 1.5 } },
   chronicle: { deathImportance: 50, builtImportance: 20 },
   /** 화면 기준값 (시안: 식량 16일분 미만이면 경고) */
   ui: {

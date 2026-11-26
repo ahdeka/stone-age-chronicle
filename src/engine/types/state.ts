@@ -233,6 +233,8 @@ export interface MonthWork {
   savings: SavingLine[];
   /** 이번 달 결속 변화의 출처별 합 (시뮬레이터 집계용. 없던 세이브는 비어 있다) */
   cohesionBy?: Record<string, number>;
+  /** 이번 턴 배급 단계별 순 수 [다 먹음, 감축, 굶주림] (시뮬레이터 집계용. 없던 세이브는 비어 있다) */
+  rationPhases?: [number, number, number];
   /** 직전 활동의 결과 맥락 ($caught, $meat 등) */
   vars: Record<string, number>;
   /** 마을 사건 판정을 이번 달에 했는가 (계절 턴: 한가운데 인물 사건 창을 열어 보았는가) */

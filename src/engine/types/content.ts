@@ -100,6 +100,8 @@ export interface PolicyTemplate {
   once?: boolean;
   /** 버티기 방침: 후보에 늘 하나 들어간다 */
   fallback?: boolean;
+  /** "겨울 준비" 이름표 (1년차 작은 발전, §B3.6). 1년차 가을·겨울에 balance.tech.prepBonus 가산 */
+  prep?: 'winter';
   crew?: CrewSpec;
   /** 원정지. 없으면 마을 근처 */
   place?: Id;

@@ -20,7 +20,12 @@ export const ch1Balance: ChapterBalance = {
     monthsPerSeason: 3,
     giftMaxShare: 0.5,
     driftRate: 0.5,
-    cellPriority: 1000,
+    // 1년차는 작은 발전과 같은 높이(부족이 직접 일한 칸만 이어 가기 +30), 계절 턴은 칸뿐 (2026-11-26 1년차 겨울 준비 복구)
+    cellPriority: { month: 26, season: 1000 },
+    // 1년차 칸 무리는 절반(내림, 최소 2명: 장인 + 1명 수준)
+    monthCrew: { share: 0.5, min: 2 },
+    // 1년차 9~2월: 겨울 준비 작은 발전 +15
+    prepBonus: { seasons: ['autumn', 'winter'], add: 15 },
     cellSlots: { month: 1, season: 3 },
     neolithicBranches: 2,
     doneCohesion: 2,
@@ -77,6 +82,8 @@ export const ch1Balance: ChapterBalance = {
     collapseMax: 0.25,
     efficiency: [1, 0.9, 0.7],
     cohesionPerPhase: [0, -1, -3],
+    /** 계절 턴: 단계마다 감축 −2, 굶주림 −5, 다 먹은 단계 +2 (§B6.4 안 A) */
+    stageCohesion: { perStage: [0, -2, -5], recover: 2 },
     sicknessChance: 0.06,
     sickness: 'cough',
     sickDeathMul: 2,

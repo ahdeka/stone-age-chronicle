@@ -4,7 +4,7 @@ import type { AgeBand, Amount, Hint, Id, Sex, Tier } from './common';
 import type { Condition, PersonQuery } from './condition';
 import type { Effect, ModifierDef } from './effect';
 import type { EventDef, Narrative, PolicyTemplate, SceneSpec } from './content';
-import type { AnimalState } from './state';
+import type { AnimalState, TurnKind } from './state';
 
 /** 부패를 결정하는 온도 구간 */
 export type TempClass = 'frozen' | 'cold' | 'mild' | 'warm';
@@ -285,8 +285,13 @@ export interface ChapterBalance {
     giftMaxShare: number;
     /** 이어 가던 칸이 저절로 나아가는 속도 (일손 진척의 비율) */
     driftRate: number;
-    /** 칸 전략의 후보 점수 */
-    cellPriority: number;
+    /** 칸 전략의 기본 점수 (턴 종류별). 1년차는 작은 발전과 같은 높이라 칸이 늘 이기지 않는다 — 진행 중인 칸만
+     *  policy.projectBonus(이어 가기)를 받는다. 계절 턴에는 발전 자리가 칸뿐이다 */
+    cellPriority: Record<TurnKind, number>;
+    /** 1년차(달 턴) 칸 무리: 칸 인원 × share, 내림, 최소 min (진척 속도는 그대로) */
+    monthCrew: { share: number; min: number };
+    /** 1년차(달 턴) "겨울 준비" 작은 발전(prep: 'winter')의 점수 가산: 이 철(9~2월 = 가을·겨울)에 add */
+    prepBonus: { seasons: Id[]; add: number };
     /** 발전 자리 중 칸이 차지할 수 있는 수 (턴 종류별). 1년차는 칸 1개 + 작은 발전(겨울 준비), 2년차부터 갈래마다 하나 (2026-11-26 결정) */
     cellSlots: { month: number; season: number };
     /** 신석기: 끝 칸이 켜진 갈래 수 */
@@ -318,8 +323,11 @@ export interface ChapterBalance {
     collapseMax: number;
     /** 굶주림 단계별 노동 효율 */
     efficiency: [number, number, number];
-    /** 굶주림 단계별 순당 결속 변화 */
+    /** 굶주림 단계별 순당 결속 변화 (달 턴) */
     cohesionPerPhase: [number, number, number];
+    /** 계절 턴의 결속 (DESIGN.md §B6.4 안 A): 단계(달)마다 한 번, 그 단계 세 순 중 가장 나쁜 배급 상태로.
+     *  perStage = 배급 단계별 변화(0 자리는 쓰지 않는다), recover = 다 먹은 단계의 회복 (recoverCohesion.upTo까지) */
+    stageCohesion: { perStage: [number, number, number]; recover: number };
     /** 굶주림 2단계에서 약한 사람이 순마다 병에 걸릴 확률과 병 id */
     sicknessChance: number;
     sickness: Id;
@@ -395,6 +403,9 @@ export interface ChapterBalance {
     max: number;
     deathCost: number;
     lowThreshold: number;
+    /** 결속이 lowThreshold 아래로 턴을 넘길 때 분열 계수기(counter low_cohesion_months)에 더하는 값.
+     *  달 턴 1, 계절 턴 1.5 → 분열 결말(계수기 3)은 "석 달" 또는 "철 둘"이 이어질 때 (§B6.4) */
+    lowWeight: Record<TurnKind, number>;
   };
   /** 기록용 연대기 기본 중요도 */
   chronicle: { deathImportance: number; builtImportance: number };

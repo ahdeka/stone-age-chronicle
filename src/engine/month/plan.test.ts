@@ -131,10 +131,14 @@ describe('일손 나누기', () => {
     const [a, b] = pv.entries.map((e) => e.bound.crew);
     expect(a!.some((x) => b!.includes(x))).toBe(false);
 
-    // 마을에 남을 사람이 모자라면 함께 할 수 없다
+    // 두 무리의 인원 합이 일할 수 있는 성인보다 많으면 함께 할 수 없다 (R1-c: planCrew)
     const greedy = calm([trip('t_hunt', 'food', 'east_steppe', 50, 0, 14), trip('t_scout', 'growth', 'south_marsh', 0, 8, 4)]);
     const g = plenty(newGame('crew2', greedy));
-    expect(previewPlan(greedy, g, [uid(g, 't_hunt'), uid(g, 't_scout')]).error).toBe('error.planLabor');
+    expect(previewPlan(greedy, g, [uid(g, 't_hunt'), uid(g, 't_scout')]).error).toBe('error.planCrew');
+    // 인원은 되지만 마을에 남을 사람이 모자라면 planLabor
+    const home = calm([trip('t_hunt', 'food', 'east_steppe', 50, 8, 10), trip('t_scout', 'growth', 'south_marsh', 0, 0, 4)]);
+    const h = plenty(newGame('crew3', home));
+    expect(previewPlan(home, h, [uid(h, 't_hunt'), uid(h, 't_scout')]).error).toBe('error.planLabor');
   });
 
   it('원정 둘은 짐과 곳을 따로 들고 다닌다', () => {

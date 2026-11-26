@@ -37,7 +37,7 @@ import { chance } from '../rng/rng';
 import { stat } from '../stats/stats';
 import { addLot, carryWeight, totalKg } from '../stores/food';
 import { expireTemporary, recoverPlaces, rollWeather, updateAnimals, updateCaches } from '../world/world';
-import { upkeep } from './upkeep';
+import { stageCohesion, upkeep } from './upkeep';
 import { monthStartOf } from '../display';
 import { checkEndings } from './endings';
 
@@ -487,6 +487,7 @@ function runSeason(def: ChapterDefinition, state: GameState): void {
       w.phasesDone += 1;
       if (population(state) === 0) break;
     }
+    if (population(state) > 0) stageCohesion(def, state, w.stageHunger ?? 0);
     closeReport(state);
     monthEnd(def, state, w.stageHunger ?? 0);
     if (population(state) === 0) break;
@@ -594,9 +595,9 @@ function settle(def: ChapterDefinition, state: GameState): void {
   // 발전 나무: 고른 칸의 진척, 이어 가던 칸, 신석기 (§B3, §B4.4)
   settleTech({ ...ctx, group: 'growth' });
 
-  // 결속이 낮은 달 수 (분열 판정)
+  // 결속이 낮은 채 넘긴 턴 (분열 판정): 달 턴 1, 계절 턴 1.5 — 결말 계수 3 = 석 달 또는 철 둘 (§B6.4)
   const low = state.cohesion < def.balance.cohesion.lowThreshold;
-  state.counters['low_cohesion_months'] = low ? (state.counters['low_cohesion_months'] ?? 0) + 1 : 0;
+  state.counters['low_cohesion_months'] = low ? (state.counters['low_cohesion_months'] ?? 0) + def.balance.cohesion.lowWeight[w.turn.kind] : 0;
 
   // 정산표: 이번 달 장부를 출처별로 합친다 (원정지의 짐은 빼고)
   report.rows = sumLedger(w.ledger.filter((l) => l.res !== 'haul'));
