@@ -304,6 +304,7 @@ export const commonKo: Record<string, string> = {
   'ui.plan.cost': '식량 약 −{kg}kg',
   'ui.plan.error': '함께 고를 수 없는 전략이다',
   'ui.plan.error.planLabor': '마을에 남을 사람이 모자란다',
+  'ui.plan.error.planKeepHome': '마을에 일할 사람 {need}명은 남아야 한다 · 지금 {have}명',
   'ui.plan.error.planCrew': '일할 사람이 {n}명뿐이다',
   'ui.plan.error.planPerson': '{name:은} 이미 {policy:을} 맡았다',
   'ui.skip': '빨리 보기',

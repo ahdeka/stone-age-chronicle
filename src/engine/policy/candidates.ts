@@ -7,15 +7,15 @@ import { findCell, isBranchEnd, peekCell } from '../tech/query';
 import { PHASES } from '../types';
 import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
 import { monthDef, nextUid } from '../core/lookup';
-import { cannotWork, laborUnits, living, sortForCrew } from '../people/people';
+import { cannotWork, laborUnits, living, sortForCrew, workingAdults } from '../people/people';
 import { nextFloat } from '../rng/rng';
 import { hintFor, type ActCtx } from '../outcome/tier';
 
 export interface CrewOpts {
   /** 이미 다른 전략에 뽑힌 사람 (무리와 이끄는 사람) */
   taken?: ReadonlySet<Id>;
-  /** 이미 마을 일에서 빠진 일손 (다른 전략의 무리) */
-  awayUnits?: number;
+  /** 이미 다른 전략의 무리로 빠진 일할 사람 수 */
+  awayAdults?: number;
   /** 이끄는 사람을 미리 정했다 (두 칸 전략: previewPlan이 식량 → 발전 순으로 먼저 정한다). null = 없음 */
   leader?: Person | null;
 }
@@ -47,8 +47,8 @@ export function formCrew(def: ChapterDefinition, state: GameState, p: PolicyTemp
   const pool = living(state).filter(
     (x) => free(x) && laborUnits(def, state, x) > 0 && (spec.includeChief || !x.isChief) && (spec.band ? matchPerson(def, state, x, { band: spec.band }) : matchPerson(def, state, x, { band: ['adult'] })),
   );
-  const totalUnits = living(state).reduce((a, x) => a + laborUnits(def, state, x), 0);
-  const room = Math.floor(totalUnits - (opts.awayUnits ?? 0) - spec.keepHome);
+  // 마을에 남길 사람(keepHome)은 일할 사람 수로 센다 (R2-b-2: 화면의 "일할 사람"과 같은 셈, 족장·노인은 따로)
+  const room = workingAdults(def, state) - (opts.awayAdults ?? 0) - spec.keepHome;
   const max = spec.max === 'all' ? pool.length : spec.max;
   const size = Math.min(max, room, pool.length);
   if (size < spec.min) return undefined;

@@ -114,10 +114,14 @@ function planError(tr: Translator, s: GameState, pv: PlanPreview): string | unde
   const person = typeof x['person'] === 'string' ? s.people[x['person']] : undefined;
   const params = {
     ...(typeof x['n'] === 'number' ? { n: x['n'] } : {}),
+    ...(typeof x['need'] === 'number' ? { need: x['need'] } : {}),
+    ...(typeof x['have'] === 'number' ? { have: x['have'] } : {}),
     ...(person ? { name: tr.label(person.name) } : {}),
     ...(typeof x['policy'] === 'string' ? { policy: tr.t(`policy.${x['policy']}.name`) } : {}),
   };
-  return tr.t(tr.has(`ui.plan.${err}`) ? `ui.plan.${err}` : 'ui.plan.error', params);
+  // 마을에 남길 사람이 모자라면 숫자판 (R2-b-2: keepHome은 일할 사람 수 기준)
+  const key = err === 'error.planLabor' && typeof x['need'] === 'number' ? 'ui.plan.error.planKeepHome' : `ui.plan.${err}`;
+  return tr.t(tr.has(key) ? key : 'ui.plan.error', params);
 }
 
 /** 카드의 대가 한 줄: 사람 수 (원정이면 나가는 사람·남는 사람, 이끄는 사람) */

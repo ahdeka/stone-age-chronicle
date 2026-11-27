@@ -56,6 +56,7 @@ export interface CrewSpec {
   /** 'all': 남겨 둘 인원을 뺀 전부 */
   max: number | 'all';
   /** 마을에 남길 최소 노동 인원 */
+  /** 마을에 남길 사람 = 일할 사람 수 기준(족장·노인 제외, workingAdults). 2026-11-27 R2-b-2에서 노동 값 기준에서 옮겼다(값 −3) */
   keepHome: number;
   prefer?: Id;
   band?: AgeBand[];

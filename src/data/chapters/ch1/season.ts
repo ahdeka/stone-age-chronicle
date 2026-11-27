@@ -51,7 +51,7 @@ export const ch1SeasonPolicies: PolicyTemplate[] = [
     appearsWhen: [],
     priority: 36,
     cooldown: 0,
-    crew: { min: 4, max: 6, keepHome: 8, prefer: 'hunt' },
+    crew: { min: 4, max: 6, keepHome: 5, prefer: 'hunt' },
     place: 'north_forest',
     leader: { seat: 'hunt_leader', ailing: false },
     scene: { bg: '{place}', subjects: ['sub.deer', 'sub.hunters'], overlay: '{weather}' },

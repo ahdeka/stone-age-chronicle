@@ -136,7 +136,8 @@ describe('일손 나누기', () => {
     const g = plenty(newGame('crew2', greedy));
     expect(previewPlan(greedy, g, [uid(g, 't_hunt'), uid(g, 't_scout')]).error).toBe('error.planCrew');
     // 인원은 되지만 마을에 남을 사람이 모자라면 planLabor
-    const home = calm([trip('t_hunt', 'food', 'east_steppe', 50, 8, 10), trip('t_scout', 'growth', 'south_marsh', 0, 0, 4)]);
+    // keepHome은 일할 사람 수 기준 (R2-b-2: 노동 값 기준 8 → 5, 콘텐츠와 같은 단위 전환)
+    const home = calm([trip('t_hunt', 'food', 'east_steppe', 50, 5, 10), trip('t_scout', 'growth', 'south_marsh', 0, 0, 4)]);
     const h = plenty(newGame('crew3', home));
     expect(previewPlan(home, h, [uid(h, 't_hunt'), uid(h, 't_scout')]).error).toBe('error.planLabor');
   });

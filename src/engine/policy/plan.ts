@@ -1,6 +1,6 @@
 // 이번 달 전략 짜기 (DESIGN.md §6.4): 식량 1개 + 발전 0~1개, 또는 큰 일 1개.
 // 무리는 큰 일 → 발전 → 식량 순으로 뽑는다. 앞에서 뽑힌 사람은 뒤에서 뽑지 않고,
-// 마을에 남길 인원(keepHome)은 두 칸을 합쳐서 지킨다. 상태를 바꾸지 않는다(잠깐 바꾼 것은 되돌린다).
+// 마을에 남길 인원(keepHome, 일할 사람 수 기준·족장과 노인 제외)은 두 칸을 합쳐서 지킨다. 상태를 바꾸지 않는다(잠깐 바꾼 것은 되돌린다).
 
 import type { BoundPolicy, ChapterDefinition, GameState, Id, Person, PlanEntry, PolicySlot, PolicyTemplate } from '../types';
 import { PHASES } from '../types';
@@ -62,11 +62,15 @@ function countWorking(def: ChapterDefinition, state: GameState, ids: readonly Id
   return living(state).filter((p) => set.has(p.id) && !p.isChief && band(def, state, p) === 'adult' && laborUnits(def, state, p) > 0).length;
 }
 
-/** 무리를 못 뽑은 까닭: 두 전략의 최소 인원 합이 일할 수 있는 성인보다 많으면 planCrew("일할 사람이 n명뿐이다"),
- *  아니면 마을에 남길 사람이 모자란 것(planLabor) */
-function crewError(def: ChapterDefinition, state: GameState, picked: readonly { p: PolicyTemplate }[]): string {
-  const need = picked.reduce((a, { p }) => a + (crewSpecFor(def, state, p)?.min ?? 0), 0);
-  return need > workingAdults(def, state) ? 'error.planCrew' : 'error.planLabor';
+/** 무리를 못 뽑은 까닭: 두 전략의 최소 인원 합이 일할 수 있는 성인보다 많으면 planCrew("일할 사람이 n명뿐이다", {n}),
+ *  아니면 마을에 남길 사람이 모자란 것 planLabor + {need, have} (화면: "마을에 일할 사람 need명은 남아야 한다 · 지금 have명", R2-b-2):
+ *  need = 고른 전략 중 가장 큰 keepHome, have = 일할 사람 − 두 무리의 최소 인원 */
+function crewError(def: ChapterDefinition, state: GameState, picked: readonly { p: PolicyTemplate }[]): { error: string; errorParams: Record<string, number> } {
+  const n = workingAdults(def, state);
+  const min = picked.reduce((a, { p }) => a + (crewSpecFor(def, state, p)?.min ?? 0), 0);
+  if (min > n) return { error: 'error.planCrew', errorParams: { n } };
+  const need = Math.max(0, ...picked.map(({ p }) => crewSpecFor(def, state, p)?.keepHome ?? 0));
+  return { error: 'error.planLabor', errorParams: { n, need, have: Math.max(0, n - min) } };
 }
 
 /** 이끌 사람이 다른 전략에 가 있으면 그 사람 id와 전략 id (화면의 이유 한 줄: "{name:은} 이미 {policy:을} 맡았다") */
@@ -117,7 +121,7 @@ export function previewPlan(def: ChapterDefinition, state: GameState, uids: read
 
   // 무리 뽑기: 큰 일 → 발전 → 식량 (발전 칸의 인원은 정해져 있고, 식량 무리는 남는 사람으로)
   const taken = new Set<Id>();
-  let awayUnits = 0;
+  let awayAdults = 0;
   const entries: PlanEntry[] = [];
   const savedProbe = state.work.probePlace;
   try {
@@ -125,11 +129,11 @@ export function previewPlan(def: ChapterDefinition, state: GameState, uids: read
       const own = leaders.get(c.uid);
       // 다른 전략을 이끄는 사람은 이 무리에 뽑지 않는다
       const busy = new Set([...taken, ...[...leaderTaken].filter((id) => id !== own?.id)]);
-      const formed = formCrew(def, state, p, { taken: busy, awayUnits, leader: own ?? null });
-      if (!formed) return { ...empty, error: crewError(def, state, picked), errorParams: { n: workingAdults(def, state) } };
+      const formed = formCrew(def, state, p, { taken: busy, awayAdults, leader: own ?? null });
+      if (!formed) return { ...empty, ...crewError(def, state, picked) };
       for (const x of formed.crew) {
         taken.add(x.id);
-        awayUnits += laborUnits(def, state, x);
+        if (!x.isChief && band(def, state, x) === 'adult' && laborUnits(def, state, x) > 0) awayAdults += 1;
       }
       if (formed.leader) taken.add(formed.leader.id);
       const place = p.crew && !p.crew.atHome ? (c.place ?? p.place) : undefined;
