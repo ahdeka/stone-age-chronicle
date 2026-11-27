@@ -101,6 +101,14 @@ export const ch1Ko: Record<string, string> = {
   'nar.village_work.winter.2': '어른들은 무릎까지 빠지는 눈 속에서 마른 가지를 꺾었다. 장작 {wood}kg, 먹을거리 {gathered}kg.',
   'nar.village_work.warm.1': '어른들은 강가와 늪을 돌며 먹을거리 {gathered}kg과 장작 {wood}kg을 모았다.',
   'nar.village_work.warm.2': '{villagers:count}명이 물가에 그물을 놓고 새순을 뜯었다. 먹을거리 {gathered}kg, 장작 {wood}kg.',
+  // 계절 턴 진행 화면: 마을 일의 수치 없는 변형 (§B2.3, 수치는 이 철의 결과에만)
+  'nar.village_work.autumn.1.season': '남은 어른들은 강가에서 뿌리를 캐고 마른 가지를 모았다.',
+  'nar.village_work.autumn.2.season': '마을에서는 마른 가지를 꺾고 강가를 뒤졌다. 겨울에 땔 것과 먹을 것이 조금씩 쌓였다.',
+  'nar.village_work.blizzard.season': '눈보라 속에서는 천막 밖으로 나가기도 어려웠다. 땔감을 겨우 끌어왔다.',
+  'nar.village_work.winter.1.season': '눈을 헤치고 땔감을 끌어왔다. 언 땅에서 건진 먹을거리는 얼마 되지 않았다.',
+  'nar.village_work.winter.2.season': '어른들은 무릎까지 빠지는 눈 속에서 마른 가지를 꺾었다.',
+  'nar.village_work.warm.1.season': '어른들은 강가와 늪을 돌며 먹을거리와 땔감을 모았다.',
+  'nar.village_work.warm.2.season': '사람들이 물가에 그물을 놓고 새순을 뜯었다.',
   'line.village.empty': '마을에는 일할 사람이 남지 않았다.',
 
   // ── 장부 행: 잡은 짐승 ──

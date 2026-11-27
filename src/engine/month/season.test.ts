@@ -219,3 +219,18 @@ describe('개발용 2년차 봄 프리셋 (R2-c)', () => {
     expect(serialize(a)).toBe(serialize(b));
   });
 });
+
+describe('한가운데 사건 칩의 값 (R2-c-1, §B2.3 중간 정산)', () => {
+  it('한가운데 단계가 시작할 때의 저장분을 남긴다', () => {
+    const s = createGame(ch1, { seed: 'y2mid', presetId: 'year2_spring' });
+    const s1 = pickSeason(ch1, s);
+    expect(s1.step).toBe('decision');
+    expect(s1.work.decision).toMatchObject({ slot: 'mid' });
+    const at = s1.work.stageStart!;
+    expect(at.foodKg).toBeGreaterThan(0);
+    expect(at.foodDays).toBeGreaterThan(0);
+    expect(at.firewood).toBeGreaterThan(0);
+    // 철 초보다 줄었다 (초입 한 달을 먹었다)
+    expect(at.foodKg).toBeLessThan(s.work.start.food);
+  });
+});

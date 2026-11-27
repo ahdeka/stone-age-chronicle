@@ -12,7 +12,7 @@ import type { ChapterDefinition, EventSlot, FoodLot, GameState, Id, LedgerLine, 
 import { isSeasonTurn, turnAt } from './turn';
 import { ensureTech, payCellCost, settleTech } from '../tech/tech';
 import { PHASES } from '../types';
-import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
+import { allTrue, firewoodDays, foodDays, matchPerson } from '../conditions/evaluate';
 import {
   addCohesion,
   applyEffects,
@@ -465,6 +465,7 @@ function runSeason(def: ChapterDefinition, state: GameState): void {
       w.stepIndex = 0;
       w.stageSteps = false;
       w.stageHunger = 0;
+      w.stageStart = { foodKg: totalKg(state.stores.food), foodDays: foodDays(def, state), firewood: state.stores.firewood, firewoodDays: firewoodDays(def, state) };
     }
     if (!w.stageSteps) {
       if (runPlanSteps(def, state, phase)) return;

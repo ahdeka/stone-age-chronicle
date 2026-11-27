@@ -68,6 +68,28 @@ export function paragraphs(tr: Translator, def: ChapterDefinition, state: GameSt
   return out.filter((x) => x.text.length > 0).map(({ group: _g, ...p }) => p);
 }
 
+const HUNGER_LINE = /^line\.hunger\.\d$/;
+
+/**
+ * 계절 턴 진행 화면의 단계별 줄 (DESIGN.md §B2.3: 진행 서술에는 수치를 넣지 않는다).
+ * - 문자열에 `<키>.season`(수치 없는 변형)이 있으면 그것을 쓴다 (마을 일, 고기 나르기, 배급 감축).
+ * - 배급 줄은 단계(달)마다 마지막 하나만, 그것도 앞 단계에서 이미 말한 상태면 뺀다
+ *   (순 셋의 "배급을 원래대로 돌렸다. 배급을 줄였다."가 한 단계에 겹치지 않게).
+ * 수치는 이 철의 결과(장부)와 한가운데 사건 팝업의 칩에만 있다.
+ */
+export function seasonProgressLines(tr: Translator, stages: readonly (readonly Line[])[]): Line[][] {
+  let said: string | undefined;
+  return stages.map((lines) => {
+    const last = [...lines].reverse().find((l) => HUNGER_LINE.test(l.key));
+    const keep = last && last.key !== said ? last : undefined;
+    if (last) said = last.key;
+    return lines.filter((l) => !HUNGER_LINE.test(l.key) || l === keep).map((l) => (isStoryKey(l.key) && tr.has(`${l.key}.season`) ? { ...l, key: `${l.key}.season` } : l));
+  });
+}
+
+/** 이야기 줄의 키 (화면 정보 키 ui.* 등은 `.season` 변형을 따로 쓰므로 건드리지 않는다) */
+const isStoryKey = (key: string) => key.startsWith('line.') || key.startsWith('nar.');
+
 export interface Recap {
   slot: 'early' | 'mid' | 'late';
   text: string;

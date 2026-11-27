@@ -299,7 +299,7 @@ export function PlanBody({ model, step, picked, labor, growthInfo, majorPicked, 
         <section className={`${d.slot} ${majorPicked ? d.slotDim : ''}`}>
           <div className={d.slotHead}>
             <h3 className={`${d.slotTitle} ${d.foodInk}`}>{tr.t('ui.plan.group.food')}</h3>
-            <span className={d.slotSub}>{tr.t('ui.plan.group.food.sub')}</span>
+            <span className={d.slotSub}>{tr.t(model.plan?.turnKind === 'season' ? 'ui.plan.group.food.sub.season' : 'ui.plan.group.food.sub')}</span>
           </div>
           <div className={d.row}>
             {food.map((c, i) => (

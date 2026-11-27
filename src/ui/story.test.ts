@@ -4,7 +4,8 @@ import { chapters, commonStrings } from '../data/registry';
 import { createTranslator } from '../i18n';
 import { ch1, newGame } from '../test/fixtures';
 import type { Line, PhaseReport } from '../engine';
-import { eventLead, firstSentence, foldRows, paragraphs, recapOf } from './story';
+import { eventLead, firstSentence, foldRows, paragraphs, recapOf, seasonProgressLines } from './story';
+import { lineText } from './format';
 
 const tr = createTranslator([commonStrings.ko, chapters['ch1']!.strings.ko], { tribe: '잿빛강 사람들' });
 
@@ -72,5 +73,28 @@ describe('글 만들기', () => {
     // 들어온 순서가 크기 순이 아니어도 작은 것부터 묶인다
     const g = foldRows([rows[4]!, rows[0]!, rows[3]!, rows[1]!], 3);
     expect(g.shown.map((r) => r.source)).toEqual(['spoil', 'feast']);
+  });
+});
+
+describe('계절 턴 진행 글 (R2-c-1, §B2.3: 진행 서술에는 수치가 없다)', () => {
+  const v = (key: string, params?: Line['params']): Line => ({ key, group: 'village', ...(params ? { params } : {}) });
+
+  it('수치 없는 .season 변형을 쓰고, 배급 줄은 단계마다 마지막 하나를 바뀐 때만', () => {
+    const out = seasonProgressLines(tr, [
+      [v('nar.village_work.warm.1', { gathered: 246, wood: 102 }), v('line.hunger.1')],
+      [v('nar.village_work.warm.2'), v('line.hunger.0'), v('line.hunger.1')],
+      [v('line.carry', { carried: 90 }), v('line.hunger.0')],
+    ]);
+    expect(out.map((ls) => ls.map((l) => l.key))).toEqual([
+      ['nar.village_work.warm.1.season', 'line.hunger.1.season'],
+      ['nar.village_work.warm.2.season'],
+      ['line.carry.season', 'line.hunger.0'],
+    ]);
+    for (const ls of out) for (const l of ls) expect(lineText(tr, l)).not.toMatch(/[0-9]|kg/);
+  });
+
+  it('변형이 없는 줄과 화면 정보 키는 그대로다', () => {
+    const out = seasonProgressLines(tr, [[{ key: 'line.chose', params: { option: 'x' }, group: 'event' }, { key: 'ui.result.title', group: 'info' }]]);
+    expect(out[0]!.map((l) => l.key)).toEqual(['line.chose', 'ui.result.title']);
   });
 });

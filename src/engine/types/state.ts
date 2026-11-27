@@ -198,6 +198,8 @@ export interface MonthWork {
   stageSteps?: boolean;
   /** 계절 턴: 지금 단계에서 가장 나빴던 굶주림 단계 (결속 계절 환산, 달별 기록) */
   stageHunger?: number;
+  /** 계절 턴: 지금 단계(달)가 시작할 때의 저장분. 한가운데 인물 사건 팝업의 머리 칩이 이 값을 쓴다 (§B2.3 중간 정산) */
+  stageStart?: { foodKg: number; foodDays: number; firewood: number; firewoodDays: number };
   /** 계절 턴: 다 메고 오지 못해 두고 온 고기 kg (이 철의 결과 글 한 줄) */
   leftBehind?: number;
   /** 칸별 후보 (큰 일 → 식량 → 발전 순). 칸은 방침 정의의 slot으로 안다 */
