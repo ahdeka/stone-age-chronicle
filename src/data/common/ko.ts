@@ -49,6 +49,8 @@ export const commonKo: Record<string, string> = {
   'ui.stage.mid': '한가운데',
   'ui.stage.late': '끝자락',
   'ui.stage.settlement': '이 철의 결과',
+  // 단계 표시줄의 마지막 칸: 화면 제목이 "이 철의 결과"라 줄에서는 짧게 (1366폭에서 지표와 겹치지 않게, R2-c-1)
+  'ui.stage.trail.settlement': '결과',
   'ui.stage.early.month': '초입 · {num}월',
   'ui.stage.mid.month': '한가운데 · {num}월',
   'ui.stage.late.month': '끝자락 · {num}월',
@@ -58,6 +60,13 @@ export const commonKo: Record<string, string> = {
   'ui.next.season': '다음 철로',
   'ui.result.note': '이달',
   'ui.result.note.season': '이 철',
+  // 결과 화면의 나무 한 줄 (R2-c-1, story.ts techSummary)
+  'ui.result.tree': '나무',
+  'ui.result.tree.done': '{cell} 켜짐',
+  'ui.result.tree.work': '{cell} {pct}%',
+  'ui.result.tree.drift': '{cell} {pct}% · 저절로',
+  'ui.result.tree.neolithic': '두 갈래 끝 · 신석기',
+  'ui.result.tree.open': '나무에서 보기',
   'line.season.leftBehind': '다 메고 오지 못해 약 {kg}kg을 두고 왔다.',
   'ui.status.basis.season': '철 초 기준',
 
@@ -244,6 +253,7 @@ export const commonKo: Record<string, string> = {
   'ui.step.mid': '중순',
   'ui.step.late': '하순',
   'ui.step.settlement': '이달의 결과',
+  'ui.step.doneMark': '완료',
   'ui.status.basis': '월초 기준',
   'ui.status.workers': '일할 사람 {n}',
   'ui.status.ailing': '아픈 사람 {n}',

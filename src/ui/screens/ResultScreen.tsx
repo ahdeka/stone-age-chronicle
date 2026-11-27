@@ -1,5 +1,5 @@
 // 이달의 결과 (화면 시안 Result, 2026-11-24 3차 피드백). 평온한 달 요약 화면을 대신한다.
-// 순별 한 줄 회고(중순 사건은 고른 것), 결과 등급, 덕분에, 사람 변화, 식량 장부(시작 → 얻은 것 → 쓴 것),
+// 순별 한 줄 회고(중순 사건은 고른 것), 발전 칸 한 줄("나무", 나무 판 링크), 결과 등급, 덕분에, 사람 변화, 식량 장부(시작 → 얻은 것 → 쓴 것),
 // 장작 장부 한 줄, 장부 맨 아래 "이달 말" 상자(식량·장작 최종 + 이달 바뀐 물자·인구), 아직 남은 일, 연대기 한 줄, "다음 달로".
 // 수치는 이 화면에서만 보인다.
 
@@ -8,7 +8,8 @@ import { foodDays, population, totalKg, type Alert, type ChapterDefinition, type
 import { StatusBar, StepTrail } from '../components/StatusBar';
 import { lineText, resName, stepLabel } from '../format';
 import { useT } from '../i18n';
-import { crewSourceTest, foldRows, orderRows, recapOf, rowLabel } from '../story';
+import { crewSourceTest, foldRows, orderRows, recapOf, rowLabel, techSummary } from '../story';
+import { useTree } from '../tree';
 import { memoryItems } from './SituationScreen';
 import r from './result.module.css';
 import u from '../ui.module.css';
@@ -54,8 +55,12 @@ export function ResultScreen({ def, state, onNext }: Props) {
   const season = state.work.turn.kind === 'season';
   const settle = reports.find((x) => x.slot === 'settlement');
   const recaps = reports.map((x) => recapOf(tr, def, state, x)).filter((x): x is NonNullable<typeof x> => !!x);
-  // 정산 줄 중 글로 보일 것 (두고 온 고기, 발전 칸의 진척·켜짐): settle.* 표 줄은 빼고
-  const notes = (settle?.lines ?? []).filter((l) => l.key.startsWith('line.'));
+  // 정산 줄 중 글로 보일 것 (두고 온 고기, 새 기술): settle.* 표 줄은 빼고.
+  // 발전 칸의 켜짐·진척은 "나무" 한 줄로 모으고 나무 판으로 가는 링크를 붙인다 (R2-c-1)
+  const settleLines = (settle?.lines ?? []).filter((l) => l.key.startsWith('line.'));
+  const notes = settleLines.filter((l) => !l.key.startsWith('line.tech.'));
+  const techLine = techSummary(tr, settleLines);
+  const tree = useTree();
   const tiers = reports.map((x) => x.tier).filter((t): t is Tier => !!t);
   const tier = TIER_ORDER.find((t) => tiers.includes(t));
   const isCrew = crewSourceTest(def, state);
@@ -157,7 +162,7 @@ export function ResultScreen({ def, state, onNext }: Props) {
 
         <div className={r.cols}>
         <section className={`${r.main} ${u.in}`}>
-          <ol className={r.recaps}>
+          <ol className={`${r.recaps} ${season ? r.recapsSeason : ''}`}>
             {recaps.map((x) => (
               <li key={x.slot} className={r.recap}>
                 <span className={r.recapLabel}>{stepLabel(tr, state, x.slot)}</span>
@@ -173,6 +178,17 @@ export function ResultScreen({ def, state, onNext }: Props) {
                 <span className={`${r.recapText} ${u.serif}`}>{lineText(tr, l)}</span>
               </li>
             ))}
+            {techLine && (
+              <li className={`${r.recap} ${r.treeRow}`} data-result="tree">
+                <span className={r.recapLabel}>{tr.t('ui.result.tree')}</span>
+                <span className={r.treeText}>{techLine.text}</span>
+                {tree && (
+                  <button type="button" className={r.treeLink} onClick={() => tree.open(techLine.focus)}>
+                    {tr.t('ui.result.tree.open')} (T)
+                  </button>
+                )}
+              </li>
+            )}
           </ol>
 
           <div className={r.boxes}>

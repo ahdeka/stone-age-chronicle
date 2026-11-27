@@ -354,3 +354,39 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 나무 한 줄 (R2-c-1): 켜진 칸·진척을 짧게, 오른쪽 끝에 나무 판 링크 */
+.treeRow {
+  align-items: baseline;
+}
+
+.treeText {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeLink {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 계절 턴: 단계 이름(한가운데·끝자락)이 한 줄에 들게 이름표 칸을 넓힌다 (R2-c-1. 36px에서는 두 줄로 꺾여 사망이 많은 겨울에 42px 넘쳤다) */
+.recapsSeason .recapLabel {
+  width: 56px;
+  white-space: nowrap;
+}

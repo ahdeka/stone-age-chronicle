@@ -90,6 +90,28 @@ export function seasonProgressLines(tr: Translator, stages: readonly (readonly L
 /** 이야기 줄의 키 (화면 정보 키 ui.* 등은 `.season` 변형을 따로 쓰므로 건드리지 않는다) */
 const isStoryKey = (key: string) => key.startsWith('line.') || key.startsWith('nar.');
 
+/**
+ * 결과 화면의 나무 한 줄 (R2-c-1): 정산의 칸 줄(켜짐·진척·저절로 나아감·신석기)을 짧은 한 줄로 모은다.
+ * "갈돌 켜짐 · 천막 보수 50% · 저절로". focus는 나무 판에서 먼저 볼 칸(켜진 칸, 없으면 처음 나온 칸)
+ */
+export function techSummary(tr: Translator, lines: readonly Line[]): { text: string; focus?: string } | undefined {
+  const parts: string[] = [];
+  let done: string | undefined;
+  let first: string | undefined;
+  for (const l of lines) {
+    const kind = l.key.startsWith('line.tech.') ? l.key.slice('line.tech.'.length) : undefined;
+    if (!kind || !tr.has(`ui.result.tree.${kind}`)) continue;
+    const cell = l.params?.['cell'];
+    const id = typeof cell === 'object' && 'key' in cell && cell.key.startsWith('tech.') ? cell.key.slice('tech.'.length) : undefined;
+    if (id && kind === 'done') done ??= id;
+    if (id) first ??= id;
+    parts.push(lineText(tr, { ...l, key: `ui.result.tree.${kind}` }));
+  }
+  if (parts.length === 0) return undefined;
+  const focus = done ?? first;
+  return { text: parts.join(' · '), ...(focus ? { focus } : {}) };
+}
+
 export interface Recap {
   slot: 'early' | 'mid' | 'late';
   text: string;

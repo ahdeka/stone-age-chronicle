@@ -4,7 +4,7 @@ import { chapters, commonStrings } from '../data/registry';
 import { createTranslator } from '../i18n';
 import { ch1, newGame } from '../test/fixtures';
 import type { Line, PhaseReport } from '../engine';
-import { eventLead, firstSentence, foldRows, paragraphs, recapOf, seasonProgressLines } from './story';
+import { eventLead, firstSentence, foldRows, paragraphs, recapOf, seasonProgressLines, techSummary } from './story';
 import { lineText } from './format';
 
 const tr = createTranslator([commonStrings.ko, chapters['ch1']!.strings.ko], { tribe: '잿빛강 사람들' });
@@ -96,5 +96,18 @@ describe('계절 턴 진행 글 (R2-c-1, §B2.3: 진행 서술에는 수치가 �
   it('변형이 없는 줄과 화면 정보 키는 그대로다', () => {
     const out = seasonProgressLines(tr, [[{ key: 'line.chose', params: { option: 'x' }, group: 'event' }, { key: 'ui.result.title', group: 'info' }]]);
     expect(out[0]!.map((l) => l.key)).toEqual(['line.chose', 'ui.result.title']);
+  });
+});
+
+describe('결과 화면의 나무 한 줄 (R2-c-1)', () => {
+  const g = (key: string, cell?: string, pct?: number): Line => ({ key, group: 'growth', params: { ...(cell ? { cell: { key: `tech.${cell}` } } : {}), ...(pct !== undefined ? { pct } : {}) } });
+
+  it('켜짐·진척·저절로를 한 줄로, 먼저 볼 칸은 켜진 칸', () => {
+    const t = techSummary(tr, [g('line.tech.drift', 'tent_repair', 50), g('line.tech.done', 'grinding_stone'), { key: 'line.knowledge', group: 'info' }]);
+    expect(t).toEqual({ text: '천막 보수 50% · 저절로 · 갈돌 켜짐', focus: 'grinding_stone' });
+  });
+
+  it('칸 줄이 없으면 없다', () => {
+    expect(techSummary(tr, [{ key: 'line.knowledge', group: 'info' }])).toBeUndefined();
   });
 });

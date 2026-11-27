@@ -128,9 +128,10 @@ export function StepTrail({ now, season = false }: { now: StepId; season?: boole
               —
             </span>
           )}
-          <span className={`${s.step} ${i < at ? s.done : ''} ${i === at ? s.now : ''}`} aria-current={i === at ? 'step' : undefined}>
-            {tr.t(season ? `ui.stage.${st}` : `ui.step.${st}`)}
-            {i < at && ' ✓'}
+          <span className={`${s.step} ${i < at ? s.done : ''} ${i === at ? s.now : ''} ${season ? s.stepTight : ''}`} aria-current={i === at ? 'step' : undefined}>
+            {tr.t(season ? (tr.has(`ui.stage.trail.${st}`) ? `ui.stage.trail.${st}` : `ui.stage.${st}`) : `ui.step.${st}`)}
+            {/* 계절 턴은 단계 이름이 길어(한가운데·끝자락·이 철의 결과) 1366폭에서 지표와 겹쳤다: ✓ 대신 흐린 글자만, 읽기 프로그램에는 "완료" */}
+            {i < at && (season ? <span className="visually-hidden"> {tr.t('ui.step.doneMark')}</span> : ' ✓')}
           </span>
         </li>
       ))}
