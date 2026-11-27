@@ -32,7 +32,7 @@ import {
   type SceneSpec,
 } from '../../engine';
 import type { Translator } from '../../i18n';
-import { dateText, lineText, weatherSummary } from '../format';
+import { dateText, lineText, stepLabel, weatherSummary } from '../format';
 import { useT } from '../i18n';
 import { eventLead } from '../story';
 import { cellName, costText, crewLine, crewWho, shortageText } from '../techText';
@@ -75,6 +75,8 @@ export const NO_GROWTH = '__no_growth__';
 export const COST_PREFIX = '__cost_';
 
 export interface PlanModel {
+  /** 턴 종류: 계절 턴이면 팝업 머리·①단계·시작 단추가 "이번 철 / 한 철" (R2-c-1. ②단계 카드 안은 그대로) */
+  turnKind: 'month' | 'season';
   command: (ids: string[]) => Command;
   /** 고를 수 없는 조합이면 이유 */
   check: (ids: string[]) => string | undefined;
@@ -108,11 +110,17 @@ export interface DecisionModel {
 
 const opt = (tr: Translator, key: string) => (tr.has(key) ? tr.t(key) : undefined);
 
-function keyChips(tr: Translator, def: ChapterDefinition, s: GameState): Chip[] {
-  const days = Math.floor(foodDays(def, s));
+/** 팝업 머리의 기본 칩 (식량 · 장작 · 날씨) + 위험·기회 칩.
+ *  계절 턴 한가운데의 사건은 단계 시작 때 값(work.stageStart)을 쓴다: 중간 정산은 이 칩으로만 보인다 (§B2.3, §B9 5번) */
+function keyChips(tr: Translator, def: ChapterDefinition, s: GameState, slot?: string): Chip[] {
+  const at = s.work.turn.kind === 'season' && slot === 'mid' ? s.work.stageStart : undefined;
+  const days = Math.floor(at ? at.foodDays : foodDays(def, s));
+  const kg = at ? at.foodKg : totalKg(s.stores.food);
+  const wood = at ? at.firewood : s.stores.firewood;
+  const woodDays = at ? at.firewoodDays : firewoodDays(def, s);
   const chips: Chip[] = [
-    { text: tr.t('ui.chip.food', { kg: Math.round(totalKg(s.stores.food)), days }), tone: days < def.balance.ui.foodWarnDays ? 'warn' : 'normal', base: true },
-    { text: tr.t('ui.chip.firewood', { kg: Math.round(s.stores.firewood) }), tone: firewoodDays(def, s) < def.balance.ui.firewoodWarnDays ? 'warn' : 'normal', base: true },
+    { text: tr.t('ui.chip.food', { kg: Math.round(kg), days }), tone: days < def.balance.ui.foodWarnDays ? 'warn' : 'normal', base: true },
+    { text: tr.t('ui.chip.firewood', { kg: Math.round(wood) }), tone: woodDays < def.balance.ui.firewoodWarnDays ? 'warn' : 'normal', base: true },
     { text: weatherSummary(tr, s), tone: 'normal', base: true },
   ];
   // 위험·기회 칩 (늑대 무리, 곰, 물고기 떼 등)은 기본 칩 뒤에. 넘치면 팝업 머리에서 "외 n개"로 접힌다
@@ -122,7 +130,8 @@ function keyChips(tr: Translator, def: ChapterDefinition, s: GameState): Chip[] 
 
 function kicker(tr: Translator, def: ChapterDefinition, s: GameState, slot?: string): string {
   const date = dateText(tr, def, s);
-  return slot && slot !== 'briefing' ? tr.t('ui.kicker.slot', { date, slot: tr.t(`ui.step.${slot}`) }) : tr.t('ui.kicker', { date });
+  // 계절 턴은 초입·한가운데·끝자락 (1년차는 상순·중순·하순)
+  return slot && slot !== 'briefing' ? tr.t('ui.kicker.slot', { date, slot: stepLabel(tr, s, slot) }) : tr.t('ui.kicker', { date });
 }
 
 /** 함께 고를 수 없는 까닭 한 줄 (일할 사람 수, 이미 다른 전략을 맡은 사람) */
@@ -240,7 +249,7 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
     kind: 'policy',
     key: `policy-${s.month}-${cands.map((c) => c.uid).join(',')}`,
     kicker: kicker(tr, def, s),
-    title: tr.t('ui.sheet.policies'),
+    title: tr.t(s.work.turn.kind === 'season' ? 'ui.sheet.policies.season' : 'ui.sheet.policies'),
     chips: keyChips(tr, def, s),
     quotes,
     choices,
@@ -279,6 +288,7 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
           .join(' · ');
       },
       tech,
+      turnKind: s.work.turn.kind,
       initial: going ? [going.uid] : [],
     },
   };
@@ -331,7 +341,7 @@ export function decisionModel(tr: Translator, def: ChapterDefinition, s: GameSta
     key: d.uid,
     kicker: kicker(tr, def, s, d.slot),
     title: tr.t(`event.${ev.id}.title`),
-    chips: keyChips(tr, def, s),
+    chips: keyChips(tr, def, s, d.slot),
     quotes,
     intro: { text: lineText(tr, eventText(def, s, ev, d.actors)), scene: resolveSceneSpec(def, s, ev.scene, currentPlace(s) ?? s.campPlace, s.work.weather[1] ?? '') },
     lead: eventLead(tr, ev.id),
@@ -447,7 +457,8 @@ export function DecisionPopup({ model, open, setOpen, send, bar = true }: PopupP
     return () => window.removeEventListener('keydown', onKey);
   }, [open, model, ready, confirm, toggle, growthInfo, step, nextStep, goNext]);
 
-  const startLabel = isPolicy ? tr.t('ui.bar.start') : tr.t('ui.bar.confirm');
+  const seasonTurn = model.plan?.turnKind === 'season';
+  const startLabel = isPolicy ? tr.t(seasonTurn ? 'ui.bar.start.season' : 'ui.bar.start') : tr.t('ui.bar.confirm');
 
   // 아래 줄: 첫 줄은 고른 것, 둘째 줄은 고른 것의 대가 글 (또는 막힌 이유)
   // 전략 ①단계는 식량(큰 일)의 대가, ②단계는 발전의 대가
@@ -512,7 +523,7 @@ export function DecisionPopup({ model, open, setOpen, send, bar = true }: PopupP
           ) : (
             <>
               <span className={c.barText}>
-                {isPolicy ? tr.t('ui.bar.pending') : tr.t('ui.bar.eventPending')}
+                {isPolicy ? tr.t(seasonTurn ? 'ui.bar.pending.season' : 'ui.bar.pending') : tr.t('ui.bar.eventPending')}
                 {isPolicy && <span className={u.muted}> · {tr.t('ui.bar.slots')}</span>}
               </span>
               <button type="button" className={`${u.btnPrimary} ${u.call}`} onClick={() => setOpen(true)}>

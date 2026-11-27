@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ch1, choose, keepAlive, newGame, pick, run, springGame, toFirstSeason, tweakDef } from '../../test/fixtures';
-import { applyCommand, calendarDate, findPolicy } from '../index';
+import { applyCommand, calendarDate, createGame, findPolicy } from '../index';
 import { firstChoice, playTurn, playTurns } from '../headless';
 import { deserialize, serialize, SAVE_FORMAT } from '../save/save';
 import { SAVE_VERSION } from '../save/version';
@@ -190,5 +190,47 @@ describe('세이브 v6 → v7 (R1-b)', () => {
     const v6a = { ...(structuredClone(y1) as unknown as Record<string, unknown>), saveVersion: 6, cooldowns: { x: 5 } };
     const r1 = deserialize(JSON.stringify({ format: SAVE_FORMAT, generation: 'monthly', saveVersion: 6, chapterId: 'ch1', savedAt: null, state: v6a }));
     expect(r1.ok && r1.state.cooldowns).toEqual({ x: 5 });
+  });
+});
+
+describe('개발용 2년차 봄 프리셋 (R2-c)', () => {
+  it('2년차 봄 계절 턴으로 시작하고, 갈돌은 켜짐 · 끌개는 잠김 + 절반 선물', () => {
+    const s = createGame(ch1, { seed: 'y2', presetId: 'year2_spring' });
+    expect(calendarDate(ch1, s)).toMatchObject({ year: 2, season: 'spring', number: 3 });
+    expect(s.work.turn).toMatchObject({ kind: 'season', months: 3, firstMonth: 13 });
+    expect(s.turn).toBe(1);
+    expect(s.tech['grinding_stone']).toMatchObject({ status: 'done', progress: 1, gifted: 0 });
+    expect(s.tech['grinding_stone']!.log.map((l) => l.kind)).toEqual(['work', 'work', 'work']);
+    expect(s.tech['sled']).toMatchObject({ status: 'locked', progress: 0.5, gifted: 0.5 });
+    expect(s.facilities['wood_shed']).toBe(1);
+    // 한 해가 지났다: 족장 마루는 봄 시작(38세)보다 한 살 많다
+    expect(Math.floor((s.month - s.people['maru']!.birthMonth) / 12)).toBe(39);
+    // 세이브 왕복
+    const r = deserialize(serialize(s));
+    expect(r.ok && r.state).toEqual(s);
+  });
+
+  it('같은 시드면 같은 철을 보낸다', () => {
+    const a = createGame(ch1, { seed: 'y2r', presetId: 'year2_spring' });
+    const b = createGame(ch1, { seed: 'y2r', presetId: 'year2_spring' });
+    playTurns(ch1, a, firstChoice, 4);
+    playTurns(ch1, b, firstChoice, 4);
+    expect(a.month).toBeGreaterThan(13);
+    expect(serialize(a)).toBe(serialize(b));
+  });
+});
+
+describe('한가운데 사건 칩의 값 (R2-c-1, §B2.3 중간 정산)', () => {
+  it('한가운데 단계가 시작할 때의 저장분을 남긴다', () => {
+    const s = createGame(ch1, { seed: 'y2mid', presetId: 'year2_spring' });
+    const s1 = pickSeason(ch1, s);
+    expect(s1.step).toBe('decision');
+    expect(s1.work.decision).toMatchObject({ slot: 'mid' });
+    const at = s1.work.stageStart!;
+    expect(at.foodKg).toBeGreaterThan(0);
+    expect(at.foodDays).toBeGreaterThan(0);
+    expect(at.firewood).toBeGreaterThan(0);
+    // 철 초보다 줄었다 (초입 한 달을 먹었다)
+    expect(at.foodKg).toBeLessThan(s.work.start.food);
   });
 });

@@ -9,7 +9,7 @@ import { ch1Months } from './calendar';
 import { ch1Events } from './events';
 import { ch1Narratives } from './narratives';
 import { ch1Policies } from './policies';
-import { ch1AutumnPreset, ch1SpringPreset } from './preset';
+import { ch1AutumnPreset, ch1SpringPreset, ch1Year2SpringPreset } from './preset';
 import { ch1Theme } from './theme';
 import { ch1SeasonEvents, ch1SeasonNarratives, ch1SeasonPolicies } from './season';
 import { ch1Tech, ch1TechNarratives, ch1TechPolicies } from './tech';
@@ -72,6 +72,6 @@ export const ch1: ChapterDefinition = {
   hooks: { villageNarrative: 'village_work' },
   globalMods: ch1GlobalMods,
   balance: ch1Balance,
-  presets: [ch1SpringPreset, ch1AutumnPreset],
+  presets: [ch1SpringPreset, ch1AutumnPreset, ch1Year2SpringPreset],
   theme: ch1Theme,
 };

@@ -244,6 +244,13 @@ export interface StartPreset {
   discovered: Id[];
   animals: Record<Id, AnimalState>;
   knowledge: Id[];
+  /** 이미 지난 달 수 (개발용 프리셋). 12면 1년차를 지난 것으로 보고 2년차 첫 달에서 시작한다.
+   *  나이(people.age)는 시작 달 기준이고, 달 번호·년차·턴 종류는 이 값만큼 지난 것으로 센다. 기본 0 */
+  elapsedMonths?: number;
+  /** 시작할 때 지어져 있는 시설 */
+  facilities?: Record<Id, number>;
+  /** 시작할 때 켜져 있는 칸. workedMonths는 부족이 그 칸에서 일한 달(나무 판의 기록 줄, 1 이상 elapsedMonths 이하) */
+  techDone?: { id: Id; workedMonths: number[] }[];
 }
 
 /** 월초 보고 규칙 (DESIGN.md §4.1). 조건은 위에서부터, 처음 맞는 것 */

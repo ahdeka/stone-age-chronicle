@@ -151,6 +151,11 @@
   color: var(--text-muted);
 }
 
+/* 계절 턴의 단계 표시: 이름이 길어 안쪽 여백을 조금 줄인다 (R2-c-1) */
+.stepTight {
+  padding: 5px 8px;
+}
+
 .done {
   color: var(--text-muted);
 }

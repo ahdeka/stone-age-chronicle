@@ -57,6 +57,27 @@ export function ensureTech(def: ChapterDefinition, state: GameState): void {
   refreshTech(def, state);
 }
 
+/** 시작 프리셋의 켜진 칸 (개발용 2년차 시작 등): 부족이 workedMonths에 한 달씩 일해 켠 것으로 기록한다.
+ *  칸이 주는 지식·시설도 준다. 잔치·연대기·서술 줄은 남기지 않는다 (게임 시작 전의 일) */
+export function presetCellsDone(def: ChapterDefinition, state: GameState, cells: { id: Id; workedMonths: number[] }[]): void {
+  ensureTech(def, state);
+  const perMonth = 1 / def.balance.tech.monthsPerSeason;
+  for (const { id, workedMonths } of cells) {
+    const cell = findCell(def, id);
+    const c = cellState(state, id);
+    c.status = 'done';
+    c.progress = cell.seasons;
+    c.costPaid = true;
+    c.log = workedMonths.map((month) => ({ kind: 'work' as const, amount: perMonth, month }));
+    const last = workedMonths.length ? Math.max(...workedMonths) : state.month;
+    c.lastProgress = last;
+    c.doneMonth = last;
+    for (const k of cell.grants?.knowledge ?? []) if (!state.knowledge.has.includes(k)) state.knowledge.has.push(k);
+    for (const f of cell.grants?.facility ?? []) state.facilities[f] = (state.facilities[f] ?? 0) + 1;
+  }
+  refreshTech(def, state);
+}
+
 /** 칸 상태를 다시 맞춘다 (열림은 되돌아가지 않는다) */
 export function refreshTech(def: ChapterDefinition, state: GameState): void {
   // 앞 칸이 켜지면 뒤 칸이 열리므로, 바뀌지 않을 때까지

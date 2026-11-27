@@ -460,6 +460,13 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     const seasons = [...new Set(def.calendar.months.map((m) => m.season))];
     const gap = uncoveredSeasons(village, seasons);
     if (gap.length > 0) warn('hooks', `마을 서술에 맞는 변형이 없는 계절 (그 계절 순의 서술이 빌 수 있다): ${gap.join(', ')}`);
+    // 계절 턴 진행 화면은 수치 없는 변형(<키>.season)을 쓴다 (§B2.3). 마을 서술은 모든 변형에 있어야 한다
+    for (const v of village.variants) if (strings[`${v.text}.season`] === undefined) err('hooks', `마을 서술의 계절 턴 변형 없음: ${v.text}.season`);
+  }
+  // 계절 턴 진행 서술의 변형(line.*·nar.* 의 .season)에는 수치가 없어야 한다: 숫자, kg, 수 서식
+  for (const [k, t] of Object.entries(strings)) {
+    if (!k.endsWith('.season') || !(k.startsWith('line.') || k.startsWith('nar.'))) continue;
+    if (/[0-9]|kg|\{[^}]*:(count|num|days)\}/.test(t)) err(k, `계절 턴 진행 서술에 수치가 있다: ${t}`);
   }
   for (const n of def.content.narratives) {
     const w = `narrative.${n.id}`;
@@ -532,6 +539,13 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     for (const f of pr.food) need('food', f.kind, w);
     for (const g of Object.keys(pr.goods)) need('goods', g, w);
     for (const d of pr.discovered) need('place', d, w);
+    for (const k of pr.knowledge) need('knowledge', k, w);
+    for (const f of Object.keys(pr.facilities ?? {})) need('facility', f, w);
+    const elapsed = pr.elapsedMonths ?? 0;
+    for (const t of pr.techDone ?? []) {
+      if (!def.tech.cells.some((c) => c.id === t.id)) err(w, `없는 칸: ${t.id}`);
+      if (t.workedMonths.some((m) => m < 1 || m > elapsed)) err(w, `${t.id}의 일한 달이 시작 전(1~${elapsed})이 아니다`);
+    }
     for (const a of def.animals) if (!pr.animals[a.id]) err(w, `동물 시작 상태 없음: ${a.id}`);
     for (const [id, st] of Object.entries(pr.animals)) {
       const a = def.animals.find((x) => x.id === id);

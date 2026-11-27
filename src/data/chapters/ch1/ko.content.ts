@@ -46,6 +46,13 @@ export const ch1ContentKo: Record<string, string> = {
   'preset.grey_river_autumn.meta': '{date} · {pop}명',
   'preset.grey_river_autumn.tagline': '첫 겨울이 다가온다. 무엇을 먼저 지킬 것인가.',
   'preset.grey_river_autumn.chronicle': '서리 내린 잿빛강 굽이에서, {tribe} {pop}명이 첫 겨울을 앞두고 있었다.',
+  // ── 숨은 개발용 시작: 2년차 봄 (?preset=year2_spring) ──
+  'preset.year2_spring.intro.1': '잿빛강 굽이에 두 번째 봄이 왔다. 첫 겨울은 아무도 잃지 않고 넘겼다.',
+  'preset.year2_spring.intro.2': '천막 {tents:count}채, {pop}명. 갈돌 소리가 아침마다 들린다.',
+  'preset.year2_spring.intro.3': '남은 식량은 {days:days}. 이제 한 철씩 앞을 내다본다.',
+  'preset.year2_spring.intro.4': '당신은 {tribe}의 족장이다.',
+  'preset.year2_spring.tagline': '첫 겨울을 넘겼다. 이제 무엇을 키울 것인가.',
+  'preset.year2_spring.chronicle': '두 번째 봄, 잿빛강 굽이에서 {tribe} {pop}명이 첫 겨울을 넘기고 다시 일어섰다.',
 
   // ── 월초 보고: 머리글 ──
   'head.starving': '먹을 것이 바닥났다',

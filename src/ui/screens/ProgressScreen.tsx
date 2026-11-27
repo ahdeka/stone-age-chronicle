@@ -1,4 +1,5 @@
-// 진행 화면: 상순 → 중순 → 하순 (화면 시안 Progress, 2026-11-24 3차 · 2026-11-25 4차 · 5차 피드백)
+// 진행 화면: 상순 → 중순 → 하순 (화면 시안 Progress, 2026-11-24 3차 · 2026-11-25 4차 · 5차 피드백).
+// 계절 턴(2년차부터)은 같은 틀로 초입 → 한가운데 → 끝자락 (R2-c-1): 서술에는 수치가 없고, 중간 수치는 한가운데 사건 팝업의 칩으로만.
 // 왼쪽 그림, 오른쪽 서술 칸. 세 순은 한 칸에 차례로 이어 써진다: "상순 · 1~10일" 같은 소제목도 글처럼 타이핑되고,
 // 지난 순의 글은 지우거나 다시 그리지 않는다 (순마다 같은 자리에 같은 열쇠로 남는다). 지금 순만 타이핑한다.
 // 페이지 전체는 스크롤 없음. 서술 칸 안쪽만 스크롤하고, 새 글이 붙으면 따라 내려간다
@@ -21,7 +22,7 @@ import { typedLines, typeSchedule, useClock } from '../hooks/useClock';
 import { useInView } from '../hooks/useInView';
 import { useT } from '../i18n';
 import { useMotion } from '../motion';
-import { paragraphs, planPolicies, type Para } from '../story';
+import { paragraphs, planPolicies, seasonProgressLines, type Para } from '../story';
 import { AUTO_DELAY_MS, PROGRESS_TIMING } from '../timing';
 import p from './progress.module.css';
 import u from '../ui.module.css';
@@ -82,14 +83,12 @@ export function ProgressScreen({ def, state, index, onNext, send, paused = false
   const nextReport = reports[index + 1];
 
   // 이 달에 지금까지 나온 순 (지난 순은 전문 그대로, 지금 순은 타이핑)
-  const phases = useMemo(
-    () =>
-      reports
-        .slice(0, index + 1)
-        .filter(isPhase)
-        .map((r) => ({ report: r, head: phaseHead(tr, def, state, r.slot, r.month), paras: paragraphs(tr, def, state, r.lines) })),
-    [reports, index, tr, def, state],
-  );
+  // 계절 턴은 진행 서술에 수치를 넣지 않는다 (수치 없는 변형, 단계마다 배급 줄 하나, §B2.3)
+  const phases = useMemo(() => {
+    const shown = reports.slice(0, index + 1).filter(isPhase);
+    const lines = state.work.turn.kind === 'season' ? seasonProgressLines(tr, shown.map((r) => r.lines)) : shown.map((r) => r.lines);
+    return shown.map((r, i) => ({ report: r, head: phaseHead(tr, def, state, r.slot, r.month), paras: paragraphs(tr, def, state, lines[i]!) }));
+  }, [reports, index, tr, def, state]);
   const current = report && isPhase(report) ? phases[phases.length - 1] : undefined;
   // 지금 순의 타이핑: 소제목 → 문단들 (소제목도 글처럼 이어서 나타난다)
   const texts = current ? [current.head, ...current.paras.map((x) => x.text)] : [];
