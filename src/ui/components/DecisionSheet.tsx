@@ -4,7 +4,7 @@
 // 위: 제목(전략은 단계 표시)과 핵심 수치 칩 / 가운데: 전략 틀(①식량 ②발전) 또는 사건 틀 / 아래: 고른 것과 대가, 다음·확정 버튼
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import type { Hint, SceneSpec } from '../../engine';
+import type { Hint, PlanLabor, SceneSpec } from '../../engine';
 import { useT } from '../i18n';
 import type { Choice, DecisionModel } from './Decision';
 import { Icon, RiskBadge } from './bits';
@@ -271,7 +271,7 @@ interface PlanBodyProps {
   model: DecisionModel;
   step: PlanStep;
   picked: string[];
-  labor: { total: number; food: number; growth: number };
+  labor: PlanLabor;
   growthInfo: Map<string, { meta: string; blocked?: string }>;
   majorPicked: boolean;
   onPick: (c: Choice) => void;
@@ -337,9 +337,12 @@ export function PlanBody({ model, step, picked, labor, growthInfo, majorPicked, 
         <div className={d.laborBar} aria-hidden="true">
           <div className={d.laborFood} style={{ width: `${(labor.food / total) * 100}%` }} />
           <div className={d.laborGrowth} style={{ width: `${(labor.growth / total) * 100}%` }} />
+          <div className={d.laborVillage} style={{ width: `${(labor.village / total) * 100}%` }} />
         </div>
         <span className={d.laborText}>
           <b className={d.foodInk}>{tr.t('ui.plan.laborFood', { n: labor.food })}</b> · <b className={d.growthInk}>{tr.t('ui.plan.laborGrowth', { n: labor.growth })}</b>
+          {labor.village > 0 && ` · ${tr.t('ui.plan.laborVillage', { n: labor.village })}`}
+          {labor.helpers > 0 && <span className={u.muted}> {tr.t('ui.plan.laborHelpers', { n: labor.helpers })}</span>}
         </span>
       </div>
 

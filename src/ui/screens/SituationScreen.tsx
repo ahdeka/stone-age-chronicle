@@ -1,12 +1,12 @@
 // 월초 상황 화면 (화면 시안 Situation, 2026-11-24 3차 피드백). 스크롤을 허용하는 유일한 진행 화면이다.
 // 순서: 지표 바 → 그림(높이 약 240) → 그림 아래 소식 → 사람들 → 옆줄(시대 목표, 아직 남은 일, 부족의 기록) → 맨 아래 땅.
-// 사람들은 주요 인물 4명과 성인·노인·아이 비율, 일손·아픈 사람·다친 사람 수, 거처만 보인다.
+// 사람들은 주요 인물 4명과 성인·노인·아이 비율, 일할 사람·아픈 사람·다친 사람 수, 거처만 보인다.
 // 부족원 개인 기록(이름·나이·건강)은 엔진에만 둔다 (이름 있는 죽음·부상 서술에 쓴다).
 // 결정은 결정 팝업에서 한다. 월초에는 저절로 열지 않고(2026-11-25 4차 피드백, 설정으로 켤 수 있다)
 // 아래 "전략 정하기" 버튼이 맥박 움직임으로 눈에 띈다.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { band, countBand, goalProgress, laborUnits, living, totalKg, type ChapterDefinition, type Command, type GameState, type LandIcon } from '../../engine';
+import { band, countBand, goalProgress, laborUnits, living, totalKg, workingAdults, type ChapterDefinition, type Command, type GameState, type LandIcon } from '../../engine';
 import type { Translator } from '../../i18n';
 import { Caret } from '../components/bits';
 import { decisionModel, DecisionPopup } from '../components/Decision';
@@ -185,7 +185,7 @@ function PeopleCard({ def, state }: { def: ChapterDefinition; state: GameState }
         </div>
         <div className={v.mixText}>
           <span>
-            <b className={v.inkAdult}>{tr.t('ui.people.adults', { n: adults })}</b> {tr.t('ui.people.adultsWork', { n: working('adult') })}
+            <b className={v.inkAdult}>{tr.t('ui.people.adults', { n: adults })}</b> {tr.t('ui.people.adultsWork', { n: workingAdults(def, state) })}
           </span>
           <span>
             <b className={v.inkElder}>{tr.t('ui.people.elders', { n: elders })}</b> {tr.t('ui.people.eldersWork', { n: working('elder') })}

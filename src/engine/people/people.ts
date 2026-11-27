@@ -46,6 +46,18 @@ export function laborUnits(def: ChapterDefinition, state: GameState, p: Person):
   return bandDef(def, ageYears(state, p)).labor;
 }
 
+/** 일할 수 있는 성인 = 화면의 "일할 사람" (§B4.3): 무리에 붙일 수 있는 성인 — 다치거나 아프지 않고, 족장이 아닌 사람
+ *  (족장은 무리에 뽑지 않는다, crew.includeChief). 노인은 들지 않는다(마을 일에 0.5로 보탠다). 줄기로 떠난 사람은 R3에서 뺀다.
+ *  지표 바·전략 팝업 막대·막힘 이유·인원 상한이 모두 이 값을 쓴다(R2-b). 노동 값의 합(workers)은 마을 수확·조건에만 쓴다 */
+export function workingAdults(def: ChapterDefinition, state: GameState): number {
+  return living(state).filter((p) => !p.isChief && band(def, state, p) === 'adult' && laborUnits(def, state, p) > 0).length;
+}
+
+/** "일할 사람"에 들지 않지만 마을 일을 하는 사람: 일할 수 있는 족장 + 일할 수 있는 노인 */
+export function villageHelpers(def: ChapterDefinition, state: GameState): number {
+  return living(state).filter((p) => laborUnits(def, state, p) > 0 && (p.isChief || band(def, state, p) !== 'adult')).length;
+}
+
 /** 하루 소비 kg */
 export function dailyFood(def: ChapterDefinition, state: GameState, p: Person): number {
   return bandDef(def, ageYears(state, p)).foodPerMonth / 30;

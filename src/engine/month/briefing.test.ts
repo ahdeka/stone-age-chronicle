@@ -117,6 +117,6 @@ describe('표시용 계산', () => {
     expect(cohesionBand(ch1, 60)).toBe('normal');
     expect(cohesionBand(ch1, 5)).toBe('broken');
     const hunt = s.work.candidates.find((c) => c.policyId === 'reindeer_big_hunt')!;
-    expect(crewSplit(ch1, s, hunt)).toEqual({ crew: 14, village: 8 });
+    expect(crewSplit(ch1, s, hunt)).toEqual({ crew: 14, village: 3 }); // 남는 일할 사람 17 − 14 (족장·노인은 세지 않는다, R2-b)
   });
 });

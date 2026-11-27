@@ -109,7 +109,7 @@ describe('일손 나누기', () => {
     const s = plenty(newGame('labor', def));
     const pv = previewPlan(def, s, [uid(s, 't_food'), uid(s, 't_grow')]);
     expect(pv.labor.growth).toBe(4);
-    expect(pv.labor.village).toBe(pv.labor.total - 4);
+    expect(pv.labor.village).toBe(0); // 무리 없는 식량 전략: 발전 무리를 뺀 일할 사람 모두가 식량 (R2-b)
     expect(pv.labor.food).toBe(pv.labor.total - 4);
     expect(pv.growthFoodCostKg).toBeGreaterThan(0);
     expect(previewPlan(def, s, [uid(s, 't_food')]).growthFoodCostKg).toBe(0);

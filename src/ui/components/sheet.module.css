@@ -258,6 +258,11 @@
   transition: width calc(0.3s * var(--motion-scale)) ease;
 }
 
+.laborVillage {
+  background: #5a4d3c;
+  transition: width calc(0.3s * var(--motion-scale)) ease;
+}
+
 .laborText {
   flex: none;
 }

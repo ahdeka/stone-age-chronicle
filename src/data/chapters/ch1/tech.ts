@@ -222,7 +222,7 @@ export const ch1TechKo: Record<string, string> = {
   'tech.grinding_stone': '갈돌',
   'tech.tent_repair': '천막 보수',
   'tech.cave_fortify': '굴 다지기',
-  'tech.none': '발전 대신 식량에 붙은 일손',
+  'tech.none': '발전 대신 식량에 붙은 사람들',
   // 칸 일 서술 (턴 첫 단계에 한 줄)
   'tech.stone_spear.work': '{leader:이} 사냥꾼들과 강돌에 창끝을 다시 갈았다.',
   'tech.sled.work': '{leader:이} 장대 두 개에 가죽끈을 엮어 짐을 끄는 틀을 짰다.',

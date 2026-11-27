@@ -255,7 +255,8 @@ export interface MonthStart {
   /** 식량 며칠치 (내림) */
   foodDays: number;
   cohesion: number;
-  /** 일할 수 있는 사람 (노인은 일부로 센다, 반올림) */
+  /** 일할 사람 = 일할 수 있는 성인(족장·노인·아이 제외, workingAdults). 세이브 v7까지는 노동 값의 합(반올림)이었다 —
+   *  월초마다 새로 쓰므로 옛 세이브는 다음 턴 첫머리에 바뀐다 */
   workers: number;
   /** 병이 있는 사람 */
   sick: number;
@@ -305,7 +306,8 @@ export interface TechCellState {
   progress: number;
   /** 사람·이웃이 채운 몫 (칸의 maxShare까지) */
   gifted: number;
-  /** 마지막으로 진척이 생긴 달 → "이어 가던 칸" */
+  /** 마지막으로 전략으로 일한 달(선물·저절로 나아간 몫은 바꾸지 않는다). 세이브 v7까지는 선물에도 바뀌었으므로
+   *  "이어 가던 칸"은 이 값이 아니라 log의 일 기록으로 정한다(continuingCell) */
   lastProgress?: number;
   costPaid?: boolean;
   doneMonth?: number;

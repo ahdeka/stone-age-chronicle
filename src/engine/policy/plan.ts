@@ -5,7 +5,7 @@
 import type { BoundPolicy, ChapterDefinition, GameState, Id, Person, PlanEntry, PolicySlot, PolicyTemplate } from '../types';
 import { PHASES } from '../types';
 import { findPolicy } from '../core/lookup';
-import { band, laborUnits, living } from '../people/people';
+import { band, laborUnits, living, villageHelpers, workingAdults } from '../people/people';
 import { crewSpecFor, formCrew, pickLeader, policyHint } from './candidates';
 import { villageHarvest } from '../month/upkeep';
 
@@ -16,10 +16,23 @@ export interface PlanPreview {
   errorParams?: Record<string, string | number>;
   /** 무리를 다시 뽑고 위험 단서를 다시 계산한 전략 (plan 순서: 식량, 발전 / 큰 일) */
   entries: PlanEntry[];
-  /** 사람 수: 일할 수 있는 사람 전체, 식량 쪽(원정 + 마을), 발전 무리, 마을에 남는 사람 */
-  labor: { total: number; food: number; growth: number; village: number };
+  /** 사람 수 (R2-b) — 막대는 food · growth · village 세 칸이고 합은 total이다 */
+  labor: PlanLabor;
   /** 발전 칸 때문에 마을 수확이 줄어드는 양 (이번 달 기대값, kg). 발전이 없으면 0 */
   growthFoodCostKg: number;
+}
+
+export interface PlanLabor {
+  /** 일할 사람 (workingAdults) */
+  total: number;
+  /** 식량 무리 (큰 일이면 큰 일 무리). 무리가 없는 식량 전략(마을에서 거둔다)이면 발전 무리를 뺀 일할 사람 모두 */
+  food: number;
+  /** 발전 무리 */
+  growth: number;
+  /** 무리에 들지 않고 마을에 남는 일할 사람 = total − food − growth */
+  village: number;
+  /** 일할 사람에 들지 않고 마을 일을 하는 사람: 일할 수 있는 족장 + 노인 ("족장과 노인 n명은 마을 일") */
+  helpers: number;
 }
 
 const ORDER: Record<PolicySlot, number> = { major: 0, growth: 1, food: 2 };
@@ -41,14 +54,12 @@ function checkSlots(slots: PolicySlot[]): string | undefined {
   return undefined;
 }
 
-function headcount(def: ChapterDefinition, state: GameState): number {
-  return living(state).filter((p) => laborUnits(def, state, p) > 0).length;
-}
+export { workingAdults };
 
-/** 일할 수 있는 성인 (§B4.3): 무리에 붙일 수 있는 성인 — 다치거나 아프지 않고, 족장이 아닌 사람(족장은 무리에 뽑지 않는다,
- *  crew.includeChief). 노인은 들지 않는다(마을 일에 0.5로 보탠다). 줄기로 떠난 사람은 R3에서 뺀다 */
-export function workingAdults(def: ChapterDefinition, state: GameState): number {
-  return living(state).filter((p) => !p.isChief && band(def, state, p) === 'adult' && laborUnits(def, state, p) > 0).length;
+/** 무리에 든 사람 중 "일할 사람"(족장이 아닌, 일할 수 있는 성인)만 센다 — 막대 세 칸의 합이 total이 되게 */
+function countWorking(def: ChapterDefinition, state: GameState, ids: readonly Id[]): number {
+  const set = new Set(ids);
+  return living(state).filter((p) => set.has(p.id) && !p.isChief && band(def, state, p) === 'adult' && laborUnits(def, state, p) > 0).length;
 }
 
 /** 무리를 못 뽑은 까닭: 두 전략의 최소 인원 합이 일할 수 있는 성인보다 많으면 planCrew("일할 사람이 n명뿐이다"),
@@ -75,8 +86,9 @@ function personConflict(
 }
 
 export function previewPlan(def: ChapterDefinition, state: GameState, uids: readonly Id[]): PlanPreview {
-  const total = headcount(def, state);
-  const empty: PlanPreview = { entries: [], labor: { total, food: total, growth: 0, village: total }, growthFoodCostKg: 0 };
+  const total = workingAdults(def, state);
+  const helpers = villageHelpers(def, state);
+  const empty: PlanPreview = { entries: [], labor: { total, food: 0, growth: 0, village: total, helpers }, growthFoodCostKg: 0 };
   if (new Set(uids).size !== uids.length) return { ...empty, error: 'error.planDuplicate' };
   const picked: { c: BoundPolicy; p: PolicyTemplate }[] = [];
   for (const uid of uids) {
@@ -142,12 +154,15 @@ export function previewPlan(def: ChapterDefinition, state: GameState, uids: read
   }
   entries.sort((a, b) => PLAN_ORDER[a.slot] - PLAN_ORDER[b.slot]);
 
-  const growthCrew = entries.filter((e) => e.slot === 'growth').reduce((a, e) => a + e.bound.crew.length, 0);
-  const allCrew = entries.reduce((a, e) => a + e.bound.crew.length, 0);
+  const crewOf = (slots: PolicySlot[]) => countWorking(def, state, entries.filter((e) => slots.includes(e.slot)).flatMap((e) => e.bound.crew));
+  const growthCrew = crewOf(['growth']);
+  // 무리가 없는 식량 전략(마을에서 거둔다)은 무리에 들지 않은 일할 사람 모두가 식량 일을 한다
+  const foodEntry = entries.find((e) => e.slot === 'food' || e.slot === 'major');
+  const foodCrew = foodEntry && !findPolicy(def, foodEntry.bound.policyId).crew ? total - growthCrew : crewOf(['food', 'major']);
   const growth = entries.find((e) => e.slot === 'growth');
   return {
     entries,
-    labor: { total, food: total - growthCrew, growth: growthCrew, village: total - allCrew },
+    labor: { total, food: foodCrew, growth: growthCrew, village: Math.max(0, total - foodCrew - growthCrew), helpers },
     growthFoodCostKg: growth ? Math.max(0, expectedVillageFood(def, state, entries.filter((e) => e !== growth)) - expectedVillageFood(def, state, entries)) : 0,
   };
 }

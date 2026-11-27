@@ -6,9 +6,9 @@ import { findPolicy, getStat, stat } from '../index';
 import { firstChoice, playTurn } from '../headless';
 import { generateCandidates } from '../policy/candidates';
 import { applyCommand } from '../core/reduce';
-import { ensureTech, refreshTech } from './tech';
+import { continuingCell, ensureTech, refreshTech } from './tech';
 import { peekCell } from './query';
-import type { ChapterDefinition, GameState } from '../types';
+import type { ChapterDefinition, GameState, TechCellState, TechLogEntry } from '../types';
 
 const status = (s: GameState, id: string) => peekCell(s, id).status;
 const progress = (s: GameState, id: string) => peekCell(s, id).progress;
@@ -69,6 +69,51 @@ describe('칸 상태 전이와 1년차 진척', () => {
     expect(s.work.reports.at(-1)!.lines.map((l) => l.key)).toContain('line.tech.done');
     expect(s.work.cohesionBy?.['tech.done']).toBe(ch1.balance.tech.doneCohesion);
     expect(status(s, 'sled')).toBe('open');
+  });
+
+  it('1년차 칸 자리는 한 장: 첫 칸이 켜지기 전에는 선물 칸이 뜨지 않고, 켜진 뒤에는 선물 칸 중 진척이 가장 많은 칸이 뜬다', () => {
+    let s = springGame('y1');
+    keepAlive(ch1, s);
+    s = finishAndNext(ch1, pick(ch1, s, 'cell_stone_spear'));
+    // 선물: 갈돌 절반(돌창 손질 1/3보다 많다), 천막 보수 1/3
+    s = gift(ch1, s, 'grinding_stone', 0.5);
+    s = gift(ch1, s, 'tent_repair', 1 / 3);
+    regen(ch1, s);
+    expect(cellCands(ch1, s)).toEqual(['cell_stone_spear']);
+    // 첫 칸이 켜지면 선물 칸 중 진척이 가장 많은 갈돌 하나
+    Object.assign(s.tech['stone_spear']!, { status: 'done', progress: 1 });
+    refreshTech(ch1, s);
+    regen(ch1, s);
+    expect(cellCands(ch1, s)).toEqual(['cell_grinding_stone']);
+    // 선물이 없는 열린 칸은 뜨지 않는다 (새로 시작하는 칸은 한 번에 하나)
+    s.tech['grinding_stone'] = { status: 'open', progress: 0, gifted: 0, log: [] };
+    s.tech['tent_repair'] = { status: 'open', progress: 0, gifted: 0, log: [] };
+    regen(ch1, s);
+    expect(cellCands(ch1, s)).toEqual([]);
+  });
+
+  it('1년차 자리의 선물 칸: 잠긴 칸과 갈래 끝 칸은 뜨지 않는다 (끌개 선물은 2년차로 이어진다)', () => {
+    const s = springGame('y2');
+    // 첫 칸(갈돌)을 일해서 켰다
+    s.tech['grinding_stone'] = { status: 'done', progress: 1, gifted: 0, log: [{ kind: 'work', amount: 1, month: 1 }] };
+    // 끌개 절반 선물: 사냥·물가 앞 칸이 켜지지 않아 잠김
+    s.tech['sled'] = { status: 'locked', progress: 0.5, gifted: 0.5, log: [{ kind: 'gift', amount: 0.5, month: 2 }] };
+    refreshTech(ch1, s);
+    regen(ch1, s);
+    expect(status(s, 'sled')).toBe('locked');
+    expect(cellCands(ch1, s)).toEqual([]);
+    // 앞 칸(돌창 손질)이 켜져 끌개가 열려도 갈래 끝이라 뜨지 않는다
+    Object.assign(s.tech['stone_spear']!, { status: 'done', progress: 1 });
+    refreshTech(ch1, s);
+    regen(ch1, s);
+    expect(status(s, 'sled')).toBe('active');
+    expect(cellCands(ch1, s)).toEqual([]);
+    // 갈래 끝이 아닌 선물 칸(저장 구덩이 → 굴 다지기)은 뜬다
+    s.tech['cave_fortify'] = { status: 'locked', progress: 0.5, gifted: 0.5, log: [{ kind: 'gift', amount: 0.5, month: 2 }] };
+    keepAlive(ch1, s); // 시작 비용 장작 100kg
+    refreshTech(ch1, s);
+    regen(ch1, s);
+    expect(cellCands(ch1, s)).toEqual(['cell_cave_fortify']);
   });
 
   it('처음 시작하는 턴에 비용: 가죽이 모자라면 천막 보수를 시작할 수 없다', () => {
@@ -160,6 +205,84 @@ describe('균형 규칙 (이어 가던 칸)', () => {
   });
 });
 
+describe('이어 가던 칸의 정의 (§B4.4, 2026-11-27 확정)', () => {
+  /** 칸 상태를 직접 쓴다: 일 기록(work)이 있는 달, 선물(gift) */
+  const set = (s: GameState, id: string, st: Partial<TechCellState> & { worked?: number[]; gifted?: number }) => {
+    const { worked = [], ...rest } = st;
+    const log: TechLogEntry[] = worked.map((m) => ({ kind: 'work', amount: 1 / 3, month: m }));
+    if (st.gifted) log.push({ kind: 'gift', amount: st.gifted, month: Math.max(0, ...worked) + 1 });
+    s.tech[id] = { status: 'active', progress: worked.length / 3 + (st.gifted ?? 0), gifted: st.gifted ?? 0, log, ...rest };
+  };
+
+  it('없음: 처음 상태, 또는 전략으로 고른 칸이 모두 켜졌으면 이어 가던 칸이 없다', () => {
+    const s = springGame('c1');
+    expect(continuingCell(ch1, s)).toBeUndefined();
+    set(s, 'stone_spear', { status: 'done', progress: 1, worked: [1, 2, 3] });
+    expect(continuingCell(ch1, s)).toBeUndefined();
+  });
+
+  it('선물로만 찬 칸은 이어 가던 칸이 아니다 (진척은 남는다)', () => {
+    let s = springGame('c2');
+    s = gift(ch1, s, 'tent_repair', 1 / 3);
+    expect(status(s, 'tent_repair')).toBe('active');
+    expect(progress(s, 'tent_repair')).toBeCloseTo(1 / 3, 6);
+    expect(peekCell(s, 'tent_repair').lastProgress).toBeUndefined();
+    expect(continuingCell(ch1, s)).toBeUndefined();
+    // 전략으로 한 번 고른 뒤 선물을 더 받아도 이어 가던 칸이다
+    set(s, 'stone_spear', { worked: [1], gifted: 1 / 6 });
+    expect(continuingCell(ch1, s)).toBe('stone_spear');
+  });
+
+  it('잠긴 칸은 일 기록이 있어도 이어 가던 칸이 아니다 (앞 칸 중 고르다 만 칸으로 넘어간다)', () => {
+    const s = springGame('c3');
+    set(s, 'grinding_stone', { worked: [1] });
+    set(s, 'sled', { status: 'locked', worked: [2] });
+    expect(continuingCell(ch1, s)).toBe('grinding_stone');
+    set(s, 'grinding_stone', { status: 'open', progress: 0 });
+    expect(continuingCell(ch1, s)).toBeUndefined();
+  });
+
+  it('가장 최근에 고른 칸. 그 칸이 켜지면 그 전에 고르다 만 칸으로 넘어간다 (계절 턴: 칸 자리가 갈래마다)', () => {
+    const def = tweakDef((d) => {
+      d.tech.cells.find((c) => c.id === 'stone_spear')!.seasons = 3;
+      d.tech.cells.find((c) => c.id === 'grinding_stone')!.seasons = 2;
+      d.content.events = d.content.events.filter((e) => e.scope !== 'person');
+    });
+    let s = freshSeason(def);
+    s = finishAndNext(def, pick(def, s, 'cell_stone_spear'));
+    expect(continuingCell(def, s)).toBe('stone_spear');
+    keepAlive(def, s);
+    s = finishAndNext(def, pick(def, s, 'cell_grinding_stone'));
+    expect(continuingCell(def, s)).toBe('grinding_stone');
+    expect(peekCell(s, 'stone_spear').log.at(-1)!.kind).toBe('drift');
+    keepAlive(def, s);
+    s = finishAndNext(def, pick(def, s, 'cell_grinding_stone'));
+    expect(status(s, 'grinding_stone')).toBe('done');
+    expect(status(s, 'stone_spear')).not.toBe('done');
+    expect(continuingCell(def, s)).toBe('stone_spear');
+  });
+
+  it('계절 턴: "발전하지 않는다" 철에는 이어 가던 칸이 나아가지 않고, 선물만 받은 칸은 다른 칸을 골라도 나아가지 않는다', () => {
+    const def = tweakDef((d) => {
+      d.tech.cells.find((c) => c.id === 'stone_spear')!.seasons = 3;
+      d.content.events = d.content.events.filter((e) => e.scope !== 'person');
+    });
+    let s = freshSeason(def);
+    s = gift(def, s, 'tent_repair', 0.5);
+    s = finishAndNext(def, pick(def, s, 'cell_stone_spear'));
+    expect(continuingCell(def, s)).toBe('stone_spear');
+    keepAlive(def, s);
+    s = finishAndNext(def, pick(def, s, 'season_camp_work'));
+    expect(progress(s, 'stone_spear')).toBeCloseTo(1, 6);
+    expect(progress(s, 'tent_repair')).toBeCloseTo(0.5, 6);
+    // 다른 칸(갈돌)을 고르면 이어 가던 칸(돌창 손질)만 절반 속도로, 선물만 받은 천막 보수는 그대로
+    keepAlive(def, s);
+    s = finishAndNext(def, pick(def, s, 'season_camp_work', 'cell_grinding_stone'));
+    expect(progress(s, 'stone_spear')).toBeCloseTo(1.5, 6);
+    expect(progress(s, 'tent_repair')).toBeCloseTo(0.5, 6);
+  });
+});
+
 describe('계절 턴의 "발전하지 않는다"와 겨울 저장분', () => {
   it('식량 전략만 고른 계절 턴에는 마을 수확 +10% (발전 인원이 식량에 붙는다)', () => {
     const def = tweakDef((d) => {
@@ -216,7 +339,7 @@ describe('신석기', () => {
     });
     const s = springGame('n1', def);
     for (const id of ['stone_spear', 'sled', 'tent_repair']) Object.assign(s.tech[id]!, { status: 'done', progress: 1 });
-    s.tech['village'] = { status: 'locked', progress: 0.99, gifted: 0, log: [], lastProgress: 1 };
+    s.tech['village'] = { status: 'locked', progress: 0.99, gifted: 0, log: [{ kind: 'work', amount: 0.99, month: 1 }], lastProgress: 1 };
     refreshTech(def, s);
     expect(status(s, 'village')).toBe('active');
     // 이어 가던 칸(마을)이 저절로 나아가 켜진다 → 갈래 끝 둘

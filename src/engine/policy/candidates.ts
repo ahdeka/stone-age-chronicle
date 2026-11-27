@@ -3,7 +3,7 @@
 
 import type { ActivityDef, BoundPolicy, ChapterDefinition, GameState, Hint, Id, Person, PersonQuery, PolicySlot, PolicyTemplate } from '../types';
 import { canStartCell } from '../tech/tech';
-import { findCell, peekCell } from '../tech/query';
+import { findCell, isBranchEnd, peekCell } from '../tech/query';
 import { PHASES } from '../types';
 import { allTrue, foodDays, matchPerson } from '../conditions/evaluate';
 import { monthDef, nextUid } from '../core/lookup';
@@ -188,11 +188,25 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
     const cell = findCell(def, s.p.tech!);
     return [-peekCell(state, cell.id).progress, cell.order, def.tech.branches.indexOf(cell.branch)];
   };
-  // 1년차: 부족이 새로 시작하는 칸은 하나 (2026-11-26). 부족이 일한 칸이 하나라도 있으면(진행 중이든 마쳤든)
-  // 그 뒤로는 진행 중인 칸만 후보다 — 선물로 진척이 생긴 칸은 이어 갈 수 있다
-  const started = state.work.turn.kind === 'month' && def.tech.cells.some((c) => peekCell(state, c.id).log.some((l) => l.kind === 'work'));
+  // 1년차 칸 자리 (2026-11-26, 2026-11-27 고침): 부족이 새로 시작하는 칸은 한 번에 하나다.
+  //  · 부족이 일한 칸이 없으면 열린 칸 중에서
+  //  · 일하다 만 칸이 있으면 그 칸만 (선물 받은 칸이 진척이 더 많아도 띄우지 않는다)
+  //  · 일한 칸이 모두 켜졌으면 선물로 진척이 생긴 칸(진행 중)만 — 진척이 가장 많은 칸이 자리에 온다.
+  //    저절로 켜지지 않고, 겨울 준비 작은 발전과 인원을 놓고 고르는 선택이 된다
+  const yearOne = state.work.turn.kind === 'month';
+  const worked = (id: string) => peekCell(state, id).log.some((l) => l.kind === 'work');
+  const workedCells = yearOne ? def.tech.cells.filter((c) => worked(c.id)) : [];
+  const unfinished = workedCells.some((c) => peekCell(state, c.id).status !== 'done');
+  const yearOneOk = (id: string) => {
+    if (!yearOne || workedCells.length === 0) return true;
+    const c = peekCell(state, id);
+    if (c.status !== 'active') return false;
+    // 선물 칸은 잠기지 않은(진행 중) 칸이면서 갈래 끝이 아닌 칸만 — 1년차에 갈래 끝이 켜지면 첫해에 신석기 1/2가 된다.
+    // 끌개 엮기의 끌개 선물은 2년차로 이어지는 절반으로 남는다
+    return unfinished ? worked(id) : c.gifted > 0 && !isBranchEnd(findCell(def, id));
+  };
   const cells = scored
-    .filter((s) => s.p.slot === 'growth' && s.offered && s.p.tech && (!started || peekCell(state, s.p.tech).status === 'active'))
+    .filter((s) => s.p.slot === 'growth' && s.offered && s.p.tech && yearOneOk(s.p.tech))
     .sort((x, y) => {
       const a = cellRank(x);
       const c = cellRank(y);

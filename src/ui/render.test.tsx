@@ -97,8 +97,8 @@ describe('화면', () => {
     expect(h).toContain('잿빛강 사람들 34명이 첫 겨울을 앞두고 있었다');
     expect(h).toContain('1년차 11월');
     expect(h).toContain('전략 정하기');
-    // 사람들: 주요 인물 4명과 비율·일손. 부족원 개인 명단은 화면에 없다 (3차 피드백)
-    expect(h).toContain('그중 일손');
+    // 사람들: 주요 인물 4명과 비율·일할 사람. 부족원 개인 명단은 화면에 없다 (3차 피드백)
+    expect(h).toContain('그중 일할 사람 17');
     expect(h).toContain('다친 사람');
     expect(h).not.toContain('부족원 명단');
     expect(h).not.toContain('⟨');

@@ -9,6 +9,7 @@ import { crewSpecFor, generateCandidates } from '../policy/candidates';
 import { ensureTech } from '../tech/tech';
 import { band, living } from '../people/people';
 import { runCtx } from './month';
+import { monthStartOf } from '../display';
 import { consume, stageCohesion } from './upkeep';
 import type { ChapterDefinition, GameState, PolicyTemplate } from '../types';
 
@@ -49,6 +50,37 @@ describe('인원 제약 (§B4.3)', () => {
     expect(workingAdults(ch1, s)).toBe(adults.length);
     adults[0]!.ailments.push({ kind: 'fracture', severity: 2, healsAt: 9999 });
     expect(workingAdults(ch1, s)).toBe(adults.length - 1);
+  });
+
+  it('셈법 하나 (R2-b): 봄 시작은 지표 바·팝업 막대·막힘 이유가 모두 일할 사람 17, 한 명이 다치면 셋 다 16', () => {
+    // 1년차 달 턴 시험용 식량 전략: 마을 안 무리 최소 16명 (칸 무리 2명과 합치면 넘친다)
+    const big: PolicyTemplate = { ...CREW_FOOD, id: 't_month_big', turn: 'month', crew: { min: 16, max: 16, keepHome: 0, atHome: true } };
+    const def = tweakDef((d) => d.content.policies.push(big));
+    const s = springGame('count', def);
+    const three = (st: GameState) => {
+      const pv = previewPlan(def, st, [uid(st, 't_month_big'), uid(st, 'cell_stone_spear')]);
+      expect(pv.error).toBe('error.planCrew');
+      return [monthStartOf(def, st).workers, previewPlan(def, st, [uid(st, 'fish_run_weirs')]).labor.total, pv.errorParams!['n']];
+    };
+    expect(s.work.start.workers).toBe(17);
+    expect(three(s)).toEqual([17, 17, 17]);
+    // 막대: 무리 없는 식량 전략은 발전 무리를 뺀 일할 사람 모두가 식량, 족장과 노인은 따로
+    const pv = previewPlan(def, s, [uid(s, 'fish_run_weirs'), uid(s, 'cell_stone_spear')]);
+    const helpers = living(s).filter((p) => (p.isChief || band(def, s, p) === 'elder') && p.ailments.length === 0).length;
+    expect(pv.labor).toEqual({ total: 17, food: 15, growth: 2, village: 0, helpers });
+    const hurt = living(s).find((p) => band(def, s, p) === 'adult' && !p.isChief && !p.advisor)!;
+    hurt.ailments.push({ kind: 'fracture', severity: 2, healsAt: 9999 });
+    expect(three(s)).toEqual([16, 16, 16]);
+  });
+
+  it('막대 세 칸: 원정 식량 전략이면 식량 = 원정대, 마을 = 남는 일할 사람 (합은 일할 사람)', () => {
+    const s = freshSeason();
+    const pv = previewPlan(ch1, s, [uid(s, 'season_forest_hunt'), uid(s, 'cell_stone_spear')]);
+    const l = pv.labor;
+    expect(l.food).toBe(pv.entries[0]!.bound.crew.length);
+    expect(l.growth).toBe(pv.entries[1]!.bound.crew.length);
+    expect(l.food + l.growth + l.village).toBe(l.total);
+    expect(l.total).toBe(workingAdults(ch1, s));
   });
 
   it('인물 겹침: 식량 전략을 이끄는 바위가 먼저, 돌창 손질 칸은 fallback(이끼)이 맡는다. 무리는 겹치지 않는다', () => {

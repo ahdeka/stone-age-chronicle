@@ -20,6 +20,7 @@ import {
   totalKg,
   type BoundPolicy,
   type ChapterDefinition,
+  type PlanLabor,
   type PlanPreview,
   type Command,
   type GameState,
@@ -62,8 +63,8 @@ export interface PlanModel {
   command: (ids: string[]) => Command;
   /** 고를 수 없는 조합이면 이유 */
   check: (ids: string[]) => string | undefined;
-  /** 고른 카드들의 일손 (식량 쪽, 발전 쪽, 전체) */
-  labor: (ids: string[]) => { total: number; food: number; growth: number };
+  /** 고른 카드들의 일할 사람 (전체, 식량 무리, 발전 무리, 마을, 족장과 노인) */
+  labor: (ids: string[]) => PlanLabor;
   /** 발전 카드의 대가 한 줄과 막힘 이유: 지금 고른 식량 전략 기준 */
   growthMeta: (foodId: string | undefined, growthId: string) => { meta: string; blocked?: string };
   /** 처음부터 골라 둘 카드 (이어지는 공사) */
@@ -192,10 +193,7 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
     plan: {
       command: (ids) => ({ type: 'choosePlan', uids: real(ids) }),
       check: (ids) => planError(tr, s, previewPlan(def, s, real(ids))),
-      labor: (ids) => {
-        const pv = previewPlan(def, s, real(ids));
-        return { total: pv.labor.total, food: pv.labor.food, growth: pv.labor.growth };
-      },
+      labor: (ids) => previewPlan(def, s, real(ids)).labor,
       growthMeta: (foodId, growthId) => {
         const base = choices.find((x) => x.id === growthId)?.meta ?? '';
         if (growthId === NO_GROWTH) return { meta: base };

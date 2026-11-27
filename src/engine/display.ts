@@ -2,8 +2,8 @@
 
 import type { BoundPolicy, ChapterDefinition, GameState, MonthStart } from './types';
 import { findAilment, findShelter } from './core/lookup';
-import { foodDays, workers } from './conditions/evaluate';
-import { laborUnits, living, population } from './people/people';
+import { foodDays } from './conditions/evaluate';
+import { band, laborUnits, living, population, workingAdults } from './people/people';
 import { stat } from './stats/stats';
 import { totalKg } from './stores/food';
 
@@ -22,7 +22,8 @@ export function monthStartOf(def: ChapterDefinition, state: GameState): MonthSta
     population: population(state),
     foodDays: Math.floor(foodDays(def, state)),
     cohesion: state.cohesion,
-    workers: Math.round(workers(def, state)),
+    // 화면의 "일할 사람" (R2-b): 노동 값의 합(workers)이 아니라 일할 수 있는 성인 수
+    workers: workingAdults(def, state),
     sick,
     injured,
   };
@@ -43,10 +44,11 @@ export function cohesionBand(def: ChapterDefinition, value: number): string {
   return (bands.find((b) => value >= b.min) ?? bands[bands.length - 1])?.id ?? '';
 }
 
-/** 방침을 고르면 원정에 나가는 사람과 마을에 남아 일하는 사람 수 */
+/** 방침을 고르면 원정에 나가는 사람과 마을에 남는 일할 사람 수 (R2-b: 화면 숫자는 모두 "일할 사람" = workingAdults.
+ *  족장과 노인은 세지 않는다) */
 export function crewSplit(def: ChapterDefinition, state: GameState, c: BoundPolicy): { crew: number; village: number } {
   const away = new Set(c.crew);
-  const village = living(state).filter((p) => !away.has(p.id) && laborUnits(def, state, p) > 0).length;
+  const village = workingAdults(def, state) - living(state).filter((p) => away.has(p.id) && !p.isChief && band(def, state, p) === 'adult' && laborUnits(def, state, p) > 0).length;
   return { crew: c.crew.length, village };
 }
 

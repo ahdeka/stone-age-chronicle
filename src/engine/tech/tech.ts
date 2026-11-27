@@ -51,7 +51,6 @@ export function ensureTech(def: ChapterDefinition, state: GameState): void {
       if (add <= EPS) continue;
       c.progress += add;
       c.gifted += add;
-      c.lastProgress = state.month;
       c.log.push({ kind: 'gift', ...(e.by ? { by: e.by } : {}), amount: add, month: state.month });
     }
   }
@@ -77,15 +76,26 @@ export function refreshTech(def: ChapterDefinition, state: GameState): void {
   }
 }
 
-/** 이어 가던 칸: 켜지지 않은 칸 중 가장 최근에 진척이 생긴 칸 (같으면 장 정의 순서) */
+/** 부족이 전략으로 이 칸에서 마지막으로 일한 달 (일 기록 'work'·'winter'만. 선물·저절로 나아간 몫은 세지 않는다) */
+export function lastWorked(c: TechCellState): number | undefined {
+  let at: number | undefined;
+  for (const l of c.log) if ((l.kind === 'work' || l.kind === 'winter') && (at === undefined || l.month > at)) at = l.month;
+  return at;
+}
+
+/** 이어 가던 칸 (§B4.4, 2026-11-27): 켜지지 않은 칸 중 가장 최근에 전략으로 고른(부족이 직접 일한) 칸.
+ *  열림·진행 중 칸만 된다(잠긴 칸은 안 됨). 선물로만 찬 칸은 되지 않는다. 마지막에 고른 칸이 켜졌으면 그 전에 고르다 만 칸,
+ *  그런 칸이 없으면 없다. 같은 달이면 장 정의 순서.
+ *  일 기록(log)에서 읽는다 — 세이브 v7의 lastProgress는 선물에도 바뀌었으므로 쓰지 않는다 */
 export function continuingCell(def: ChapterDefinition, state: GameState): Id | undefined {
   let best: Id | undefined;
   let at = -Infinity;
   for (const cell of def.tech.cells) {
     const c = peekCell(state, cell.id);
-    if (c.status === 'done' || c.progress <= EPS || c.lastProgress === undefined) continue;
-    if (c.lastProgress > at) {
-      at = c.lastProgress;
+    if (c.status !== 'open' && c.status !== 'active') continue;
+    const m = lastWorked(c);
+    if (m !== undefined && m > at) {
+      at = m;
       best = cell.id;
     }
   }
@@ -103,8 +113,8 @@ export function addTechProgress(ctx: RunCtx, id: Id, amount: number, kind: TechL
   if (add <= EPS) return 0;
   c.progress += add;
   if (kind === 'gift') c.gifted += add;
-  // 저절로 나아간 몫(drift)은 "이어 가던 칸"을 바꾸지 않는다
-  if (kind !== 'drift') c.lastProgress = state.month;
+  // 마지막으로 전략으로 일한 달: 선물·저절로 나아간 몫은 바꾸지 않는다 (§B3.3, 이어 가던 칸은 log에서 읽는다)
+  if (kind === 'work' || kind === 'winter') c.lastProgress = state.month;
   c.log.push({ kind, ...(by ? { by } : {}), amount: add, month: state.month });
   refreshTech(def, state);
   if (c.status !== 'locked' && c.progress >= cell.seasons - EPS) completeCell(ctx, id);
