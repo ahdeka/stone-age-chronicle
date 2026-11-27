@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>R2 시안 3 · 1년차 → 2년차 넘어가기 + 4월 첫 갈래</title>
+<link rel="stylesheet" href="r2.css">
+<style>
+/* ── 넘어가기 화면 ── */
+.tmain { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; padding: 14px 24px 10px; }
+.col { min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.ttl h2 { margin: 0; font-family: var(--font-serif); font-size: 28px; line-height: 1.3; }
+.ttl span { font-size: 14px; color: var(--text-muted); }
+.boxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.box { border-radius: 14px; background: var(--surface); border: 1px solid var(--border); padding: 9px 12px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.box h3 { margin: 0; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.box .big { font-size: 19px; font-weight: 700; line-height: 1.35; }
+.box .l { font-size: 13px; line-height: 1.45; color: var(--prose); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.box .l.m { color: var(--text-muted); }
+.box.lost { border-color: #4a3428; }
+.box.lost .big { color: var(--warn-soft); }
+.box.cell { border-color: #7a5530; background: #2a2017; }
+.box.cell .big { color: #f6d7ad; }
+.chron { flex: 1; min-height: 0; overflow: hidden; border-radius: 14px; background: var(--inset); border: 1px solid var(--border); padding: 10px 14px; }
+.chron h3 { margin: 0 0 4px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.chron p { margin: 0 0 4px; font-family: var(--font-serif); font-size: 17px; line-height: 1.6; color: var(--prose-strong); }
+.chron p .when { font-family: var(--font-sans); font-size: 13px; color: var(--accent); margin-right: 8px; }
+
+.next { border-radius: 16px; background: #1b1d16; border: 1px solid #4d6640; padding: 12px 16px; display: flex; flex-direction: column; gap: 9px; min-height: 0; flex: 1; overflow: hidden; }
+.next h3 { margin: 0; font-family: var(--font-serif); font-size: 21px; color: var(--text); }
+.next .lead { margin: 0; font-size: 17px; line-height: 1.55; color: var(--prose-strong); }
+.next .lead b { color: var(--growth-ink); }
+/* 해 띠: 1년차 달 12칸 → 2년차 철 4칸 */
+.yr { display: grid; grid-template-columns: 52px 1fr; gap: 4px 8px; align-items: center; font-size: 13px; color: var(--text-muted); }
+.months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+.months i { height: 12px; border-radius: 3px; background: #4a3e30; }
+.seasons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.seasons span { display: flex; align-items: center; justify-content: center; height: 24px; border-radius: 6px; background: #2c3a25; color: var(--text); font-size: 13px; }
+.seasons span:first-child { background: var(--growth); color: #12160e; font-weight: 700; }
+.phases { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--prose); }
+.phases span { padding: 2px 8px; border-radius: 8px; background: var(--inset); border: 1px solid var(--border); }
+.phases span.mid { border-color: var(--accent); color: var(--text); }
+.bul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 14px; line-height: 1.5; color: var(--prose); }
+.bul li::before { content: '·'; color: var(--accent); margin-right: 8px; font-weight: 700; }
+/* 나무 미리 보기 */
+.mini { display: grid; grid-template-columns: 58px repeat(4, 1fr); gap: 4px 5px; align-items: center; font-size: 13px; }
+.mini .bn { color: var(--text-muted); white-space: nowrap; }
+.mini .c { height: 22px; border-radius: 6px; border: 1px dashed var(--border-strong); background: #16130f; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; padding: 0 6px; white-space: nowrap; overflow: hidden; }
+.mini .c.open { border: 1px solid var(--button-line); background: var(--surface); color: var(--text); }
+.mini .c.done { border: 1px solid #7a5530; background: #3a2a1b; color: #f6d7ad; font-weight: 700; }
+.sledNote { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 1.45; color: var(--bone); }
+.sledNote .sw { flex: none; width: 18px; height: 10px; border-radius: 3px; border: 1px dashed #6b5f4c; background: repeating-linear-gradient(135deg, rgba(217,203,178,.35) 0 3px, transparent 3px 6px); }
+.mini .c.gift { border: 1px dashed #6b5f4c; background: repeating-linear-gradient(135deg, rgba(217,203,178,.18) 0 4px, transparent 4px 8px), #16130f; color: var(--bone); }
+
+.tfoot { flex: none; padding: 10px 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.tfoot .hint { font-size: 14px; color: var(--text-muted); }
+
+/* ── 사건 팝업 (sheet.module.css의 사건 틀) ── */
+.backdrop { position: absolute; inset: 0; background: rgba(6,5,4,.72); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.under { position: absolute; inset: 0; background: linear-gradient(180deg, #1a1511 0%, #12100e 40%); }
+.under .bar { opacity: .5; }
+.sheet { width: min(1180px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 22px; background: var(--sheet); border: 1px solid var(--border-strong); box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.head { flex: none; padding: 12px 24px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
+.head h2 { margin: 0; font-family: var(--font-serif); font-size: 24px; line-height: 1.3; white-space: nowrap; }
+.kicker { font-size: 14px; color: var(--accent); white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.body { flex: 1 1 auto; min-height: 0; padding: 12px 20px; display: flex; flex-direction: column; gap: 12px; }
+.eventTop { display: flex; gap: 16px; align-items: stretch; }
+.eventScene { flex: 0 0 40%; max-width: 440px; aspect-ratio: 2 / 1; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: var(--bg-deep); }
+.eventScene svg { display: block; width: 100%; height: 100%; }
+.eventText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.prose { margin: 0; font-family: var(--font-serif); font-size: 17px; line-height: 1.7; color: var(--prose-strong); }
+.quotes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.quote { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: 10px; background: var(--inset); border: 1px solid #2a241d; font-size: 13px; line-height: 1.5; color: var(--quote); }
+.quote i { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 4px; }
+.quote b { color: var(--text); }
+.quote .s { font-family: var(--font-serif); }
+.opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.opt { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px 12px; border-radius: 14px; background: #1c1915; border: 1px solid var(--border-soft); color: var(--text); min-width: 0; border-top: 3px solid var(--bc); }
+.opt.on { background: #211d17; border-color: var(--accent); border-top-color: var(--bc); box-shadow: 0 0 0 2px rgba(224,161,90,.25); }
+.opt .top { display: flex; align-items: center; gap: 8px; }
+.opt .num { font-size: 13px; color: var(--text-muted); }
+.opt .title { font-family: var(--font-serif); font-size: 16px; font-weight: 700; white-space: nowrap; }
+.opt .br { margin-left: auto; font-size: 13px; color: var(--bc); white-space: nowrap; }
+.opt .gift { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--bone); }
+.opt .gift .prog { flex: 0 0 90px; }
+.opt .l { font-size: 13px; line-height: 1.45; color: var(--prose); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opt .l .k { color: var(--text-muted); margin-right: 4px; }
+.opt .cost { font-size: 13px; line-height: 1.45; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.foot { flex: none; padding: 10px 24px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+.foot .pick { display: flex; flex-direction: column; min-width: 0; }
+.foot .pick > span:first-child { font-size: 15px; }
+.foot .pick .cost { font-size: 13px; color: var(--text-muted); }
+
+body.big .opt .l, body.big .opt .cost, body.big .quote, body.big .box .l { font-size: 14px; }
+body.big .chron p { font-size: 18px; }
+body.big .tmain { width: 100%; max-width: 1500px; margin: 0 auto; align-content: center; gap: 28px; }
+body.big .chron, body.big .next { flex: none; }
+body.big .chron { min-height: 260px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="docHead">
+    <h1>시안 3 · 1년차 → 2년차 넘어가기 + 4월 첫 갈래 사건</h1>
+    <span>위: 1년차 2월의 결과 뒤 한 화면. 아래: 1년차 4월 월초 사건(같은 팝업 틀, 사건형).</span>
+    <div class="tools"><button data-size="small">1366×650</button><button data-size="big">1920×950</button></div>
+  </div>
+
+  <div class="boardLabel"><b>넘어가기 · 이제부터 한 철씩</b><span id="fit-turn" class="fit"></span></div>
+  <div class="board" id="turn">
+    <div class="bar">
+      <div class="brand"><span class="tribe">잿빛강 사람들</span><span class="when">1년차가 끝났다</span></div>
+      <div class="stats">
+        <span class="stat"><b>32명</b><span class="m">34명에서</span></span>
+        <span class="stat"><b>식량 95kg</b><span class="m">3일치</span></span>
+        <span class="stat"><b>장작 60kg</b></span>
+        <span class="stat"><b>결속 흔들림</b></span>
+        <button class="barBtn" type="button">발전 나무 <span class="m">1/12</span></button>
+      </div>
+    </div>
+    <div class="tmain">
+      <div class="col">
+        <div class="ttl"><h2>첫 해가 지났다</h2><span>1년차 3월 ~ 2월 · 열두 달</span></div>
+        <div class="boxes">
+          <div class="box lost" data-fit="lost">
+            <h3>잃은 사람</h3>
+            <div class="big">2명</div>
+            <div class="l">돌쩌귀 · 12월 · 곰 사냥</div>
+            <div class="l">느티 · 2월 · 굶주림</div>
+          </div>
+          <div class="box cell" data-fit="cell">
+            <h3>켜진 칸</h3>
+            <div class="big">갈돌</div>
+            <div class="l">6월 · 씨앗 갈래 첫 칸</div>
+            <div class="l"><span style="color:var(--text-muted)">연 것</span> 도토리 갈무리</div>
+          </div>
+          <div class="box" data-fit="food">
+            <h3>남은 것</h3>
+            <div class="big">식량 95kg · 3일치</div>
+            <div class="l">장작 60kg · 가죽 7장</div>
+            <div class="l m">그물 2 · 장작 덧집 · 끌개</div>
+          </div>
+        </div>
+        <div class="chron" data-fit="chron">
+          <h3>부족의 기록</h3>
+          <p><span class="when">4월</span>소식이 셋이나 들어온 아침, 노을의 말을 따라 풀씨를 갈아 보기로 했다.</p>
+          <p><span class="when">6월</span>오목하게 간 돌에서 처음으로 가루가 나왔다. 가을에는 도토리를 갈았다.</p>
+          <p><span class="when">12월</span>잠든 곰은 쓰러졌지만 사냥꾼 돌쩌귀가 숨을 거뒀다.</p>
+          <p><span class="when">2월</span>마지막 열흘은 먹는 양을 줄였다. 노인 느티가 잠든 채 깨어나지 못했다.</p>
+        </div>
+      </div>
+      <div class="col">
+        <div class="next" data-fit="next">
+          <h3>이제부터 한 철씩</h3>
+          <p class="lead">이제 한 번 고르면 <b>한 철</b>이 지나갑니다.</p>
+          <div class="yr">
+            <span>1년차</span><div class="months"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <span>2년차</span><div class="seasons"><span>봄</span><span>여름</span><span>가을</span><span>겨울</span></div>
+          </div>
+          <div class="phases">한 철 = <span>초입</span>→<span class="mid">한가운데</span>→<span>끝자락</span>→ 이 철의 결과</div>
+          <ul class="bul">
+            <li>한가운데에 사람의 일이 하나 생깁니다.</li>
+            <li>발전 나무는 갈래마다 한 칸씩 고를 수 있습니다.</li>
+            <li>고르지 않은 칸도 이어 가던 것은 천천히 나아갑니다.</li>
+          </ul>
+          <div class="mini" id="mini"></div>
+          <div class="sledNote"><span class="sw"></span>끌개는 끌개 엮기로 절반 찼다 · 사냥·물가 칸 하나가 먼저 켜져야 함</div>
+        </div>
+      </div>
+    </div>
+    <div class="tfoot">
+      <span class="hint">Enter 2년차 봄으로 · T 발전 나무</span>
+      <div style="display:flex;gap:10px"><button class="btnGhost" type="button">발전 나무 보기</button><button class="btn" type="button">2년차 봄을 맞는다</button></div>
+    </div>
+  </div>
+
+  <div class="boardLabel"><b>4월 첫 갈래 사건 · 세 갈래 소식</b><span id="fit-branch" class="fit"></span></div>
+  <div class="board" id="branch">
+    <div class="under"><div class="bar"><div class="brand"><span class="tribe">잿빛강 사람들</span><span class="when">1년차 · 봄 · 4월</span></div></div></div>
+    <div class="backdrop">
+      <div class="sheet" data-fit="sheet">
+        <div class="head">
+          <h2>세 갈래 소식</h2><span class="kicker">1년차 · 봄 · 4월</span>
+          <div class="chips"><span class="chip">식량 210kg · 7일치</span><span class="chip">장작 60kg</span><span class="chip">비</span><span class="chip chipGood">얼음이 다 풀림</span></div>
+          <button class="btnGhost" type="button">상황 보기 ✕</button>
+        </div>
+        <div class="body">
+          <div class="eventTop">
+            <div class="eventScene" id="scene"></div>
+            <div class="eventText">
+              <p class="prose">얼음이 다 풀린 아침, 소식이 셋이나 한꺼번에 들어왔다. 강 아래로 큰 짐승 발자국이 이어졌고, 볕 든 비탈에 묵은 풀씨가 이삭째 남아 있었고, 지난밤 비에 천막 두 채가 샜다.</p>
+              <div class="quotes">
+                <div class="quote"><i style="background:#c9813a"></i><span><b>바위</b> <span class="s">“발자국이 식기 전에 창부터 갈아 둡시다.”</span></span></div>
+                <div class="quote"><i style="background:#b9a35a"></i><span><b>노을</b> <span class="s">“이 씨는 겨울에도 썩지 않아요.”</span></span></div>
+                <div class="quote"><i style="background:#a9b8c9"></i><span><b>서리</b> <span class="s">“비가 새면 아이들이 먼저 앓습니다.”</span></span></div>
+                <div class="quote"><i style="background:#8fa87a"></i><span><b>이끼</b> <span class="s">“어느 쪽이든 손에 쥘 것부터 만들어야 합니다.”</span></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="foot">
+          <div class="pick">
+            <span>고른 것: <b style="color:var(--accent)">풀씨를 갈아 본다</b> → 갈돌 1/3</span>
+            <span class="cost">고르면 발전 나무에 첫 잎이 난다. 고르지 않은 두 칸도 열려 있어 나중에 시작할 수 있다.</span>
+          </div>
+          <span style="font-size:13px;color:var(--text-muted);white-space:nowrap">1~3 고르기 · Enter 확정</span>
+          <button class="btn" type="button">이 길로 간다</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="r2.js"></script>
+<script>
+var MINI = [
+  ['사냥·물가', [['돌창 손질', 'open'], ['투창기', ''], ['어살과 건조대', ''], ['끌개 · 절반', 'gift']]],
+  ['씨앗', [['갈돌', 'done'], ['이삭 풀밭', 'open'], ['농기구', ''], ['첫 수확', '']]],
+  ['집', [['천막 보수', 'open'], ['굴 다지기', ''], ['움집', ''], ['마을', '']]],
+];
+var OPTS = [
+  { title: '창끝을 다시 간다', br: '사냥·물가', bc: 'var(--br-hunt)', cell: '돌창 손질', opens: '들소 몰이', when: '겨울에도 나온다', cost: '바위가 반긴다 · 노을과 서리는 서운해한다' },
+  { title: '풀씨를 갈아 본다', br: '씨앗', bc: 'var(--br-seed)', cell: '갈돌', opens: '도토리 갈무리', when: '가을에 나온다', cost: '노을이 반긴다 · 바위와 서리는 서운해한다', on: true },
+  { title: '천막부터 고친다', br: '집', bc: 'var(--br-home)', cell: '천막 보수', opens: '물가 야영', when: '여름에 나온다', cost: '가죽 6장 · 서리가 반긴다 · 바위와 노을은 서운해한다' },
+];
+
+// 강가 야영지의 불가, 조언자 넷 (시안용 장면)
+var SCENE = '<svg viewBox="0 0 440 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+  '<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2a33"/><stop offset=".6" stop-color="#3b2f28"/><stop offset="1" stop-color="#1a140f"/></linearGradient></defs>' +
+  '<rect width="440" height="220" fill="url(#sk)"/>' +
+  '<path d="M0 150 Q110 136 220 146 T440 140 V220 H0 Z" fill="#14100c"/>' +
+  '<path d="M0 176 C80 168 160 186 240 176 C320 166 380 180 440 172" class="lnBone"/>' +
+  '<path d="M40 150 L64 112 L88 150 Z" fill="#2c2219"/><path class="ln" d="M40 150 L64 112 L88 150 M64 112 V150"/>' +
+  '<path d="M330 148 L356 108 L382 148 Z" fill="#2c2219"/><path class="ln" d="M330 148 L356 108 L382 148 M356 108 V148"/>' +
+  '<path d="M214 158 l6 -16 l6 16 Z" fill="#e0a15a" opacity=".85"/><path d="M210 160 h20" class="ln"/>' +
+  [[150, '#c9813a'], [180, '#b9a35a'], [262, '#a9b8c9'], [292, '#8fa87a']].map(function (p) {
+    return '<circle cx="' + p[0] + '" cy="128" r="5" fill="' + p[1] + '"/><path d="M' + p[0] + ' 134 v18 M' + p[0] + ' 152 l-5 10 M' + p[0] + ' 152 l5 10" fill="none" stroke="' + p[1] + '" stroke-width="2" stroke-linecap="round"/>';
+  }).join('') +
+  '<path class="lnBone" d="M120 196 l6 -3 M132 200 l6 -3 M144 196 l6 -3"/>' +
+  '<path class="ln" d="M396 120 v-22 M396 104 l-5 -5 M396 104 l5 -5 M396 110 l-5 -5 M396 110 l5 -5"/>' +
+  '</svg>';
+
+R2.ready(function () {
+  var m = '';
+  MINI.forEach(function (r) {
+    m += '<span class="bn">' + r[0] + '</span>';
+    r[1].forEach(function (c) { m += '<span class="c ' + c[1] + '">' + c[0] + '</span>'; });
+  });
+  document.getElementById('mini').innerHTML = m;
+  document.getElementById('scene').innerHTML = SCENE;
+  document.getElementById('opts').innerHTML = OPTS.map(function (o, i) {
+    return '<button type="button" class="opt' + (o.on ? ' on' : '') + '" style="--bc:' + o.bc + '">' +
+      '<span class="top"><span class="num">' + (i + 1) + '</span><span class="title">' + o.title + '</span><span class="br">' + o.br + '</span></span>' +
+      '<span class="gift">' + R2.prog(1, [{ k: 'g', v: 1 / 3 }]) + '<span><b style="color:var(--text)">' + o.cell + '</b>에 1/3 · 두 달 더 하면 켜진다</span></span>' +
+      '<span class="l"><span class="k">켜지면 새 전략</span><b style="color:var(--text)">' + o.opens + '</b> · ' + o.when + '</span>' +
+      '<span class="cost">' + o.cost + '</span></button>';
+  }).join('');
+});
+</script>
+</body>
+</html>

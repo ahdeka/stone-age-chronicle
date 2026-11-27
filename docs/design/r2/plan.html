@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>R2 시안 2 · 전략 팝업 ②단계 (발전)</title>
+<link rel="stylesheet" href="r2.css">
+<style>
+/* 뒤에 깔린 상황 화면(흐림) + 가운데 대화상자. 틀은 src/ui/components/sheet.module.css 그대로 */
+.backdrop { position: absolute; inset: 0; background: rgba(6,5,4,.72); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.under { position: absolute; inset: 0; background: linear-gradient(180deg, #1a1511 0%, #12100e 40%); }
+.under .bar { opacity: .5; }
+.sheet {
+  width: min(1180px, 100%); max-height: 100%;
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 22px; background: var(--sheet); border: 1px solid var(--border-strong);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.head { flex: none; padding: 12px 24px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
+.head h2 { margin: 0; font-family: var(--font-serif); font-size: 24px; line-height: 1.3; white-space: nowrap; }
+.kicker { font-size: 14px; color: var(--accent); white-space: nowrap; }
+.steps { flex: none; display: flex; align-items: center; gap: 4px; }
+.step { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid transparent; background: transparent; color: var(--text-muted); font-size: 14px; }
+.step i { font-style: normal; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 10px; background: var(--inset); font-size: 13px; }
+.stepOn { border-color: var(--accent); background: #2a2119; color: var(--text); font-weight: 700; }
+.stepOn i { background: var(--accent); color: #1a140e; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+
+.body { flex: 1 1 auto; min-height: 0; padding: 12px 20px; display: flex; flex-direction: column; gap: 9px; }
+.foodLine { display: flex; align-items: center; gap: 12px; padding: 6px 14px; border-radius: 12px; background: var(--inset); border: 1px solid var(--border); font-size: 14px; }
+.foodLine .foodInk { color: var(--accent); }
+.labor { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.laborBar { flex: 1; display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--border); }
+.laborBar .f { background: var(--accent); }
+.laborBar .g { background: var(--growth); }
+.laborBar .v { background: #5a4d3c; }
+.ink-f { color: var(--accent); }
+.ink-g { color: var(--growth-ink); }
+
+.slotHead { display: flex; align-items: baseline; gap: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.slotHead h3 { margin: 0; font-size: 16px; color: var(--growth-ink); white-space: nowrap; }
+.slotHead .sub { font-size: 13px; color: var(--text-muted); }
+.slotHead .link { margin-left: auto; white-space: nowrap; }
+
+/* 균형 규칙 한 줄 */
+.drift { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--prose); }
+.drift svg { flex: none; }
+.drift b { color: var(--growth-ink); }
+
+.row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.card {
+  position: relative; display: flex; flex-direction: column; gap: 7px; padding: 8px; min-width: 0;
+  border-radius: 14px; background: #1c1915; border: 1px solid var(--border-soft); text-align: left; color: var(--text);
+}
+.card.on { background: #211d17; border-color: var(--growth); box-shadow: 0 0 0 2px rgba(143,168,122,.28); }
+.card.blocked { background: #16130f; border: 1px dashed var(--border-soft); }
+.card.blocked .pic, .card.blocked .cb > :not(.drift1) { opacity: .5; }
+.picWrap { position: relative; flex: none; display: block; }
+.whyTop { position: absolute; left: 6px; right: 6px; bottom: 6px; padding: 4px 8px; border-radius: 8px; background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-soft); font-size: 13px; line-height: 1.4; }
+.whyTop b { color: var(--warn-text); }
+.pic { display: block; position: relative; height: 100px; border-radius: 10px; overflow: hidden; background: var(--bg-deep); flex: none; }
+.pic svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pic .tl { position: absolute; left: 6px; top: 6px; }
+.pic .tr { position: absolute; right: 6px; top: 6px; }
+.pic .tag { background: rgba(12,11,10,.82); }
+.cb { display: flex; flex-direction: column; gap: 3px; padding: 0 4px 2px; min-width: 0; }
+.top { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.num { flex: none; font-size: 13px; color: var(--text-muted); }
+.title { font-family: var(--font-serif); font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top .tag { margin-left: auto; }
+.pr { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+.pr .prog { flex: 1; }
+.pr span { flex: none; font-size: 13px; color: var(--text-muted); }
+.l { font-size: 13px; line-height: 1.45; color: var(--prose); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.l.m { color: var(--text-muted); }
+.l .k { color: var(--text-muted); margin-right: 4px; }
+.l.soon { color: #f0c48e; }
+.why { font-size: 13px; line-height: 1.4; color: var(--warn-text); }
+.drift1 { font-size: 13px; line-height: 1.4; color: var(--growth-ink); }
+.see { font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; background: none; border: none; padding: 0; align-self: flex-start; }
+.none .pic { display: grid; place-items: center; }
+
+.foot { flex: none; padding: 10px 24px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+.foot .pick { display: flex; flex-direction: column; min-width: 0; }
+.foot .pick b.f { color: var(--accent); }
+.foot .pick b.g { color: var(--growth-ink); }
+.foot .pick .cost { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.foot .pick > span:first-child { font-size: 15px; }
+.keys { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+
+body.big .pic { height: 130px; }
+body.big .l, body.big .why, body.big .drift1 { font-size: 14px; }
+body.big .title { font-size: 17px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="docHead">
+    <h1>시안 2 · 전략 팝업 ②단계 (발전)</h1>
+    <span>위: 계절 턴(2년차 가을). 아래: 1년차(6월). 같은 틀이고 다른 점은 카드 구성과 안내 한 줄뿐이다.</span>
+    <div class="tools"><button data-size="small">1366×650</button><button data-size="big">1920×950</button></div>
+  </div>
+
+  <div class="boardLabel"><b>계절 턴 · 2년차 가을</b><span>갈래마다 다음 칸 하나 + 발전하지 않는다 · 노을이 겹쳐 이삭 풀밭이 흐려짐</span><span id="fit-season" class="fit"></span></div>
+  <div class="board" id="season">
+    <div class="under"><div class="bar"><div class="brand"><span class="tribe">잿빛강 사람들</span><span class="when">2년차 · 가을</span></div></div></div>
+    <div class="backdrop">
+      <div class="sheet" data-fit="sheet">
+        <div class="head">
+          <h2>이번 철 전략</h2><span class="kicker">2년차 · 가을</span>
+          <div class="steps"><button class="step" type="button"><i>1</i>식량 ✓</button><span style="color:var(--text-muted)">·</span><button class="step stepOn" type="button"><i>2</i>발전</button></div>
+          <div class="chips">
+            <span class="chip">식량 640kg · 24일치</span><span class="chip">장작 420kg</span><span class="chip">맑음</span>
+            <span class="chip chipGood">도토리가 떨어진다</span><span class="chip chipWarn">강 건너에 늑대</span>
+          </div>
+          <button class="btnGhost" type="button">상황 보기 ✕</button>
+        </div>
+        <div class="body">
+          <div class="foodLine"><span>식량: <b class="foodInk">도토리 갈무리</b> · 11명 · 노을이 이끈다</span><button class="link" type="button">바꾸기</button></div>
+          <div class="labor">
+            <b>일할 사람 15</b>
+            <div class="laborBar"><span class="f" style="width:73.3%"></span><span class="g" style="width:20%"></span><span class="v" style="width:6.7%"></span></div>
+            <span><b class="ink-f">식량 11명</b> · <b class="ink-g">발전 3명</b> · 마을 1명 <span style="color:var(--text-muted)">· 족장과 노인 4명은 마을 일</span></span>
+          </div>
+          <div class="slotHead">
+            <h3>발전 전략</h3><span class="sub">갈래마다 다음 칸 하나 · 1개 고른다</span>
+            <button class="link" type="button">숨은 칸 2개 · 나무에서 보기 (T)</button>
+          </div>
+          <div class="drift" id="driftS"></div>
+          <div class="row" id="rowS"></div>
+        </div>
+        <div class="foot">
+          <div class="pick">
+            <span>식량 <b class="f">도토리 갈무리</b> + 발전 <b class="g">천막 보수</b></span>
+            <span class="cost">가죽 6장 · 3명이 한 철 마을 일에서 빠진다 · 식량 약 −210kg · 이삭 풀밭은 절반 속도로 이어진다</span>
+          </div>
+          <span class="keys">1~4 고르기 · Backspace 식량으로</span>
+          <button class="btn" type="button">한 철을 시작한다</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="boardLabel"><b>1년차 · 6월</b><span>칸 1개 + 겨울 준비 2개 · 장작 비축이 인원 넘침으로 흐려짐</span><span id="fit-year1" class="fit"></span></div>
+  <div class="board" id="year1">
+    <div class="under"><div class="bar"><div class="brand"><span class="tribe">잿빛강 사람들</span><span class="when">1년차 · 여름 · 6월</span></div></div></div>
+    <div class="backdrop">
+      <div class="sheet" data-fit="sheet">
+        <div class="head">
+          <h2>이번 달 전략</h2><span class="kicker">1년차 · 여름 · 6월</span>
+          <div class="steps"><button class="step" type="button"><i>1</i>식량 ✓</button><span style="color:var(--text-muted)">·</span><button class="step stepOn" type="button"><i>2</i>발전</button></div>
+          <div class="chips">
+            <span class="chip">식량 520kg · 18일치</span><span class="chip">장작 140kg</span><span class="chip">맑음</span>
+            <span class="chip chipGood">물고기 떼가 올라옴</span>
+          </div>
+          <button class="btnGhost" type="button">상황 보기 ✕</button>
+        </div>
+        <div class="body">
+          <div class="foodLine"><span>식량: <b class="foodInk">물고기 떼 잡기</b> · 13명 · 바위가 이끈다</span><button class="link" type="button">바꾸기</button></div>
+          <div class="labor">
+            <b>일할 사람 17</b>
+            <div class="laborBar"><span class="f" style="width:76.5%"></span><span class="g" style="width:11.75%"></span><span class="v" style="width:11.75%"></span></div>
+            <span><b class="ink-f">식량 13명</b> · <b class="ink-g">발전 2명</b> · 마을 2명 <span style="color:var(--text-muted)">· 족장과 노인 4명은 마을 일</span></span>
+          </div>
+          <div class="slotHead">
+            <h3>발전 전략</h3><span class="sub">나무의 칸 하나와 겨울 준비 · 1개 고른다</span>
+            <button class="link" type="button">나무에서 보기 (T)</button>
+          </div>
+          <div class="drift" id="driftY"></div>
+          <div class="row" id="rowY"></div>
+        </div>
+        <div class="foot">
+          <div class="pick">
+            <span>식량 <b class="f">물고기 떼 잡기</b> + 발전 <b class="g">갈돌</b></span>
+            <span class="cost">2명이 마을 일에서 빠진다 · 식량 약 −60kg · 이 달을 마치면 갈돌이 켜진다</span>
+          </div>
+          <span class="keys">1~4 고르기 · Backspace 식량으로</span>
+          <button class="btn" type="button">한 달을 시작한다</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="r2.js"></script>
+<script>
+var LOOP = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8 a5 5 0 1 1 -2 -4 M11 1 v3 h-3" fill="none" stroke="#a9c194" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+// 카드 그림: 철 색 하늘 + 땅 + 큰 선 그림 (시안용. R2-b에서는 칸의 장면 id)
+function scene(id, tint) {
+  var sky = { autumn: ['#3a2618', '#1a120c'], summer: ['#2b2a1c', '#14130d'], none: ['#1c1915', '#14110e'] }[tint || 'autumn'];
+  return '<svg class="scene" viewBox="0 0 240 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+    '<defs><linearGradient id="g' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + sky[0] + '"/><stop offset="1" stop-color="' + sky[1] + '"/></linearGradient></defs>' +
+    '<rect width="240" height="100" fill="url(#g' + id + ')"/>' +
+    '<path d="M0 78 Q60 70 120 76 T240 74 V100 H0 Z" fill="#100d0a"/>' +
+    '<g transform="translate(92 18) scale(1.15)">' + R2.icon(id).replace(/<\/?svg[^>]*>/g, '') + '</g></svg>';
+}
+
+function card(c, n) {
+  var cls = 'card' + (c.on ? ' on' : '') + (c.why ? ' blocked' : '') + (c.none ? ' none' : '');
+  var h = '<button type="button" class="' + cls + '"' + (c.why ? ' aria-disabled="true"' : '') + '>';
+  h += '<span class="picWrap"><span class="pic">' + scene(c.icon, c.tint) + (c.where ? '<span class="tl tag ' + (c.prep ? 'tagPrep' : 'tagOpen') + '">' + c.where + '</span>' : '') +
+       (c.state ? '<span class="tr">' + c.state + '</span>' : '') + '</span>' +
+       (c.why ? '<span class="whyTop"><b>같이 못 고름</b> · ' + c.why + '</span>' : '') + '</span>';
+  h += '<span class="cb">';
+  h += '<span class="top"><span class="num">' + n + '</span><span class="title">' + c.title + '</span>' + (c.cont ? '<span class="tag tagCont">↻ 이어 가던 칸</span>' : '') + '</span>';
+  if (c.bar) h += '<span class="pr">' + R2.prog(c.bar.total, c.bar.parts) + '<span>' + c.bar.text + '</span></span>';
+  (c.lines || []).forEach(function (l) { h += '<span class="l ' + (l[2] || '') + '">' + (l[0] ? '<span class="k">' + l[0] + '</span>' : '') + l[1] + '</span>'; });
+
+  if (c.drift) h += '<span class="drift1">' + LOOP.replace('16', '13').replace('16', '13') + ' ' + c.drift + '</span>';
+  if (c.see) h += '<span class="see">나무에서 보기</span>';
+  return h + '</span></button>';
+}
+
+var SEASON = [
+  { icon: 'stone_spear', where: '사냥·물가 · 1번째', state: '<span class="tag tagOpen">열림</span>', title: '돌창 손질',
+    bar: { total: 1, parts: [], text: '0%' },
+    lines: [['', '1철 · 3명 · 바위', 'm'], ['', '비용 없음 · 식량 약 −210kg', 'm'], ['연다', '들소 몰이 (식량, 겨울에도)']], see: true },
+  { icon: 'grain_meadow', where: '씨앗 · 2번째', state: '<span class="tag tagAct">진행 중</span>', title: '이삭 풀밭', cont: true,
+    bar: { total: 2, parts: [{ k: 'w', v: 1 }, { k: 'next', v: 0.5 }], text: '50%' },
+    lines: [['', '2철 · 4명 · 노을', 'm'], ['연다', '싹이 났다 (사건) · 풀밭 지키기']],
+    why: '노을은 이번 철 도토리 갈무리를 이끈다', drift: '고르지 않아도 이번 철 +25%' },
+  { icon: 'tent_repair', where: '집 · 1번째', state: '<span class="tag tagOpen">열림</span>', title: '천막 보수', on: true,
+    bar: { total: 1, parts: [], text: '0%' },
+    lines: [['', '1철 · 3명 · 누구든', 'm'], ['', '가죽 6장 (가진 것 9장) · 식량 약 −210kg', 'm'], ['연다', '물가 야영 (식량, 여름)']], see: true },
+  { icon: 'none', none: true, tint: 'none', title: '발전하지 않는다',
+    lines: [['', '발전할 3명이 식량에 붙는다', 'm'], ['', '이번 철 식량 +10%'], ['', '이어 가던 칸도 이번 철엔 쉰다', 'm']] },
+];
+
+var YEAR1 = [
+  { icon: 'grinding_stone', tint: 'summer', where: '씨앗 · 1번째 칸', state: '<span class="tag tagAct">진행 중</span>', title: '갈돌', cont: true, on: true,
+    bar: { total: 1, parts: [{ k: 'g', v: 1 / 3 }, { k: 'w', v: 1 / 3 }], text: '67%' },
+    lines: [['', '이 달을 마치면 켜진다', 'soon'], ['', '2명 · 노을 또는 버들 · 식량 약 −60kg', 'm'], ['연다', '도토리 갈무리 (가을)']], see: true },
+  { icon: 'net', tint: 'summer', prep: true, where: '겨울 준비', title: '그물 엮기',
+    lines: [['', '한 달 · 이끼와 1명', 'm'], ['', '식량 약 −60kg', 'm'], ['', '그물 +1 · 겨울 얼음 밑에도 친다']] },
+  { icon: 'woodpile', tint: 'summer', prep: true, where: '겨울 준비', title: '장작 비축과 덧집',
+    lines: [['', '한 달 · 8명', 'm'], ['', '쌓아 둘 수 있는 장작 +600kg']],
+    why: '일할 사람이 17명뿐이다 (식량 최소 10 + 이 일 8)' },
+  { icon: 'none', none: true, tint: 'none', title: '발전하지 않는다',
+    lines: [['', '일손 모두 식량에 쓴다', 'm'], ['', '이어 가던 갈돌도 이 달엔 쉰다', 'm']] },
+];
+
+R2.ready(function () {
+  document.getElementById('rowS').innerHTML = SEASON.map(function (c, i) { return card(c, i + 1); }).join('');
+  document.getElementById('rowY').innerHTML = YEAR1.map(function (c, i) { return card(c, i + 1); }).join('');
+  document.getElementById('driftS').innerHTML = LOOP + '<span>고르지 않아도 이어 가던 <b>이삭 풀밭</b>은 절반 속도로 나아갑니다. 발전하지 않는다를 고르면 쉽니다.</span>';
+  document.getElementById('driftY').innerHTML = LOOP + '<span>고르지 않아도 이어 가던 <b>갈돌</b>은 반 달 몫씩 나아갑니다. 1년차에는 칸을 하나만 키웁니다.</span>';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>R2 시안 1 · 발전 나무</title>
+<link rel="stylesheet" href="r2.css">
+<style>
+/* ── 발전 나무 화면 ── */
+.thead {
+  flex: none;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 18px;
+}
+.thead h2 { margin: 0; font-family: var(--font-serif); font-size: 24px; line-height: 1.3; }
+.thead .sum { font-size: 14px; color: var(--prose); white-space: nowrap; }
+.thead .sum b { color: var(--accent); }
+.legend { display: flex; gap: 12px; align-items: center; margin-left: auto; font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+.legend .sw { display: inline-block; width: 18px; height: 8px; border-radius: 4px; vertical-align: 1px; margin-right: 5px; }
+
+.tmain { flex: 1; min-height: 0; display: flex; gap: 14px; padding: 10px 24px 8px; }
+.lanes { flex: 1; min-width: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.lane { display: grid; grid-template-columns: 64px repeat(4, minmax(0, 1fr)); gap: 12px; min-height: 0; }
+.laneHead { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding-left: 8px; border-left: 3px solid var(--bc); }
+.laneHead b { font-family: var(--font-serif); font-size: 16px; line-height: 1.3; }
+.laneHead span { font-size: 13px; color: var(--text-muted); line-height: 1.35; }
+
+/* 칸 */
+.cell {
+  position: relative; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 10px 8px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  text-align: left;
+}
+.cell + .cell::before { content: none; }
+.cellTop { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cellTop .ic { flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--inset); display: grid; place-items: center; }
+.cellTop .ic svg { width: 26px; height: 26px; }
+.cellName { flex: 1; min-width: 0; font-family: var(--font-serif); font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
+.progRow { display: flex; align-items: center; gap: 8px; }
+.progRow .prog { flex: 1; }
+.progRow .pct { flex: none; font-size: 13px; color: var(--text-muted); min-width: 34px; text-align: right; }
+.line { font-size: 13px; line-height: 1.45; color: var(--prose); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.line.m { color: var(--text-muted); }
+.line .k { color: var(--text-muted); margin-right: 4px; }
+.line.warn { color: var(--warn-text); }
+.line.gift { color: var(--bone); }
+
+/* 칸 사이 잇는 선 */
+.lane .cell:not(.end)::after {
+  content: ''; position: absolute; right: -13px; top: 22px; width: 12px; height: 2px; background: var(--border-strong);
+}
+.lane .cell { overflow: visible; }
+.lane .cell .clip { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden; }
+
+/* 상태 네 가지 */
+.s-locked { background: #16130f; border: 1px dashed var(--border-strong); }
+.s-locked .cellName { color: var(--text-muted); }
+.s-locked .ic svg path { stroke: #7d705c; }
+.s-open { background: var(--surface); border: 1px solid var(--button-line); }
+.s-active { background: #1b1d16; border: 1px solid #4d6640; }
+.s-done { background: #2a2017; border: 1px solid #7a5530; }
+.s-done .cellName { color: #f6d7ad; }
+.s-done .ic { background: #3a2a1b; }
+.s-done .ic svg path { stroke: #f0b56e; stroke-width: 2.4; }
+
+/* 갈래 끝 칸: 두 겹 테두리 + 이름표 */
+.end { box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px rgba(224,161,90,.35); }
+.endMark { position: absolute; top: -9px; right: 10px; padding: 0 6px; font-size: 12px; line-height: 17px; border-radius: 6px; background: var(--bg); color: var(--accent); border: 1px solid #6b4a2a; }
+
+/* 이어 가던 칸 */
+.cont { border-color: var(--growth) !important; }
+/* 전략 팝업에서 와서 보는 칸 */
+.focus { box-shadow: 0 0 0 2px var(--accent), 0 0 18px rgba(224,161,90,.35); }
+.focus.end { box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 3px var(--bg), inset 0 0 0 4px rgba(224,161,90,.35); }
+.hereMark { position: absolute; top: -9px; left: 10px; padding: 0 6px; font-size: 12px; line-height: 17px; border-radius: 6px; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+/* 이번 철 전략 카드에 나오는지 */
+.inPlan { font-size: 12px; color: var(--growth-ink); }
+.hidden { font-size: 12px; color: var(--text-muted); }
+
+/* ── 옆줄: 칸 자세히 + 신석기 ── */
+.side { flex: 0 0 280px; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.panel { border-radius: 14px; background: var(--inset); border: 1px solid var(--border); padding: 10px 12px; min-height: 0; }
+.panel h3 { margin: 0 0 4px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.detail { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 5px; }
+.detail .dn { font-family: var(--font-serif); font-size: 19px; font-weight: 700; line-height: 1.3; }
+.detail .row2 { display: flex; gap: 6px; flex-wrap: wrap; }
+.detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 13px; line-height: 1.45; }
+.detail dt { color: var(--text-muted); white-space: nowrap; }
+.detail dd { margin: 0; color: var(--prose); }
+.detail .opens { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 13px; line-height: 1.45; }
+.detail .opens li { display: flex; gap: 6px; }
+.detail .opens .kind { flex: none; color: var(--text-muted); }
+.detail .logline { font-size: 13px; line-height: 1.45; color: var(--bone); border-left: 2px dashed #6b5f4c; padding-left: 8px; }
+.detail .say { font-family: var(--font-serif); font-size: 14px; line-height: 1.5; color: var(--quote); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detail .note { font-size: 13px; line-height: 1.45; color: var(--text-muted); }
+body.big .detail .say { white-space: normal; }
+.state.off { display: none; }
+
+.neo { flex: none; display: flex; flex-direction: column; gap: 6px; }
+.neo .nt { display: flex; align-items: baseline; justify-content: space-between; }
+.neo .nt b { font-family: var(--font-serif); font-size: 18px; }
+.neo .nt span { font-size: 14px; color: var(--accent); font-weight: 700; }
+.neo .rule { font-size: 13px; color: var(--prose); line-height: 1.45; }
+.slots { display: flex; gap: 6px; }
+.slots i { flex: 1; height: 10px; border-radius: 5px; background: var(--border); }
+.slots i.on { background: var(--accent); }
+.ends { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 13px; line-height: 1.45; }
+.ends li { display: flex; gap: 8px; align-items: baseline; }
+.ends .dot { flex: none; width: 8px; height: 8px; border-radius: 4px; background: var(--bc); transform: translateY(-1px); }
+.ends .what { color: var(--prose); }
+.ends .ok { color: #f0c48e; font-weight: 700; }
+
+.tfoot { flex: none; padding: 6px 24px 8px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--text-muted); }
+.tfoot span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 1920×950: 칸이 커진다. 그림을 키우고 줄 간격을 조금 늘린다 */
+body.big .cellTop .ic { width: 44px; height: 44px; }
+body.big .cellTop .ic svg { width: 38px; height: 38px; }
+body.big .cellName { font-size: 17px; }
+body.big .cell { padding: 12px 14px; gap: 7px; }
+body.big .line { font-size: 14px; }
+body.big .side { flex-basis: 340px; }
+body.big .lane { gap: 16px; grid-template-columns: 84px repeat(4, minmax(0, 1fr)); }
+body.big .lanes { gap: 14px; }
+body.big .lane .cell:not(.end)::after { right: -17px; width: 16px; top: 32px; }
+body.big .extra { display: block; }
+.extra { display: none; }
+body.big .detail dl, body.big .detail .opens, body.big .detail .logline, body.big .ends, body.big .neo .rule { font-size: 15px; }
+body.big .detail .dn { font-size: 22px; }
+body.big .detail .say { font-size: 16px; }
+body.big .detail h3 { font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="docHead">
+    <h1>시안 1 · 발전 나무 화면</h1>
+    <span>전략 팝업 ②단계 카드의 "나무에서 보기"를 눌러 들어온 모습. 위 단추로 상태와 크기를 바꾼다.</span>
+    <div class="tools">
+      <button data-state="tree" aria-pressed="true">3년차 겨울</button><button data-state="tree1" aria-pressed="false">1년차 6월</button>
+      <span style="width:10px"></span>
+      <button data-size="small">1366×650</button><button data-size="big">1920×950</button>
+    </div>
+  </div>
+
+  <section class="state" id="st-tree">
+    <div class="boardLabel"><b>3년차 겨울 (전략 고르기 전)</b><span>2차 시험 플레이 3년차 가을 결과 뒤. 이어 가던 칸 없음(고른 칸이 모두 켜짐)</span><span id="fit-tree" class="fit"></span></div>
+    <div class="board" id="tree"></div>
+  </section>
+  <section class="state off" id="st-tree1">
+    <div class="boardLabel"><b>1년차 6월 (전략 고르기 전)</b><span>4월 첫 갈래에서 갈돌을 고르고 5월에 한 달 일함. 눈금 한 칸 = 한 달</span><span id="fit-tree1" class="fit"></span></div>
+    <div class="board" id="tree1"></div>
+  </section>
+</div>
+
+<script src="r2.js"></script>
+<script>
+// 예시 상태. 숫자는 시안용이다. 칸 정의는 DESIGN.md §B3.2 표.
+var BR = {
+  hunt_water: { name: '사냥·물가', c: 'var(--br-hunt)' },
+  seed: { name: '씨앗', c: 'var(--br-seed)' },
+  home: { name: '집', c: 'var(--br-home)' },
+};
+var OPENS = {
+  stone_spear: [['식량', '들소 몰이']],
+  spear_thrower: [['식량', '물새 사냥'], ['선택지', '멀리서 겁주기']],
+  weir_rack: [['식량', '여름 어살 막기'], ['선택지', '말린 물고기를 내준다']],
+  sled: [['식량', '먼 사냥터 원정'], ['선택지', '짐을 끌고 옮긴다']],
+  grinding_stone: [['식량', '도토리 갈무리'], ['식량', '풀씨 갈무리']],
+  grain_meadow: [['사건', '흩뿌린 씨에서 싹이 났다'], ['식량', '풀밭 지키기']],
+  farm_tools: [['식량', '씨 뿌리기']],
+  first_harvest: [['큰 일', '밭 넓히기'], ['사건', '너울 일행의 부탁']],
+  tent_repair: [['식량', '물가 야영']],
+  cave_fortify: [['선택지', '울타리 안으로 물러나 지킨다'], ['덧붙음', '굴 장작 1/3 덜 든다']],
+  pit_house: [['사건', '강가에 땅집'], ['선택지', '떠돌이를 받아들인다']],
+  village: [['사건', '어디에 마을을 세울까']],
+};
+var NAME = { stone_spear: '돌창 손질', spear_thrower: '투창기', weir_rack: '어살과 건조대', sled: '끌개', grinding_stone: '갈돌', grain_meadow: '이삭 풀밭', farm_tools: '농기구', first_harvest: '첫 수확', tent_repair: '천막 보수', cave_fortify: '굴 다지기', pit_house: '움집', village: '마을' };
+var ORDER = { hunt_water: ['stone_spear', 'spear_thrower', 'weir_rack', 'sled'], seed: ['grinding_stone', 'grain_meadow', 'farm_tools', 'first_harvest'], home: ['tent_repair', 'cave_fortify', 'pit_house', 'village'] };
+var SE = { grain_meadow: 2, farm_tools: 2, first_harvest: 2, pit_house: 2 };
+var END = { sled: 1, first_harvest: 1, village: 1 };
+
+// 칸 상태. s: locked/open/active/done · w: 부족이 한 몫(철) · g: 선물 몫(철)
+// plan: 이번 턴 전략에 나옴 · hide: 숨은 이유 · need: 잠긴 까닭 · crew: 인원 줄 · cost
+var STATES = {
+  tree: {
+    when: '3년차 · 겨울', unit: '철', step: 1,
+    stats: [['33명'], ['식량 3,115kg', '39일치'], ['장작 1,240kg'], ['일할 사람 17'], ['결속 단단함']],
+    done: 5, ends: 1,
+    cells: {
+      stone_spear: { s: 'open', crew: '1철 · 3명 · 바위 또는 이끼', cost: '비용 없음', hide: '숨음 · 어살과 건조대가 먼저' },
+      spear_thrower: { s: 'locked', need: '돌창 손질이 켜지면 열림' },
+      weir_rack: { s: 'active', g: 0.5, giver: '왜가리가', crew: '1철 · 5명', cost: '가죽 2장', plan: true },
+      sled: { s: 'locked', g: 0.5, giver: '바위 일행이', need: '어살과 건조대가 먼저 켜져야 함' },
+      grinding_stone: { s: 'done', when: '2년차 봄' },
+      grain_meadow: { s: 'done', when: '2년차 가을' },
+      farm_tools: { s: 'done', when: '2년차 겨울' },
+      first_harvest: { s: 'done', when: '3년차 여름' },
+      tent_repair: { s: 'done', when: '3년차 가을' },
+      cave_fortify: { s: 'open', crew: '1철 · 4명', cost: '장작 100kg', hide: '숨음 · 움집이 먼저 나온다' },
+      pit_house: { s: 'active', g: 1, giver: '바위 일행이', crew: '2철 · 6명 · 바위', cost: '장작 300kg · 가죽 4장', plan: true, focus: true },
+      village: { s: 'open', crew: '1철 · 모두 · 마을 결정 사건', cost: '비용 없음', hide: '숨음 · 움집이 먼저 나온다' },
+    },
+    detail: {
+      id: 'pit_house', left: '1철 · 우리 손으로', per: '한 철에', crew: '6명 · 바위', cost: '장작 300kg · 가죽 4장',
+      tags: ['<span class="tag tagOpen">이번 철 카드</span>'],
+      log: ['3년차 가을 · 바위 일행이 가져온 땅집 기술 (+1철)'],
+      note: '선물로 찬 칸은 이어 가던 칸이 되지 않는다.',
+      say: '바위 “굴 앞이든 강가든, 첫 구덩이는 내가 파겠소.”',
+    },
+    neo: [['seed', '씨앗 · 첫 수확', '켜짐'], ['hunt_water', '사냥·물가 · 끌개 · 어살과 건조대가 먼저'], ['home', '집 · 마을 · 시작할 수 있음']],
+    foot: '고르지 않은 칸의 진척은 사라지지 않는다. 이어 가던 칸(전략으로 고른 마지막 칸)은 다른 일을 고른 철에도 절반 속도로 나아간다.',
+  },
+  tree1: {
+    when: '1년차 · 여름 · 6월', unit: '달', step: 1 / 3,
+    stats: [['34명'], ['식량 520kg', '18일치'], ['장작 140kg'], ['일할 사람 17'], ['결속 단단함']],
+    done: 0, ends: 0,
+    cells: {
+      stone_spear: { s: 'open', crew: '3달 · 2명 · 바위 또는 이끼', cost: '비용 없음', hide: '숨음 · 1년차엔 칸 하나만' },
+      spear_thrower: { s: 'locked', need: '돌창 손질이 켜지면 열림' },
+      weir_rack: { s: 'locked', need: '투창기가 켜지면 열림' },
+      sled: { s: 'locked', need: '사냥·물가 칸 하나가 켜져야 함' },
+      grinding_stone: { s: 'active', g: 1 / 3, w: 1 / 3, crew: '3달 · 2명 · 노을 또는 버들', cost: '비용 없음', plan: true, cont: true, focus: true },
+      grain_meadow: { s: 'locked', need: '갈돌이 켜지면 열림' },
+      farm_tools: { s: 'locked', need: '이삭 풀밭이 켜지면 열림' },
+      first_harvest: { s: 'locked', need: '씨앗 칸 하나가 켜져야 함' },
+      tent_repair: { s: 'open', crew: '3달 · 2명', cost: '가죽 6장', hide: '숨음 · 1년차엔 칸 하나만' },
+      cave_fortify: { s: 'locked', need: '천막 보수나 바위굴이면 열림' },
+      pit_house: { s: 'locked', need: '굴 다지기가 켜지면 열림' },
+      village: { s: 'locked', need: '집 칸 하나가 켜져야 함' },
+    },
+    detail: {
+      id: 'grinding_stone', left: '1달 · 이 달을 마치면 켜진다', per: '한 달에', crew: '2명 · 노을 또는 버들', cost: '비용 없음',
+      tags: ['<span class="tag tagCont">↻ 이어 가던 칸</span>', '<span class="tag tagOpen">이번 달 카드</span>'],
+      log: ['4월 · 세 갈래 소식에서 고름 (선물 1달)', '5월 · 노을과 버들이 돌을 골랐다 (+1달)'],
+      say: '노을 “가운데가 오목해지면 가루가 고여요.”',
+    },
+    neo: [['seed', '씨앗 · 첫 수확 · 잠김'], ['hunt_water', '사냥·물가 · 끌개 · 잠김'], ['home', '집 · 마을 · 잠김']],
+    foot: '2년차부터 한 철씩 나무가 이어진다. 1년차에는 칸을 하나만 키우고, 눈금 한 칸은 한 달이다.',
+  },
+};
+
+var STATUS = {
+  locked: '<span class="tag tagLock">' + R2.icon('lock', 'lnDim', 13) + '잠김</span>',
+  open: '<span class="tag tagOpen">열림</span>',
+  active: '<span class="tag tagAct">진행 중</span>',
+  done: '<span class="tag tagDone">켜짐</span>',
+};
+
+function bar(S, id, c, h) {
+  var se = SE[id] || 1;
+  if (c.s === 'done') return R2.prog(se, [{ k: 'd', v: se }], h, S.step);
+  var parts = [];
+  if (c.w) parts.push({ k: 'w', v: c.w });
+  if (c.g) parts.push({ k: 'g', v: c.g });
+  return R2.prog(se, parts, h, S.step);
+}
+function pct(id, c) { return Math.round(100 * ((c.w || 0) + (c.g || 0)) / (SE[id] || 1)); }
+function opensLine(id, i) {
+  var o = OPENS[id][i];
+  return o ? '<div class="line"><span class="k">' + o[0] + '</span>' + o[1] + '</div>' : '';
+}
+function lockLine(t) { return '<div class="line m">' + R2.icon('lock', 'lnDim', 12) + ' ' + t + '</div>'; }
+
+function cellHtml(S, id) {
+  var c = S.cells[id];
+  var cls = 'cell s-' + c.s + (END[id] ? ' end' : '') + (c.cont ? ' cont' : '') + (c.focus ? ' focus' : '');
+  var h = '<div class="' + cls + '" tabindex="0" title="' + NAME[id] + '">';
+  if (c.focus) h += '<span class="hereMark">보는 칸</span>';
+  if (END[id]) h += '<span class="endMark">갈래 끝</span>';
+  h += '<div class="clip">';
+  h += '<div class="cellTop"><span class="ic">' + R2.icon(id) + '</span><span class="cellName">' + NAME[id] + '</span>' + STATUS[c.s] + '</div>';
+  h += '<div class="progRow">' + bar(S, id, c) + '<span class="pct">' + (c.s === 'done' ? c.when : pct(id, c) + '%') + '</span></div>';
+  if (c.s === 'done') {
+    h += opensLine(id, 0) + opensLine(id, 1);
+  } else if (c.s === 'locked') {
+    h += opensLine(id, 0) + '<div class="extra">' + opensLine(id, 1) + '</div>';
+    if (c.g) h += '<div class="line gift">' + c.giver + ' 절반을 줬다</div>';
+    h += lockLine(c.need);
+  } else {
+    h += '<div class="line m">' + c.crew + '</div>';
+    h += '<div class="extra"><div class="line m">' + c.cost + '</div></div>';
+    h += opensLine(id, 0) + '<div class="extra">' + opensLine(id, 1) + '</div>';
+    if (c.cont) h += '<div class="line"><span class="tag tagCont">↻ 이어 가던 칸</span></div>';
+    else if (c.g) h += '<div class="line gift">' + c.giver + ' 절반을 줬다</div>';
+    else h += '<div class="line ' + (c.plan ? 'inPlan' : 'hidden') + '">' + (c.plan ? '이번 철 전략에 나온다' : c.hide) + '</div>';
+  }
+  return h + '</div></div>';
+}
+
+function detailHtml(S) {
+  var d = S.detail, c = S.cells[d.id];
+  var br = Object.keys(ORDER).filter(function (k) { return ORDER[k].indexOf(d.id) >= 0; })[0];
+  var h = '<h3>칸 자세히 · ' + BR[br].name + ' ' + (ORDER[br].indexOf(d.id) + 1) + '번째 칸</h3>';
+  h += '<div class="dn">' + NAME[d.id] + '</div>';
+  h += '<div class="row2">' + STATUS[c.s] + d.tags.join('') + '</div>';
+  h += bar(S, d.id, c, 10);
+  h += '<dl><dt>남은 일</dt><dd>' + d.left + '</dd><dt>' + d.per + '</dt><dd>' + d.crew + '</dd><dt>처음 손댈 때</dt><dd>' + d.cost + '</dd>';
+  h += '<dt>켜지면</dt><dd><ul class="opens">';
+  OPENS[d.id].forEach(function (o) { h += '<li><span class="kind">' + o[0] + '</span><span>' + o[1] + '</span></li>'; });
+  h += '</ul></dd></dl>';
+  d.log.forEach(function (l) { h += '<div class="logline">' + l + '</div>'; });
+  if (d.note) h += '<div class="note extra">' + d.note + '</div>';
+  h += '<div class="say" title="' + d.say.replace(/"/g, '&quot;') + '">' + d.say + '</div>';
+  return h;
+}
+
+function boardHtml(S) {
+  var h = '<div class="bar"><div class="brand"><span class="tribe">잿빛강 사람들</span><span class="when">' + S.when + '</span></div><div class="stats">';
+  S.stats.forEach(function (s) { h += '<span class="stat"><b>' + s[0] + '</b>' + (s[1] ? '<span class="m">' + s[1] + '</span>' : '') + '</span>'; });
+  h += '<button class="barBtn on" type="button">발전 나무 <span class="m">' + S.done + '/12</span></button></div></div>';
+  h += '<div class="thead"><h2>발전 나무</h2><span class="sum">켜진 칸 <b>' + S.done + '</b> / 12 · 갈래 끝 <b>' + S.ends + '</b> / 2</span>' +
+    '<div class="legend"><span><i class="sw" style="background:var(--growth)"></i>부족이 한 몫</span>' +
+    '<span><i class="sw" style="background:repeating-linear-gradient(135deg,rgba(217,203,178,.85) 0 3px,rgba(217,203,178,.35) 3px 6px)"></i>사람·이웃이 준 몫</span>' +
+    '<span><i class="sw" style="background:var(--accent)"></i>켜짐</span>' +
+    '<span><i class="sw" style="background:none;border:1px solid var(--growth);height:10px;width:16px;border-radius:5px"></i>이어 가던 칸</span>' +
+    '<span>눈금 한 칸 = 한 ' + S.unit + '</span></div>' +
+    '<button class="btnGhost" type="button">← 전략으로 돌아가기</button></div>';
+  h += '<div class="tmain"><div class="lanes">';
+  Object.keys(BR).forEach(function (k) {
+    var done = ORDER[k].filter(function (id) { return S.cells[id].s === 'done'; }).length;
+    h += '<div class="lane" style="--bc:' + BR[k].c + '"><div class="laneHead"><b>' + BR[k].name + '</b><span>' + done + '/4 켜짐</span></div>';
+    ORDER[k].forEach(function (id) { h += cellHtml(S, id); });
+    h += '</div>';
+  });
+  h += '</div><div class="side"><section class="panel detail" data-fit="detail">' + detailHtml(S) + '</section>';
+  h += '<section class="panel neo" data-fit="neo"><div class="nt"><b>신석기</b><span>' + S.ends + ' / 2</span></div>' +
+    '<div class="slots"><i' + (S.ends > 0 ? ' class="on"' : '') + '></i><i' + (S.ends > 1 ? ' class="on"' : '') + '></i></div>' +
+    '<div class="rule">갈래 끝 2개가 켜지면 신석기로</div><ul class="ends">';
+  S.neo.forEach(function (r) { h += '<li style="--bc:' + BR[r[0]].c + '"><i class="dot"></i><span class="what">' + r[1] + '</span>' + (r[2] ? '<span class="ok">' + r[2] + '</span>' : '') + '</li>'; });
+  h += '</ul></section></div></div>';
+  h += '<div class="tfoot"><span>' + S.foot + '</span><span style="flex:none">T 나무 열기·닫기 · 방향키 칸 옮기기 · Esc 돌아가기</span></div>';
+  return h;
+}
+
+R2.ready(function () {
+  Object.keys(STATES).forEach(function (id) {
+    document.getElementById(id).innerHTML = boardHtml(STATES[id]);
+    document.querySelectorAll('#' + id + ' .cell .clip').forEach(function (el, i) { el.dataset.fit = 'cell' + (i + 1); });
+  });
+  // 상태 단추: 3년차 겨울 ⇄ 1년차 6월
+  var sb = document.querySelectorAll('[data-state]');
+  sb.forEach(function (b) {
+    b.addEventListener('click', function () {
+      sb.forEach(function (o) {
+        o.setAttribute('aria-pressed', String(o === b));
+        document.getElementById('st-' + o.dataset.state).classList.toggle('off', o !== b);
+      });
+      R2.check();
+    });
+  });
+});
+</script>
+</body>
+</html>
