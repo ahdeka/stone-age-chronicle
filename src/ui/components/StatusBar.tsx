@@ -1,11 +1,12 @@
 // 상단 지표 바 (2026-11-24 3차 피드백): 월초 상황, 진행 화면, 이달의 결과가 함께 쓴다.
-// 인구, 식량 kg·며칠치, 장작, 일손·아픈 사람, 결속.
+// 인구, 식량 kg·며칠치, 장작, 일할 사람·아픈 사람, 결속, "발전 나무 n/12" 단추(R2-b-2).
 // - live: 지금 값 (월초 상황 화면)
 // - start: 월초 기준으로 고정 (진행 화면. 순마다 갱신하지 않는다)
 // - result: 이달의 결과. 새 값 옆에 월초 대비 증감
 
-import type { ReactNode } from 'react';
-import { cohesionBand, countBand, firewoodDays, monthDef, monthStartOf, type ChapterDefinition, type GameState, type MonthStart } from '../../engine';
+import { useMemo, type ReactNode } from 'react';
+import { cohesionBand, countBand, firewoodDays, monthDef, monthStartOf, techView, type ChapterDefinition, type GameState, type MonthStart } from '../../engine';
+import { useTree } from '../tree';
 import { dateText, tribeDisplayName, weatherSummary } from '../format';
 import { useT } from '../i18n';
 
@@ -20,6 +21,10 @@ interface Props {
   mode: StatusMode;
   /** 가운데에 넣을 것 (진행 단계 표시) */
   children?: ReactNode;
+  /** 지금 값이라도 작은 바로 (발전 나무 판 위) */
+  compact?: boolean;
+  /** 발전 나무 판이 열려 있다 (단추 강조, 누르면 닫는다) */
+  treeOn?: boolean;
 }
 
 const num = (n: number) => Math.round(n).toLocaleString('ko-KR');
@@ -36,8 +41,13 @@ function Delta({ d, unit = '' }: { d: number; unit?: string }) {
   );
 }
 
-export function StatusBar({ def, state, mode, children }: Props) {
+export function StatusBar({ def, state, mode, children, compact = false, treeOn = false }: Props) {
   const tr = useT();
+  const tree = useTree();
+  const cells = useMemo(() => {
+    const v = techView(def, state);
+    return { done: v.done, total: v.total };
+  }, [def, state]);
   const now = monthStartOf(def, state);
   const start = state.work.start;
   const v: MonthStart = mode === 'start' ? start : now;
@@ -45,7 +55,7 @@ export function StatusBar({ def, state, mode, children }: Props) {
   const foodWarn = v.foodDays < ui.foodWarnDays;
   const season = monthDef(def, state).season;
   const woodWarn = mode === 'live' && firewoodDays(def, state) < ui.firewoodWarnDays && (season === 'winter' || season === 'autumn');
-  const full = mode === 'live';
+  const full = mode === 'live' && !compact;
   const delta = mode === 'result';
   const ailing = v.sick + v.injured;
 
@@ -82,6 +92,18 @@ export function StatusBar({ def, state, mode, children }: Props) {
             {full && <span className={s.muted}>{tr.t(`cohesion.${cohesionBand(def, v.cohesion)}`)}</span>}
             {delta && <Delta d={now.cohesion - start.cohesion} />}
           </span>
+          {tree && (
+            <button
+              type="button"
+              className={`${s.treeBtn} ${treeOn ? s.treeOn : ''}`}
+              aria-pressed={treeOn}
+              onClick={() => (treeOn ? tree.close() : tree.open())}
+              title={tr.t('ui.tree.keys')}
+              data-tree-button
+            >
+              {tr.t('ui.tree.button')} <span className={s.muted}>{tr.t('ui.tree.count', cells)}</span>
+            </button>
+          )}
           <SettingsMenu />
         </div>
       </div>

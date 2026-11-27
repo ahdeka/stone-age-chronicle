@@ -23,6 +23,7 @@ export { sumLedger } from './month/month';
 export { turnAt, turnKindAt, isSeasonTurn } from './month/turn';
 export { cellPolicies, cellPolicyId, CELL_POLICY_PREFIX, canStartCell, continuingCell, ensureTech, giftCap, lastWorked, requiresMet } from './tech/tech';
 export { branchesDone, findCell, isBranchEnd, nextCell, peekCell } from './tech/query';
+export { techView, type CellView, type HiddenReason, type LockReason, type OpenKind, type OpenView, type TechView } from './tech/view';
 export { previewPlan, expectedVillageFood, slotOf, workingAdults, type PlanLabor, type PlanPreview } from './policy/plan';
 export { villageHelpers } from './people/people';
 export { currentEntry, currentPlace, planCrew } from './policy/current';

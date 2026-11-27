@@ -432,6 +432,25 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     }
   }
   for (const b of def.tech.branches) if (!def.tech.cells.some((c) => c.branch === b)) warn(`tech.${b}`, '칸이 없는 갈래');
+  // 나무 화면 (R2-b-2): 갈래 이름, 준비 중 칸(엔진 효과 없음 — 이름과 여는 것 글만), 칸 자리(갈래 × order)가 겹치지 않는다
+  for (const b of def.tech.branches) str(`branch.${b}`, `tech.${b}`);
+  const slots = new Map<string, string>();
+  const slot = (id: string, branch: string, order: number) => {
+    const k = `${branch}#${order}`;
+    if (slots.has(k)) err(`tech.${id}`, `칸 자리가 겹친다: ${branch} ${order}번째 (${slots.get(k)})`);
+    slots.set(k, id);
+  };
+  for (const cell of def.tech.cells) slot(cell.id, cell.branch, cell.order);
+  for (const p of def.tech.planned ?? []) {
+    const w = `tech.${p.id}`;
+    if (def.tech.cells.some((c) => c.id === p.id)) err(w, '준비 중 칸과 엔진 칸의 id가 겹친다');
+    if (!branches.has(p.branch)) err(w, `없는 갈래: ${p.branch}`);
+    if (!(p.seasons > 0)) err(w, `철 수는 0보다 커야 한다: ${p.seasons}`);
+    if (p.opens.length === 0) err(w, '여는 것이 없다 (준비 중 칸도 여는 것 글은 있어야 한다)');
+    str(w, w);
+    for (const o of p.opens) str(o.name, w);
+    slot(p.id, p.branch, p.order);
+  }
 
   // ── 서술 ──
   need('narrative', def.hooks.villageNarrative, 'hooks');

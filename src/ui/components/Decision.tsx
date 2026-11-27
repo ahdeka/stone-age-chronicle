@@ -17,8 +17,11 @@ import {
   optionStatuses,
   previewPlan,
   resolveSceneSpec,
+  techView,
   totalKg,
   type BoundPolicy,
+  type CellView,
+  type TechView,
   type ChapterDefinition,
   type PlanLabor,
   type PlanPreview,
@@ -32,6 +35,7 @@ import type { Translator } from '../../i18n';
 import { dateText, lineText, weatherSummary } from '../format';
 import { useT } from '../i18n';
 import { eventLead } from '../story';
+import { cellName, costText, crewLine, crewWho, shortageText } from '../techText';
 
 import { DecisionSheet, EventBody, PlanBody, PlanSteps, type Chip, type PlanStep, type Quote } from './DecisionSheet';
 import c from './chrome.module.css';
@@ -54,10 +58,21 @@ export interface Choice {
   lockText?: string;
   /** 전략 칸 (전략 고르기에서만). 칸마다 하나씩 고른다 */
   group?: PolicySlot;
+  /** 발전 나무 칸 전략이면 그 칸 (R2-b-2: 카드에 갈래·진척·여는 것) */
+  cell?: CellView;
+  /** 1년차 작은 발전의 "겨울 준비" 이름표 (§B3.6) */
+  prep?: boolean;
+  /** 이끄는 사람 이름 (식량 한 줄 "노을이 이끈다") */
+  leader?: string;
+  /** 칸 카드의 무리 줄: "1철 · 3명 · 바위 또는 이끼" / 비용을 이미 냈으면 짧게 "2명 · 노을 또는 버들" */
+  cellCrew?: string;
+  cellCrewShort?: string;
 }
 
 /** "발전하지 않는다" 카드의 id (엔진 후보가 아니다) */
 export const NO_GROWTH = '__no_growth__';
+/** 시작 비용이 모자라 흐리게 보이는 칸 카드의 id 앞머리 (엔진 후보가 아니다, 고를 수 없다) */
+export const COST_PREFIX = '__cost_';
 
 export interface PlanModel {
   command: (ids: string[]) => Command;
@@ -65,8 +80,12 @@ export interface PlanModel {
   check: (ids: string[]) => string | undefined;
   /** 고른 카드들의 일할 사람 (전체, 식량 무리, 발전 무리, 마을, 족장과 노인) */
   labor: (ids: string[]) => PlanLabor;
-  /** 발전 카드의 대가 한 줄과 막힘 이유: 지금 고른 식량 전략 기준 */
-  growthMeta: (foodId: string | undefined, growthId: string) => { meta: string; blocked?: string };
+  /** 발전 카드의 대가 한 줄과 막힘 이유, 식량 대가 kg: 지금 고른 식량 전략 기준 */
+  growthMeta: (foodId: string | undefined, growthId: string) => { meta: string; blocked?: string; kg?: number };
+  /** 고른 발전 칸의 아래 줄 대가 글 (칸 전략만, R2-b-2): "가죽 6장 · 3명이 한 철 마을 일에서 빠진다 · 식량 약 −210kg · …" */
+  growthFoot: (foodId: string | undefined, growthId: string) => string | undefined;
+  /** 발전 나무 보기 (카드의 칸, 균형 규칙 한 줄, 숨은 칸 수) */
+  tech: TechView;
   /** 처음부터 골라 둘 카드 (이어지는 공사) */
   initial: string[];
 }
@@ -134,7 +153,9 @@ function crewMeta(tr: Translator, def: ChapterDefinition, s: GameState, cand: Bo
     const proj = p.builds ? tr.t('ui.plan.project', { done: (s.projects[p.builds.facility] ?? 0) + 1, months: p.builds.months }) : '';
     return [proj, who].filter(Boolean).join(' · ');
   }
-  if (p.crew && !p.crew.atHome) return [tr.t('ui.crew.expedition', { crew: split.crew, village: split.village }), leader ? tr.t('ui.crew.leader', { name: tr.label(leader.name) }) : ''].filter(Boolean).join(' · ');
+  if (p.crew && !p.crew.atHome)
+    // "남는 사람 3명 · 족장과 노인은 따로": 남는 사람은 일할 사람만 센다 (줄어든 숫자가 마을이 빈다는 뜻으로 읽히지 않게, R2-b-2)
+    return [tr.t('ui.crew.expedition', { crew: split.crew, village: split.village }), tr.t('ui.crew.helpers'), leader ? tr.t('ui.crew.leader', { name: tr.label(leader.name) }) : ''].filter(Boolean).join(' · ');
   return tr.t('ui.crew.village', { village: split.village });
 }
 
@@ -155,13 +176,24 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
     const c = cands.find((x) => x.uid === uid);
     return c ? findPolicy(def, c.policyId).slot : uid === NO_GROWTH ? 'growth' : undefined;
   };
-  const real = (ids: string[]) => ids.filter((x) => x !== NO_GROWTH);
+  const real = (ids: string[]) => ids.filter((x) => x !== NO_GROWTH && !x.startsWith(COST_PREFIX));
   const firstFood = cands.find((c) => findPolicy(def, c.policyId).slot === 'food')?.uid;
 
+  const tech = techView(def, s, (id) => tr.has(`tech.${id}.need`));
   const choices: Choice[] = cands.map((cand) => {
     const p = findPolicy(def, cand.policyId);
     const leader = cand.leaderId ? s.people[cand.leaderId] : undefined;
+    const cell = p.tech ? tech.cells.find((c) => c.id === p.tech) : undefined;
     return {
+      ...(cell
+        ? {
+            cell,
+            cellCrew: crewLine(tr, s, cell, s.work.turn.kind),
+            cellCrewShort: [cell.crew ? tr.t('ui.plan.crewN', { n: cell.crew.n }) : '', crewWho(tr, s, cell)].filter(Boolean).join(' · '),
+          }
+        : {}),
+      ...(p.prep ? { prep: true } : {}),
+      ...(leader ? { leader: tr.label(leader.name) } : {}),
       id: cand.uid,
       title: tr.t(`policy.${p.id}.name`),
       brief: opt(tr, `policy.${p.id}.brief`),
@@ -177,6 +209,25 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
       group: p.slot,
     };
   });
+  // 시작 비용이 모자란 칸: 숨기지 않고 흐린 카드로 (고를 수 없다, R2-b-2 검토). 엔진 후보가 아니다.
+  // 1년차는 칸 자리가 한 장이라 그 칸이 자리에 올 칸일 때만 (techView가 그때만 cost 까닭을 준다), 카드가 넷을 넘지 않게
+  const growthCount = () => choices.filter((x) => x.group === 'growth').length;
+  for (const v of tech.cells) {
+    if (v.hidden?.kind !== 'cost') continue;
+    if (s.work.turn.kind === 'month' && growthCount() >= 3) continue;
+    const cell = def.tech.cells.find((x) => x.id === v.id)!;
+    choices.push({
+      id: `${COST_PREFIX}${v.id}`,
+      title: cellName(tr, v.id),
+      group: 'growth',
+      cell: v,
+      cellCrew: crewLine(tr, s, v, s.work.turn.kind),
+      cellCrewShort: [v.crew ? tr.t('ui.plan.crewN', { n: v.crew.n }) : '', crewWho(tr, s, v)].filter(Boolean).join(' · '),
+      scene: resolveSceneSpec(def, s, cell.scene, s.campPlace, s.work.weather[0] ?? ''),
+      disabled: true,
+      lockText: shortageText(tr, v),
+    });
+  }
   choices.push({ id: NO_GROWTH, title: tr.t('ui.plan.noGrowth'), brief: tr.t('ui.plan.noGrowth.brief'), desc: tr.t('ui.plan.noGrowth.desc'), meta: tr.t('ui.plan.noGrowth.meta'), group: 'growth' });
 
   // 이어지는 공사는 처음부터 골라 둔다 (여러 달짜리 공사를 매달 다시 찾지 않게, §6.4.1.4)
@@ -201,13 +252,33 @@ function policyModel(tr: Translator, def: ChapterDefinition, s: GameState): Deci
       growthMeta: (foodId, growthId) => {
         const base = choices.find((x) => x.id === growthId)?.meta ?? '';
         if (growthId === NO_GROWTH) return { meta: base };
+        // 비용이 모자란 칸: 막힘 이유 = 모자란 양
+        if (growthId.startsWith(COST_PREFIX)) return { meta: base, blocked: choices.find((x) => x.id === growthId)?.lockText ?? '' };
         const food = foodId && slotOf(foodId) === 'food' ? foodId : firstFood;
         if (!food) return { meta: base };
         const pv = previewPlan(def, s, [food, growthId]);
         if (pv.error) return { meta: base, blocked: planError(tr, s, pv) };
         const kg = Math.round(pv.growthFoodCostKg / 10) * 10;
-        return { meta: [base, kg > 0 ? tr.t('ui.plan.cost', { kg }) : tr.t('ui.plan.noCost')].filter(Boolean).join(' · ') };
+        return { meta: [base, kg > 0 ? tr.t('ui.plan.cost', { kg }) : tr.t('ui.plan.noCost')].filter(Boolean).join(' · '), kg };
       },
+      growthFoot: (foodId, growthId) => {
+        const ch = choices.find((x) => x.id === growthId);
+        const v = ch?.cell;
+        if (!v) return undefined;
+        const food = foodId && slotOf(foodId) === 'food' ? foodId : firstFood;
+        const pv = food ? previewPlan(def, s, [food, growthId]) : undefined;
+        const kg = pv && !pv.error ? Math.round(pv.growthFoodCostKg / 10) * 10 : 0;
+        const n = pv?.labor.growth ?? v.crew?.n ?? 0;
+        return [
+          v.costPaid ? '' : costText(tr, v),
+          tr.t(`ui.plan.cellAway.${s.work.turn.kind}`, { n }),
+          kg > 0 ? tr.t('ui.plan.cost', { kg }) : tr.t('ui.plan.noCost'),
+          tech.continuing && tech.continuing !== v.id ? tr.t('ui.plan.driftFoot', { cell: cellName(tr, tech.continuing) }) : '',
+        ]
+          .filter(Boolean)
+          .join(' · ');
+      },
+      tech,
       initial: going ? [going.uid] : [],
     },
   };
@@ -386,7 +457,9 @@ export function DecisionPopup({ model, open, setOpen, send, bar = true }: PopupP
     return pickedChoices.find((c) => c.group === 'growth');
   })();
   const shownError = model.plan && step === 1 && !majorPicked ? undefined : error;
-  const costLine = shownError ?? (costOf?.cost ? tr.t(isPolicy ? 'ui.sheet.pickedCost' : 'ui.sheet.optionCost', { cost: costOf.cost }) : undefined);
+  // 발전 칸을 골랐으면 그 칸의 대가 글(비용 · 빠지는 사람 · 식량 kg · 이어 가던 칸), 그 밖은 전략의 대가 글
+  const cellFoot = model.plan && step === 2 && costOf?.cell ? model.plan.growthFoot(pickedFood, costOf.id) : undefined;
+  const costLine = shownError ?? cellFoot ?? (costOf?.cost ? tr.t(isPolicy ? 'ui.sheet.pickedCost' : 'ui.sheet.optionCost', { cost: costOf.cost }) : undefined);
   const summary = (() => {
     if (!isPolicy) return ready ? `${tr.t('ui.bar.pickedOption')}: ${pickedTitle}` : tr.t('ui.sheet.eventHint');
     if (!ready) return tr.t('ui.sheet.policyHint');

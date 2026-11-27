@@ -77,6 +77,16 @@ export const ch1Tech: TechTreeDef = {
       scene: { bg: 'bg.cave_mouth', subjects: ['sub.gatherers', 'sub.firewood'], overlay: '{weather}' },
     },
   ],
+  // 나무 화면의 "준비 중" 칸 (R2-b-2): 이름과 여는 것 글만 (DESIGN.md §B3.2). 엔진 효과는 R4에서 cells로 옮길 때 넣는다
+  planned: [
+    { id: 'spear_thrower', branch: 'hunt_water', order: 2, seasons: 1, opens: [{ kind: 'food', name: 'tech.spear_thrower.open.1' }, { kind: 'option', name: 'tech.spear_thrower.open.2' }] },
+    { id: 'weir_rack', branch: 'hunt_water', order: 3, seasons: 1, opens: [{ kind: 'food', name: 'tech.weir_rack.open.1' }, { kind: 'option', name: 'tech.weir_rack.open.2' }] },
+    { id: 'grain_meadow', branch: 'seed', order: 2, seasons: 2, opens: [{ kind: 'event', name: 'tech.grain_meadow.open.1' }, { kind: 'food', name: 'tech.grain_meadow.open.2' }] },
+    { id: 'farm_tools', branch: 'seed', order: 3, seasons: 2, opens: [{ kind: 'food', name: 'tech.farm_tools.open.1' }] },
+    { id: 'first_harvest', branch: 'seed', order: 4, seasons: 2, end: true, opens: [{ kind: 'major', name: 'tech.first_harvest.open.1' }, { kind: 'event', name: 'tech.first_harvest.open.2' }] },
+    { id: 'pit_house', branch: 'home', order: 3, seasons: 2, opens: [{ kind: 'event', name: 'tech.pit_house.open.1' }, { kind: 'option', name: 'tech.pit_house.open.2' }] },
+    { id: 'village', branch: 'home', order: 4, seasons: 1, end: true, opens: [{ kind: 'event', name: 'tech.village.open.1' }] },
+  ],
 };
 
 /** 사냥 한 단계 (그 달 첫 순): 사슴 몰이. 칸이 연 사냥은 조금 쉽다 */
@@ -223,6 +233,36 @@ export const ch1TechKo: Record<string, string> = {
   'tech.tent_repair': '천막 보수',
   'tech.cave_fortify': '굴 다지기',
   'tech.none': '발전 대신 식량에 붙은 사람들',
+  // 갈래 이름 (나무 화면, 전략 카드의 "사냥·물가 · 1번째")
+  'branch.hunt_water': '사냥·물가',
+  'branch.seed': '씨앗',
+  'branch.home': '집',
+  // 켜지면 덧붙는 것 (나무 화면 "덧붙음" 줄, 화면 정보)
+  'tech.sled.extra': '짐꾼이 나르는 양 +50%',
+  'tech.tent_repair.extra': '짐꾼이 나르는 양 +25%',
+  'tech.cave_fortify.extra': '바위굴 장작 1/3 덜 든다',
+  // 열리는 조건을 따로 쓰는 칸 (앞 칸 조건이 "또는"인 칸)
+  'tech.cave_fortify.need': '천막 보수나 바위굴이면 열림',
+  // 준비 중 칸 (R4에서 본편으로): 이름과 여는 것
+  'tech.spear_thrower': '투창기',
+  'tech.spear_thrower.open.1': '물새 사냥',
+  'tech.spear_thrower.open.2': '멀리서 겁주기',
+  'tech.weir_rack': '어살과 건조대',
+  'tech.weir_rack.open.1': '여름 어살 막기',
+  'tech.weir_rack.open.2': '말린 물고기를 내준다',
+  'tech.grain_meadow': '이삭 풀밭',
+  'tech.grain_meadow.open.1': '흩뿌린 씨에서 싹이 났다',
+  'tech.grain_meadow.open.2': '풀밭 지키기',
+  'tech.farm_tools': '농기구',
+  'tech.farm_tools.open.1': '씨 뿌리기',
+  'tech.first_harvest': '첫 수확',
+  'tech.first_harvest.open.1': '밭 넓히기',
+  'tech.first_harvest.open.2': '너울 일행의 부탁',
+  'tech.pit_house': '움집',
+  'tech.pit_house.open.1': '강가에 땅집',
+  'tech.pit_house.open.2': '떠돌이를 받아들인다',
+  'tech.village': '마을',
+  'tech.village.open.1': '어디에 마을을 세울까',
   // 칸 일 서술 (턴 첫 단계에 한 줄)
   'tech.stone_spear.work': '{leader:이} 사냥꾼들과 강돌에 창끝을 다시 갈았다.',
   'tech.sled.work': '{leader:이} 장대 두 개에 가죽끈을 엮어 짐을 끄는 틀을 짰다.',

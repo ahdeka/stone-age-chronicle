@@ -165,10 +165,26 @@ export interface TechCellDef {
   scene: SceneSpec;
 }
 
+/** 나무 화면에만 보이는 "준비 중" 칸 (R2-b-2): 엔진 효과가 아직 없어 늘 잠겨 있다. 이름 `tech.<id>`, 여는 것의 글만 있다.
+ *  본편 칸(R4)이 들어오면 cells로 옮기고 여기서 지운다. 엔진·시뮬레이터·검증기의 칸 규칙은 이것을 보지 않는다 */
+export interface PlannedCellDef {
+  id: Id;
+  branch: Id;
+  order: number;
+  /** 걸릴 철 수 (§B3.2 초안, 진척 막대의 눈금) */
+  seasons: number;
+  /** 갈래 끝인가 (두 겹 테두리) */
+  end?: boolean;
+  /** 켜지면 여는 것: 종류와 이름 문자열 키 */
+  opens: { kind: 'food' | 'major' | 'event' | 'option'; name: string }[];
+}
+
 export interface TechTreeDef {
   /** 갈래 id (화면 순서) */
   branches: Id[];
   cells: TechCellDef[];
+  /** 나무 화면의 "준비 중" 칸 (R4에서 cells로) */
+  planned?: PlannedCellDef[];
 }
 
 export interface ClueDef {

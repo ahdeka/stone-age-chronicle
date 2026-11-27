@@ -4,9 +4,13 @@
 // 위: 제목(전략은 단계 표시)과 핵심 수치 칩 / 가운데: 전략 틀(①식량 ②발전) 또는 사건 틀 / 아래: 고른 것과 대가, 다음·확정 버튼
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import type { Hint, PlanLabor, SceneSpec } from '../../engine';
+import type { Hint, PlanLabor, SceneSpec, TechView } from '../../engine';
 import { useT } from '../i18n';
+import { branchName, cellName, cellPct, costText, openKind, openName, splitAround } from '../techText';
+import { useTree } from '../tree';
 import type { Choice, DecisionModel } from './Decision';
+import { CellIcon, Prog, cellParts } from './TechTree';
+import tt from './tree.module.css';
 import { Icon, RiskBadge } from './bits';
 import { Portrait, SceneView } from './SceneView';
 import d from './sheet.module.css';
@@ -272,7 +276,7 @@ interface PlanBodyProps {
   step: PlanStep;
   picked: string[];
   labor: PlanLabor;
-  growthInfo: Map<string, { meta: string; blocked?: string }>;
+  growthInfo: Map<string, { meta: string; blocked?: string; kg?: number }>;
   majorPicked: boolean;
   onPick: (c: Choice) => void;
   onStep: (s: PlanStep) => void;
@@ -319,12 +323,15 @@ export function PlanBody({ model, step, picked, labor, growthInfo, majorPicked, 
     );
 
   const pickedFood = food.find((c) => picked.includes(c.id));
+  const tech = model.plan?.tech;
   return (
     <div className={d.plan}>
       {pickedFood && (
         <div className={d.foodLine}>
           <span>
-            <span className={d.foodInk}>{tr.t('ui.plan.foodLine', { food: pickedFood.title, n: labor.food })}</span>
+            <span className={d.foodInk}>
+              {pickedFood.leader ? tr.t('ui.plan.foodLine.leader', { food: pickedFood.title, n: labor.food, name: pickedFood.leader }) : tr.t('ui.plan.foodLine', { food: pickedFood.title, n: labor.food })}
+            </span>
           </span>
           <button type="button" className={d.change} onClick={() => onStep(1)}>
             {tr.t('ui.plan.change')}
@@ -347,36 +354,175 @@ export function PlanBody({ model, step, picked, labor, growthInfo, majorPicked, 
       </div>
 
       <section className={d.slot}>
-        <div className={d.slotHead}>
-          <h3 className={`${d.slotTitle} ${d.growthInk}`}>{tr.t('ui.plan.group.growth')}</h3>
-          <span className={d.slotSub}>{tr.t('ui.plan.group.growth.sub')}</span>
-        </div>
-        <div className={d.row}>
-          {growth.map((c, i) => {
-            const info = growthInfo.get(c.id);
-            return (
-              <ChoiceCard
-                key={c.id}
-                tall
-                num={i + 1}
-                accent="growth"
-                title={c.title}
-                brief={c.brief}
-                meta={info?.meta ?? c.meta}
-                hint={c.hint}
-                scene={c.scene}
-                full={full(c)}
-                disabled={!!info?.blocked}
-                blockText={info?.blocked}
-                selected={picked.includes(c.id)}
-                onPick={() => onPick(c)}
-              />
-            );
-          })}
+        {tech ? <GrowthHead tech={tech} /> : null}
+        {tech && <DriftLine tech={tech} />}
+        <div className={d.row} style={{ gridTemplateColumns: `repeat(${Math.max(4, growth.length)}, minmax(0, 1fr))` }}>
+          {growth.map((c, i) => (
+            <GrowthCard key={c.id} c={c} num={i + 1} info={growthInfo.get(c.id)} tech={tech} selected={picked.includes(c.id)} full={full(c)} onPick={() => onPick(c)} />
+          ))}
         </div>
       </section>
     </div>
   );
+}
+
+/** ②단계 머리: "발전 전략 · 갈래마다 다음 칸 하나 · 1개 고른다" + 숨은 칸 수 · 나무에서 보기 (T) */
+function GrowthHead({ tech }: { tech: TechView }) {
+  const tr = useT();
+  const tree = useTree();
+  // 비용이 모자란 칸은 숨지 않고 흐린 카드로 나온다
+  const hidden = tech.cells.filter((c) => c.hidden && c.hidden.kind !== 'cost').length;
+  return (
+    <div className={d.slotHead}>
+      <h3 className={`${d.slotTitle} ${d.growthInk}`}>{tr.t('ui.plan.group.growth')}</h3>
+      <span className={d.slotSub}>{tr.t(`ui.plan.group.growth.sub.${tech.turnKind}`)}</span>
+      {tree && (
+        <button type="button" className={d.treeLink} onClick={() => tree.open(undefined, true)}>
+          {hidden > 0 ? tr.t('ui.plan.hiddenLink', { n: hidden }) : tr.t('ui.plan.treeLink')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+const LOOP = (
+  <svg width={16} height={16} viewBox="0 0 16 16" aria-hidden="true" style={{ flex: 'none' }}>
+    <path d="M13 8 a5 5 0 1 1 -2 -4 M11 1 v3 h-3" fill="none" stroke="var(--growth-ink)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/** 균형 규칙 한 줄 (§B4.4): 카드 줄 위. 이어 가던 칸 이름은 굵게 */
+function DriftLine({ tech }: { tech: TechView }) {
+  const tr = useT();
+  if (!tech.continuing || tech.driftAmount <= 1e-9) {
+    return (
+      <div className={d.drift}>
+        {LOOP}
+        <span>{tr.t(`ui.plan.drift.none.${tech.turnKind}`)}</span>
+      </div>
+    );
+  }
+  const name = cellName(tr, tech.continuing);
+  const [a, b, c] = splitAround(tr.t(`ui.plan.drift.${tech.turnKind}`, { cell: name }), name);
+  return (
+    <div className={d.drift}>
+      {LOOP}
+      <span>
+        {a}
+        <b className={d.growthInk}>{b}</b>
+        {c}
+      </span>
+    </div>
+  );
+}
+
+interface GrowthCardProps {
+  c: Choice;
+  num: number;
+  info?: { meta: string; blocked?: string; kg?: number };
+  tech?: TechView;
+  selected: boolean;
+  full: string;
+  onPick: () => void;
+}
+
+/**
+ * ②단계 발전 카드 (시안 plan.html): 그림 위에 갈래·몇 번째 칸(또는 "겨울 준비")과 상태, 막혔으면 경고색 띠.
+ * 칸: 진척(이어 가던 칸은 이번 턴에 저절로 찰 몫을 점선으로), 걸리는 철·인원·맡을 사람, 비용과 식량 kg, 여는 것, "나무에서 보기".
+ */
+function GrowthCard({ c, num, info, tech, selected, full, onPick }: GrowthCardProps) {
+  const tr = useT();
+  const tree = useTree();
+  const v = c.cell;
+  const kind = tech?.turnKind ?? 'month';
+  const blocked = info?.blocked;
+  const none = c.id === '__no_growth__';
+  const kgText = info?.kg !== undefined ? (info.kg > 0 ? tr.t('ui.plan.cost', { kg: info.kg }) : tr.t('ui.plan.noCost')) : undefined;
+  const lines: { text: string; cls?: string; k?: string }[] = [];
+  let bar: ReactNode = null;
+  let driftLine: string | undefined;
+  if (v && tech) {
+    const step = kind === 'month' ? 1 / 3 : 1;
+    const parts: { k: 'w' | 'g' | 'd' | 'next'; v: number }[] = cellParts(v);
+    if (v.continuing && tech.driftAmount > 1e-9 && !selected) parts.push({ k: 'next', v: tech.driftAmount });
+    bar = (
+      <span className={d.pr}>
+        <Prog total={v.seasons} parts={parts} step={step} />
+        <span>{cellPct(v)}%</span>
+      </span>
+    );
+    // 이미 시작한 칸이 이번 턴을 마치면 켜질 때만 (처음 손대는 1철 칸마다 붙이면 늘 같은 줄이 된다)
+    const soon = v.progress > 1e-9 && v.seasons - v.progress <= tech.rate + 1e-9;
+    if (soon) lines.push({ text: tr.t(`ui.plan.cell.soon.${kind}`), cls: d.soon });
+    if (v.costPaid) lines.push({ text: [c.cellCrewShort, kgText].filter(Boolean).join(' · '), cls: d.lm });
+    else {
+      lines.push({ text: c.cellCrew ?? '', cls: d.lm });
+      lines.push({ text: [costText(tr, v), kgText].filter(Boolean).join(' · '), cls: d.lm });
+    }
+    const o = v.opens[0];
+    if (o) lines.push({ k: tr.t('ui.plan.cell.opens'), text: tr.t('ui.plan.cell.open', { name: openName(tr, o), kind: openKind(tr, o) }) });
+    // 저절로 찰 몫 한 줄: "켜진다" 줄이 있으면 뺀다 (막대의 점선과 카드 줄 위 균형 규칙 문장에 같은 내용이 있다)
+    if (v.continuing && tech.driftAmount > 1e-9 && !selected && !soon) driftLine = tr.t(`ui.plan.cell.drift.${kind}`, { pct: Math.round((tech.driftAmount / v.seasons) * 100) });
+  } else if (none) {
+    if (kind === 'season') {
+      lines.push({ text: tr.t('ui.plan.noGrowth.food.season'), cls: d.lm });
+      lines.push({ text: tr.t('ui.plan.noGrowth.bonus.season') });
+    } else lines.push({ text: tr.t('ui.plan.noGrowth.brief'), cls: d.lm });
+    if (tech?.continuing) lines.push({ text: tr.t(`ui.plan.noGrowth.rest.${kind}`), cls: d.lm });
+  } else {
+    if (info?.meta ?? c.meta) lines.push({ text: (info?.meta ?? c.meta)!, cls: d.lm });
+    if (c.brief) lines.push({ text: c.brief });
+  }
+  const where = v ? tr.t('ui.plan.cell.where', { branch: branchName(tr, v.branch), n: v.order }) : c.prep ? tr.t('ui.plan.prep') : undefined;
+  return (
+    <div className={`${d.gcard} ${selected ? d.gOn : ''} ${blocked ? d.gBlocked : ''}`} data-growth-card={v?.id ?? c.id}>
+      <button type="button" className={d.gMain} aria-pressed={selected} aria-disabled={!!blocked} title={full} onClick={() => !blocked && onPick()}>
+        <span className={d.picWrap}>
+          <span className={`${d.pic} ${none || !c.scene ? d.picNone : ''}`}>
+            {c.scene && !none ? <SceneView scene={c.scene} /> : <CellIcon id="none" size={48} />}
+            {where && <span className={`${d.picTag} ${d.picTl} ${c.prep && !v ? d.tagPrep : ''}`}>{where}</span>}
+            {v && <span className={`${d.picTr}`}>{statusTag(tr, v.status)}</span>}
+          </span>
+          {blocked && (
+            <span className={d.whyTop}>
+              <b>{tr.t('ui.plan.whyTop')}</b> · {blocked}
+            </span>
+          )}
+        </span>
+        <span className={d.gBody}>
+          <span className={d.cardTop}>
+            <span className={d.num} aria-hidden="true">
+              {num}
+            </span>
+            <b className={`${d.cardTitle} ${u.serif}`}>{c.title}</b>
+            {v?.continuing && <span className={`${tt.tag} ${tt.tagCont} ${d.contTag}`}>{tr.t('ui.tree.cont')}</span>}
+          </span>
+          {bar}
+          {lines.map((l, i) => (
+            <span key={i} className={`${d.l} ${l.cls ?? ''}`}>
+              {l.k && <span className={d.lk}>{l.k}</span>}
+              {l.text}
+            </span>
+          ))}
+          {driftLine && (
+            <span className={d.drift1}>
+              {LOOP} {driftLine}
+            </span>
+          )}
+        </span>
+      </button>
+      {v && tree && (
+        <button type="button" className={d.see} onClick={() => tree.open(v.id, true)}>
+          {tr.t('ui.plan.see')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function statusTag(tr: ReturnType<typeof useT>, status: string) {
+  const cls = { locked: tt.tagLock, open: tt.tagOpen, active: tt.tagAct, done: tt.tagDone }[status] ?? tt.tagOpen;
+  return <span className={`${tt.tag} ${cls} ${d.picTagBg}`}>{tr.t(`ui.tree.status.${status}`)}</span>;
 }
 
 /** 사건 틀: 그림 + 본문·대사 → 선택지 한 줄 */

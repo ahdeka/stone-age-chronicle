@@ -7,9 +7,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { chapters, commonStrings } from '../data/registry';
 import { availableOptions, createGame, reduce, type GameState } from '../engine';
 import { createTranslator } from '../i18n';
-import { ch1, choose, finishMonth, newGame, pick, pickFood, springGame, toFirstSeason } from '../test/fixtures';
-import { decisionModel, DecisionPopup } from './components/Decision';
+import { ch1, choose, finishMonth, keepAlive, newGame, pick, pickFood, run, springGame, toFirstSeason } from '../test/fixtures';
+import { COST_PREFIX, decisionModel, DecisionPopup } from './components/Decision';
+import { ensureTech } from '../engine/tech/tech';
+import { generateCandidates } from '../engine/policy/candidates';
 import { orderChips, PlanBody } from './components/DecisionSheet';
+import { TechTree } from './components/TechTree';
+import { TreeContext, type TreeApi } from './tree';
 import { I18nProvider } from './i18n';
 import { MotionProvider } from './motion';
 import { EndingScreen } from './screens/EndingScreen';
@@ -32,6 +36,18 @@ function html(node: ReactNode, tribe = '잿빛강 사람들'): string {
       </I18nProvider>
     </MotionProvider>,
   );
+}
+
+const treeApi: TreeApi = { open: noop, close: noop, isOpen: false };
+const withTree = (node: ReactNode) => <TreeContext.Provider value={treeApi}>{node}</TreeContext.Provider>;
+
+/** 전략 팝업 ②단계 (첫 식량 카드를 고른 상태) */
+function step2(s: GameState): string {
+  const model = decisionModel(tr, ch1, s)!;
+  const food = model.choices.find((c) => c.group === 'food')!;
+  const picked = [food.id];
+  const growthInfo = new Map(model.choices.filter((c) => c.group === 'growth').map((c) => [c.id, model.plan!.growthMeta(food.id, c.id)]));
+  return html(withTree(<PlanBody model={model} step={2} picked={picked} labor={model.plan!.labor(picked)} growthInfo={growthInfo} majorPicked={false} onPick={noop} onStep={noop} />));
 }
 
 function sheet(s: GameState): string {
@@ -111,7 +127,8 @@ describe('화면', () => {
     expect(h).toContain('1년차 · 가을 · 11월');
     expect(h).toContain('18일치');
     expect(h).toContain('순록 떼를 놓치면 겨울을 못 넘깁니다');
-    expect(h).toMatch(/나가는 사람 14명 · 남는 사람 \d+명 · 이끄는 사람 바위/);
+    // 남는 사람은 일할 사람만 센다: 줄어든 숫자가 마을이 빈다는 뜻으로 읽히지 않게 "족장과 노인은 따로" (R2-b-2)
+    expect(h).toMatch(/나가는 사람 14명 · 남는 사람 \d+명 · 족장과 노인은 따로 · 이끄는 사람 바위/);
     expect(h).toContain('그동안 마을이 비고');
     // ①단계 (4차 피드백): 단계 표시, 식량 카드, 큰 일 줄, "다음: 발전 고르기". 발전 카드는 ②단계에
     expect(h).toContain('식량 전략');
@@ -135,6 +152,87 @@ describe('화면', () => {
     expect(h).toContain('발전하지 않는다');
     expect(h).toMatch(/발전 \d+명/);
     expect(h).not.toContain('⟨');
+  });
+
+  it('발전 나무 (R2-b-2): 1년차는 12칸 전체, 달 눈금, 숨음 이유, 잠긴 갈래 끝의 갈래 이름, 준비 중 칸, 신석기 0 / 2', () => {
+    const s = springGame('ui-tree1');
+    const h = html(withTree(<TechTree def={ch1} state={s} fromPlan={false} barMode="live" onClose={noop} />));
+    expect((h.match(/data-cell="/g) ?? []).length).toBe(12);
+    expect(h).toContain('발전 나무');
+    expect(h).toContain('0/12');
+    expect(h).toContain('눈금 한 칸 = 한 달');
+    expect(h).toContain('2년차부터 한 철씩 나무가 이어진다');
+    expect(h).toContain('숨음 · 1년차엔 한 번에 칸 하나');
+    expect(h).toContain('사냥·물가 칸 하나가 켜져야 함');
+    expect(h).toContain('준비 중');
+    expect(h).toContain('갈래 끝');
+    expect(h).toContain('신석기');
+    expect(h).toContain('0 / 2');
+    expect(h).toContain('이번 달 전략에 나온다');
+    expect(h).toContain('← 돌아가기');
+    expect(h).not.toContain('⟨');
+  });
+
+  it('발전 나무: 계절 턴은 철 눈금, 전략 팝업에서 오면 "← 전략으로 돌아가기"와 보는 칸', () => {
+    const s = toFirstSeason();
+    const h = html(withTree(<TechTree def={ch1} state={s} focus="grinding_stone" fromPlan barMode="live" onClose={noop} />));
+    expect(h).toContain('눈금 한 칸 = 한 철');
+    expect(h).toContain('고르지 않은 칸의 진척은 사라지지 않는다');
+    expect(h).toContain('← 전략으로 돌아가기');
+    expect(h).toContain('보는 칸');
+    expect(h).toContain('칸 자세히 · 씨앗 1번째 칸');
+    expect(h).not.toContain('⟨');
+  });
+
+  it('전략 팝업 ②단계 칸 카드 (R2-b-2): 갈래·몇 번째, 진척, 여는 것, 나무에서 보기, 균형 규칙 한 줄', () => {
+    const h = step2(toFirstSeason());
+    expect(h).toMatch(/(사냥·물가|씨앗|집) · 1번째/);
+    expect(h).toContain('나무에서 보기');
+    expect(h).toContain('연다');
+    expect(h).toContain('갈래마다 다음 칸 하나 · 1개 고른다');
+    expect(h).toContain('이번 철 식량 +10%');
+    expect(h).not.toContain('⟨');
+  });
+
+  it('전략 팝업 ②단계 1년차: 칸 1개 + "겨울 준비" 이름표, 이어 가던 칸은 점선 미리 채움과 "이 달엔 쉰다"', () => {
+    let s = springGame('ui-cont');
+    keepAlive(ch1, s);
+    s = finishMonth(ch1, pick(ch1, s, 'cell_stone_spear'));
+    s = run(ch1, s, { type: 'nextMonth' });
+    keepAlive(ch1, s);
+    const h = step2(s);
+    expect(h).toContain('겨울 준비');
+    expect(h).toContain('↻ 이어 가던 칸');
+    expect(h).toContain('반 달 몫씩 나아갑니다');
+    expect(h).toContain('고르지 않아도 이번 달 +17%');
+    expect(h).toContain('이어 가던 칸도 이 달엔 쉰다');
+    expect(h).not.toContain('⟨');
+  });
+
+  it('비용이 모자란 칸은 숨지 않고 흐린 카드로 보이고 고를 수 없다 (R2-b-2 검토)', () => {
+    const s = toFirstSeason();
+    s.tech = {};
+    ensureTech(ch1, s);
+    // 집 갈래의 다음 칸이 천막 보수가 되게 (굴 다지기는 저장 구덩이 선물로 반쯤 차 있으면 먼저 나온다)
+    s.tech['cave_fortify'] = { status: 'locked', progress: 0, gifted: 0, log: [] };
+    s.stores.goods['hide'] = 4; // 천막 보수는 가죽 6장
+    s.work.candidates = generateCandidates(ch1, s);
+    expect(s.work.candidates.some((c) => c.policyId === 'cell_tent_repair')).toBe(false);
+    const model = decisionModel(tr, ch1, s)!;
+    const card = model.choices.find((c) => c.id === `${COST_PREFIX}tent_repair`)!;
+    expect(card.disabled).toBe(true);
+    const food = model.choices.find((c) => c.group === 'food')!;
+    expect(model.plan!.growthMeta(food.id, card.id).blocked).toBe('가죽 2장 모자람');
+    // 고를 수 없다: 명령에 들어가지 않고, 막힌 카드라 팝업도 고르지 않는다
+    const cmd = model.plan!.command([food.id, card.id]);
+    expect(cmd.type === 'choosePlan' && cmd.uids.includes(card.id)).toBe(false);
+    const h = step2(s);
+    expect(h).toContain('같이 못 고름');
+    expect(h).toContain('가죽 2장 모자람');
+    expect(h).toContain('data-growth-card="tent_repair"');
+    // 나무에는 "흐린 카드 · 가죽 2장 모자람", 숨은 칸 수에는 들지 않는다
+    const tree = html(withTree(<TechTree def={ch1} state={s} fromPlan barMode="live" onClose={noop} />));
+    expect(tree).toContain('흐린 카드 · 가죽 2장 모자람');
   });
 
   it('모든 사건을 팝업으로 띄워도 누락 문자열이 없다', () => {

@@ -236,14 +236,14 @@ var YEAR1 = [
     lines: [['', '한 달 · 8명', 'm'], ['', '쌓아 둘 수 있는 장작 +600kg']],
     why: '일할 사람이 17명뿐이다 (식량 최소 10 + 이 일 8)' },
   { icon: 'none', none: true, tint: 'none', title: '발전하지 않는다',
-    lines: [['', '일손 모두 식량에 쓴다', 'm'], ['', '이어 가던 갈돌도 이 달엔 쉰다', 'm']] },
+    lines: [['', '일할 사람 모두를 식량에 쓴다', 'm'], ['', '이어 가던 갈돌도 이 달엔 쉰다', 'm']] },
 ];
 
 R2.ready(function () {
   document.getElementById('rowS').innerHTML = SEASON.map(function (c, i) { return card(c, i + 1); }).join('');
   document.getElementById('rowY').innerHTML = YEAR1.map(function (c, i) { return card(c, i + 1); }).join('');
   document.getElementById('driftS').innerHTML = LOOP + '<span>고르지 않아도 이어 가던 <b>이삭 풀밭</b>은 절반 속도로 나아갑니다. 발전하지 않는다를 고르면 쉽니다.</span>';
-  document.getElementById('driftY').innerHTML = LOOP + '<span>고르지 않아도 이어 가던 <b>갈돌</b>은 반 달 몫씩 나아갑니다. 1년차에는 칸을 하나만 키웁니다.</span>';
+  document.getElementById('driftY').innerHTML = LOOP + '<span>고르지 않아도 이어 가던 <b>갈돌</b>은 반 달 몫씩 나아갑니다. 1년차에는 한 번에 칸 하나를 키웁니다.</span>';
 });
 </script>
 </body>

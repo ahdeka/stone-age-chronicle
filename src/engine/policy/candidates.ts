@@ -111,6 +111,20 @@ export function cacheTargets(def: ChapterDefinition, state: GameState): string[]
     .map(([id]) => id);
 }
 
+/** 1년차 칸 자리 규칙(아래 generateCandidates)이 이 칸을 허락하는가. 계절 턴은 늘 허락. 나무 보기(techView)도 쓴다 */
+export function yearOneAllows(def: ChapterDefinition, state: GameState, id: Id): boolean {
+  if (state.work.turn.kind !== 'month') return true;
+  const worked = (x: Id) => peekCell(state, x).log.some((l) => l.kind === 'work');
+  const workedCells = def.tech.cells.filter((c) => worked(c.id));
+  if (workedCells.length === 0) return true;
+  const unfinished = workedCells.some((c) => peekCell(state, c.id).status !== 'done');
+  const c = peekCell(state, id);
+  if (c.status !== 'active') return false;
+  // 선물 칸은 잠기지 않은(진행 중) 칸이면서 갈래 끝이 아닌 칸만 — 1년차에 갈래 끝이 켜지면 첫해에 신석기 1/2가 된다.
+  // 끌개 엮기의 끌개 선물은 2년차로 이어지는 절반으로 남는다
+  return unfinished ? worked(id) : c.gifted > 0 && !isBranchEnd(findCell(def, id));
+}
+
 export function generateCandidates(def: ChapterDefinition, state: GameState): BoundPolicy[] {
   const b = def.balance.policy;
   const scored: { p: PolicyTemplate; bound: BoundPolicy; offered: boolean }[] = [];
@@ -193,18 +207,7 @@ export function generateCandidates(def: ChapterDefinition, state: GameState): Bo
   //  · 일하다 만 칸이 있으면 그 칸만 (선물 받은 칸이 진척이 더 많아도 띄우지 않는다)
   //  · 일한 칸이 모두 켜졌으면 선물로 진척이 생긴 칸(진행 중)만 — 진척이 가장 많은 칸이 자리에 온다.
   //    저절로 켜지지 않고, 겨울 준비 작은 발전과 인원을 놓고 고르는 선택이 된다
-  const yearOne = state.work.turn.kind === 'month';
-  const worked = (id: string) => peekCell(state, id).log.some((l) => l.kind === 'work');
-  const workedCells = yearOne ? def.tech.cells.filter((c) => worked(c.id)) : [];
-  const unfinished = workedCells.some((c) => peekCell(state, c.id).status !== 'done');
-  const yearOneOk = (id: string) => {
-    if (!yearOne || workedCells.length === 0) return true;
-    const c = peekCell(state, id);
-    if (c.status !== 'active') return false;
-    // 선물 칸은 잠기지 않은(진행 중) 칸이면서 갈래 끝이 아닌 칸만 — 1년차에 갈래 끝이 켜지면 첫해에 신석기 1/2가 된다.
-    // 끌개 엮기의 끌개 선물은 2년차로 이어지는 절반으로 남는다
-    return unfinished ? worked(id) : c.gifted > 0 && !isBranchEnd(findCell(def, id));
-  };
+  const yearOneOk = (id: string) => yearOneAllows(def, state, id);
   const cells = scored
     .filter((s) => s.p.slot === 'growth' && s.offered && s.p.tech && yearOneOk(s.p.tech))
     .sort((x, y) => {

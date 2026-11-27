@@ -175,3 +175,27 @@
     flex-wrap: wrap;
   }
 }
+
+/* "발전 나무 n/12" 단추 (R2-b-2, 시안 r2.css .barBtn) */
+.treeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  border: 1px solid var(--button-line);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.treeBtn:hover {
+  border-color: var(--border-hover);
+}
+.treeOn {
+  border-color: var(--accent);
+  background: #2a2119;
+}

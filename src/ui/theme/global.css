@@ -10,6 +10,12 @@
   --border: #2e2821;
   --border-strong: #4a3e30;
   --border-soft: #3a3229;
+  /* 발전 (R2 시안 docs/design/r2/r2.css): 발전 초록, 갈래 색 = 그 갈래를 미는 조언자 색 */
+  --growth: #8fa87a;
+  --growth-ink: #a9c194;
+  --br-hunt_water: #c9813a;
+  --br-seed: #b9a35a;
+  --br-home: #a9b8c9;
   --border-hover: #6b5a44;
   --button-line: #5a4d3c;
   --text: #f1e8d8;

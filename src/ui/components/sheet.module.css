@@ -688,3 +688,233 @@
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+/* ── 전략 팝업 ②단계 발전 카드 (R2-b-2, 시안 docs/design/r2/plan.html) ── */
+.treeLink {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 균형 규칙 한 줄 */
+.drift {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--prose);
+  min-width: 0;
+}
+.drift > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 8px;
+  gap: 4px;
+  border-radius: 14px;
+  background: #1c1915;
+  border: 1px solid var(--border-soft);
+  transition: border-color calc(0.2s * var(--motion-scale)) ease;
+}
+.gcard:hover {
+  border-color: var(--border-hover);
+}
+.gOn,
+.gOn:hover {
+  background: #211d17;
+  border-color: var(--growth);
+  box-shadow: 0 0 0 2px rgba(143, 168, 122, 0.28);
+}
+.gBlocked,
+.gBlocked:hover {
+  background: #16130f;
+  border: 1px dashed var(--border-soft);
+}
+.gBlocked .gMain {
+  cursor: not-allowed;
+}
+/* 흐린 카드: 그림과 글을 흐리게, 경고 띠와 저절로 찰 몫 줄은 그대로 (시안 C) */
+.gBlocked .pic,
+.gBlocked .gBody > :not(.drift1) {
+  opacity: 0.5;
+}
+.gMain {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-sans);
+  text-align: left;
+  min-width: 0;
+  cursor: pointer;
+}
+.gMain:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+.picWrap {
+  position: relative;
+  flex: none;
+  display: block;
+}
+.picNone {
+  display: grid !important;
+  place-items: center;
+  background: var(--inset);
+}
+.picNone svg {
+  position: static !important;
+  width: 48px !important;
+  height: 48px !important;
+}
+.picNone svg path {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.picTag {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 9px;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  white-space: nowrap;
+  background: rgba(12, 11, 10, 0.82);
+  color: var(--text);
+  border: 1px solid var(--button-line);
+}
+.picTl {
+  left: 6px;
+  top: 6px;
+  max-width: calc(100% - 90px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picTr {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+}
+.picTagBg {
+  background: rgba(12, 11, 10, 0.82) !important;
+}
+.tagPrep {
+  background: #1d2329;
+  color: #b8c9d6;
+  border: 1px solid #3a4a58;
+}
+.whyTop {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  color: var(--warn-soft);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+.whyTop b {
+  color: var(--warn-text);
+}
+.gBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 4px 0;
+  min-width: 0;
+}
+.contTag {
+  margin-left: auto;
+}
+.pr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+}
+.pr > span:first-child {
+  flex: 1;
+}
+.pr > span:last-child {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.l {
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--prose);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lm {
+  color: var(--text-muted);
+}
+.lk {
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.soon {
+  color: #f0c48e;
+}
+.drift1 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--growth-ink);
+}
+.see {
+  align-self: flex-start;
+  margin: 0 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+@media (min-width: 1700px) and (min-height: 880px) {
+  .gcard .pic {
+    height: 130px;
+  }
+  .l,
+  .drift1 {
+    font-size: var(--fs-sm);
+  }
+  .gcard .cardTitle {
+    font-size: 17px;
+  }
+}
