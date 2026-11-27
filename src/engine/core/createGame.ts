@@ -8,6 +8,7 @@ import { freshWork, startTurn } from '../month/month';
 import { addLot } from '../stores/food';
 import { population } from '../people/people';
 import { EMPTY_START } from '../display';
+import { presetCellsDone } from '../tech/tech';
 
 export interface NewGameOptions {
   presetId?: string;
@@ -28,11 +29,13 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
   const preset = opts.presetId ? byId(def.presets, opts.presetId, 'preset') : (def.presets.find((p) => !p.hidden) ?? def.presets[0]);
   if (!preset) throw new Error(`chapter ${def.id} has no presets`);
   const rng = seedToState(opts.seed);
+  // 개발용 프리셋은 이미 지난 달 수만큼 달 번호를 앞당겨 시작한다 (2년차 봄 시작 등)
+  const elapsed = preset.elapsedMonths ?? 0;
 
   const people: Record<string, Person> = {};
   for (const pp of preset.people) {
-    // 태어난 달: 시작 달(1) 기준으로 나이만큼 거슬러 가고, 생일은 시드로 흩는다
-    const birthMonth = 1 - pp.age * 12 - nextInt(rng, 0, 11);
+    // 태어난 달: 시작 달(elapsed + 1) 기준으로 나이만큼 거슬러 가고, 생일은 시드로 흩는다
+    const birthMonth = elapsed + 1 - pp.age * 12 - nextInt(rng, 0, 11);
     people[pp.id] = {
       id: pp.id,
       name: { key: `person.${pp.id}` },
@@ -66,7 +69,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     seed: opts.seed,
     rng,
     tribeName: cleanTribeName(opts.tribeName),
-    month: 0,
+    month: elapsed,
     turn: 0,
     startMonthIndex: preset.startMonthIndex,
     step: 'policy',
@@ -80,7 +83,7 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     places,
     animals: structuredClone(preset.animals),
     knowledge: { has: [...preset.knowledge], progress: {} },
-    facilities: {},
+    facilities: { ...(preset.facilities ?? {}) },
     projects: {},
     tech: {},
     arcs: {},
@@ -98,8 +101,9 @@ export function createGame(def: ChapterDefinition, opts: NewGameOptions): GameSt
     chronicle: [],
     seq: 0,
   };
+  if (preset.techDone?.length) presetCellsDone(def, state, preset.techDone);
   startTurn(def, state);
   // 연대기의 첫 문장 (기록자 시점)
-  state.chronicle.push({ month: 1, monthId: monthDef(def, state).id, key: preset.presentation.chronicleOpening, params: { pop: population(state) } });
+  state.chronicle.push({ month: state.month, monthId: monthDef(def, state).id, key: preset.presentation.chronicleOpening, params: { pop: population(state) } });
   return state;
 }

@@ -532,6 +532,13 @@ export function validate(def: ChapterDefinition, strings: Record<string, string>
     for (const f of pr.food) need('food', f.kind, w);
     for (const g of Object.keys(pr.goods)) need('goods', g, w);
     for (const d of pr.discovered) need('place', d, w);
+    for (const k of pr.knowledge) need('knowledge', k, w);
+    for (const f of Object.keys(pr.facilities ?? {})) need('facility', f, w);
+    const elapsed = pr.elapsedMonths ?? 0;
+    for (const t of pr.techDone ?? []) {
+      if (!def.tech.cells.some((c) => c.id === t.id)) err(w, `없는 칸: ${t.id}`);
+      if (t.workedMonths.some((m) => m < 1 || m > elapsed)) err(w, `${t.id}의 일한 달이 시작 전(1~${elapsed})이 아니다`);
+    }
     for (const a of def.animals) if (!pr.animals[a.id]) err(w, `동물 시작 상태 없음: ${a.id}`);
     for (const [id, st] of Object.entries(pr.animals)) {
       const a = def.animals.find((x) => x.id === id);

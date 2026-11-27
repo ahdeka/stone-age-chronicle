@@ -115,6 +115,37 @@ export const ch1SpringPreset: StartPreset = {
   knowledge: [],
 };
 
+const Y2 = 'preset.year2_spring';
+
+/** 숨은 개발용 시작: 2년차 봄 (R2-c, 2026-11-27). 계절 턴을 측정하고 직접 보려고 1년차를 무난히 넘긴 부족으로 시작한다.
+ *  개발 모드 주소 ?preset=year2_spring. 바탕은 sure 100판의 2년차 3월 월초(인구 p50 32, 장작 p50 1,027kg, 결속 p50 44,
+ *  지식 끌개·얼음 낚시·털옷·고기 말리기, 장작 덧집)보다 조금 나은 쪽: 죽은 사람 없음, 식량 약 15일치(sure p90 16일치).
+ *  켜진 칸은 갈돌(1년차 6~8월에 일함), 끌개 엮기를 마쳐 끌개 칸에 절반 선물(sled 지식의 grantEffects) */
+export const ch1Year2SpringPreset: StartPreset = {
+  ...ch1SpringPreset,
+  id: 'year2_spring',
+  hidden: true,
+  presentation: {
+    ...ch1SpringPreset.presentation,
+    introLines: lines(Y2),
+    tagline: `${Y2}.tagline`,
+    chronicleOpening: `${Y2}.chronicle`,
+  },
+  elapsedMonths: 12,
+  // 한 해가 지났다: 모두 한 살 더 먹었다 (나이 구간이 바뀌는 사람은 없다)
+  people: ch1People.map((p) => ({ ...p, age: p.age + 1 })),
+  food: [
+    { kind: 'dried_meat', kg: 280 },
+    { kind: 'raw_meat', kg: 150 },
+  ],
+  firewood: 800,
+  goods: { hide: 10, bear_hide: 0, spear: 14, knife: 9, net: 3, willow_bark: 0 },
+  cohesion: 52,
+  knowledge: ['meat_drying', 'sled', 'ice_fishing', 'fur_clothes'],
+  facilities: { wood_shed: 1 },
+  techDone: [{ id: 'grinding_stone', workedMonths: [4, 5, 6] }],
+};
+
 /** 숨은 시작: 시험 플레이 재현 테스트용 늦가을 (낙엽달). 화면의 시작에는 나오지 않는다 */
 export const ch1AutumnPreset: StartPreset = {
   ...ch1SpringPreset,
